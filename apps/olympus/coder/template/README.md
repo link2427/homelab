@@ -23,9 +23,11 @@ GPU selection adds both the `nvidia.com/gpu: 1` limit and a hostname node
 selector, so Kubernetes cannot silently assign the other card.
 
 `olympus-agent` exposes the official Coder integrations for Codex, Claude Code,
-and OpenCode. Reasonix 1.19.1 is installed into the persistent home directory,
-so all four tools survive workspace rebuilds and can keep their user-level
-configuration with the workspace.
+and OpenCode. It provides correctly branded launcher tiles for Codex, Claude
+Code, OpenCode CLI, and Reasonix, plus the OpenCode web interface. Node.js
+24.18.1 LTS, Reasonix 1.19.1, and AgentAPI are installed into the persistent
+home directory without requiring root privileges, so all four tools survive
+workspace rebuilds and keep their user-level configuration with the workspace.
 
 `olympus-gpu` uses the official PyTorch 2.13.0 CUDA 12.6 runtime image. CUDA
 12.6 is intentional: unlike CUDA 13, it retains binary support for both the

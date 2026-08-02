@@ -214,7 +214,7 @@ locals {
   } : {}
   profile_environment = merge(
     var.profile == "agent" ? {
-      "PATH" = "/home/coder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      "PATH" = "/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     } : {},
     var.profile == "gpu" ? {
       "HF_HOME"                   = "/home/coder/.cache/huggingface"
@@ -236,7 +236,21 @@ resource "coder_agent" "main" {
     mkdir -p /home/coder/project
     printf '%s\n' '${var.profile}' > /home/coder/.olympus-profile
     %{ if var.profile == "agent" ~}
-    mkdir -p /home/coder/.local/bin
+    mkdir -p /home/coder/.local/bin /home/coder/.local/lib
+    if ! command -v npm >/dev/null 2>&1; then
+      node_version="v24.18.1"
+      node_dir="/home/coder/.local/lib/node-$${node_version}-linux-x64"
+      if [ ! -x "$${node_dir}/bin/node" ]; then
+        mkdir -p "$${node_dir}"
+        curl -fsSL "https://nodejs.org/dist/$${node_version}/node-$${node_version}-linux-x64.tar.xz" \
+          -o /tmp/olympus-node.tar.xz
+        tar -xJf /tmp/olympus-node.tar.xz -C "$${node_dir}" --strip-components=1
+        rm -f /tmp/olympus-node.tar.xz
+      fi
+      ln -sfn "$${node_dir}/bin/node" /home/coder/.local/bin/node
+      ln -sfn "$${node_dir}/bin/npm" /home/coder/.local/bin/npm
+      ln -sfn "$${node_dir}/bin/npx" /home/coder/.local/bin/npx
+    fi
     if ! /home/coder/.local/bin/reasonix --version >/dev/null 2>&1; then
       npm install --global --prefix /home/coder/.local reasonix@1.19.1
     fi
@@ -327,13 +341,99 @@ module "claude_code" {
 }
 
 module "opencode" {
+  count            = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  source           = "registry.coder.com/coder-labs/opencode/coder"
+  version          = "0.1.2"
+  agent_id         = coder_agent.main.id
+  workdir          = "/home/coder/project"
+  icon             = "/icon/opencode.svg"
+  report_tasks     = false
+  cli_app          = false
+  install_agentapi = false
+
+  pre_install_script = <<-EOT
+    #!/bin/bash
+    set -euo pipefail
+    mkdir -p /home/coder/.local/bin
+    if [ ! -x /home/coder/.local/bin/agentapi ]; then
+      curl --retry 5 --retry-delay 5 --fail --retry-all-errors -L \
+        -o /home/coder/.local/bin/agentapi \
+        https://github.com/coder/agentapi/releases/download/v0.11.2/agentapi-linux-amd64
+      chmod +x /home/coder/.local/bin/agentapi
+    fi
+  EOT
+}
+
+resource "coder_app" "codex" {
   count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  source       = "registry.coder.com/coder-labs/opencode/coder"
-  version      = "0.1.2"
   agent_id     = coder_agent.main.id
-  workdir      = "/home/coder/project"
-  report_tasks = false
-  cli_app      = true
+  slug         = "codex"
+  display_name = "Codex"
+  icon         = "/icon/openai.svg"
+  group        = "AI Agents"
+  order        = 10
+  open_in      = "slim-window"
+  command      = <<-EOT
+    #!/bin/bash
+    set -e
+    export PATH="/home/coder/.local/bin:$PATH"
+    cd /home/coder/project
+    exec codex
+  EOT
+}
+
+resource "coder_app" "claude_code" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id     = coder_agent.main.id
+  slug         = "claude-code"
+  display_name = "Claude Code"
+  icon         = "/icon/claude.svg"
+  group        = "AI Agents"
+  order        = 20
+  open_in      = "slim-window"
+  command      = <<-EOT
+    #!/bin/bash
+    set -e
+    export PATH="/home/coder/.local/bin:$PATH"
+    cd /home/coder/project
+    exec claude
+  EOT
+}
+
+resource "coder_app" "opencode_cli" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id     = coder_agent.main.id
+  slug         = "opencode-cli"
+  display_name = "OpenCode CLI"
+  icon         = "/icon/opencode.svg"
+  group        = "AI Agents"
+  order        = 30
+  open_in      = "slim-window"
+  command      = <<-EOT
+    #!/bin/bash
+    set -e
+    export PATH="/home/coder/.opencode/bin:/home/coder/.local/bin:$PATH"
+    cd /home/coder/project
+    exec opencode
+  EOT
+}
+
+resource "coder_app" "reasonix" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id     = coder_agent.main.id
+  slug         = "reasonix"
+  display_name = "Reasonix"
+  icon         = "/icon/terminal.svg"
+  group        = "AI Agents"
+  order        = 40
+  open_in      = "slim-window"
+  command      = <<-EOT
+    #!/bin/bash
+    set -e
+    export PATH="/home/coder/.local/bin:$PATH"
+    cd /home/coder/project
+    exec reasonix
+  EOT
 }
 
 resource "kubernetes_persistent_volume_claim_v1" "home" {
