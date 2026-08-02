@@ -1,4 +1,6 @@
 terraform {
+  required_version = ">= 1.9"
+
   required_providers {
     coder = {
       source  = "coder/coder"
@@ -14,6 +16,17 @@ terraform {
 provider "coder" {}
 provider "kubernetes" {}
 
+variable "profile" {
+  type        = string
+  description = "Template profile selected by the Coder administrator at publish time."
+  default     = "linux"
+
+  validation {
+    condition     = contains(["linux", "agent", "gpu", "build"], var.profile)
+    error_message = "Profile must be linux, agent, gpu, or build."
+  }
+}
+
 variable "namespace" {
   type        = string
   description = "Kubernetes namespace used for Coder workspaces."
@@ -22,18 +35,66 @@ variable "namespace" {
 
 variable "image" {
   type        = string
-  description = "Linux workspace image."
+  description = "Linux workspace image selected by the template publisher."
   default     = "codercom/example-base:ubuntu"
 }
 
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
+locals {
+  profiles = {
+    linux = {
+      cpu          = "4"
+      memory       = "4"
+      disk         = "30"
+      storage_tier = "fast"
+      gpu          = "none"
+      node         = ""
+    }
+    agent = {
+      cpu          = "6"
+      memory       = "12"
+      disk         = "60"
+      storage_tier = "fast"
+      gpu          = "none"
+      node         = ""
+    }
+    gpu = {
+      cpu          = "4"
+      memory       = "8"
+      disk         = "80"
+      storage_tier = "fast"
+      gpu          = "quadro-m4000"
+      node         = ""
+    }
+    build = {
+      cpu          = "8"
+      memory       = "16"
+      disk         = "120"
+      storage_tier = "bulk"
+      gpu          = "none"
+      node         = "precision-7810-01"
+    }
+  }
+
+  selected_profile = local.profiles[var.profile]
+  storage_classes = {
+    fast      = "longhorn-fast"
+    resilient = "longhorn-resilient"
+    bulk      = "longhorn-bulk"
+  }
+  gpu_nodes = {
+    quadro-m4000 = "precision-5810-01"
+    quadro-p2000 = "precision-7810-01"
+  }
+}
+
 data "coder_parameter" "cpu" {
   name         = "cpu"
   display_name = "CPU"
   description  = "Maximum CPU cores available to the workspace."
-  default      = "4"
+  default      = local.selected_profile.cpu
   mutable      = true
 
   option {
@@ -58,7 +119,7 @@ data "coder_parameter" "memory" {
   name         = "memory"
   display_name = "Memory"
   description  = "Maximum memory available to the workspace."
-  default      = "4"
+  default      = local.selected_profile.memory
   mutable      = true
 
   option {
@@ -77,6 +138,11 @@ data "coder_parameter" "memory" {
     name  = "16 GiB"
     value = "16"
   }
+
+  option {
+    name  = "24 GiB"
+    value = "24"
+  }
 }
 
 data "coder_parameter" "home_disk_size" {
@@ -84,19 +150,42 @@ data "coder_parameter" "home_disk_size" {
   display_name = "Home disk"
   description  = "Persistent fast-tier home disk size in GiB."
   type         = "number"
-  default      = "30"
+  default      = local.selected_profile.disk
   mutable      = false
   validation {
     min = 10
-    max = 200
+    max = 250
+  }
+}
+
+data "coder_parameter" "storage_tier" {
+  name         = "storage_tier"
+  display_name = "Storage tier"
+  description  = "Fast uses two SSD replicas; resilient uses three replicas; bulk uses the single HDD and daily backup."
+  default      = local.selected_profile.storage_tier
+  mutable      = false
+
+  option {
+    name  = "Fast SSD · 2 replicas"
+    value = "fast"
+  }
+
+  option {
+    name  = "Resilient · 3 replicas"
+    value = "resilient"
+  }
+
+  option {
+    name  = "Bulk HDD · 1 replica + backup"
+    value = "bulk"
   }
 }
 
 data "coder_parameter" "gpu" {
   name         = "gpu"
   display_name = "GPU"
-  description  = "Optionally reserve one NVIDIA GPU for this workspace."
-  default      = "none"
+  description  = "Reserve a specific physical GPU and pin the workspace to its Precision host."
+  default      = local.selected_profile.gpu
   mutable      = true
 
   option {
@@ -104,16 +193,38 @@ data "coder_parameter" "gpu" {
     value = "none"
   }
   option {
-    name  = "1 NVIDIA GPU"
-    value = "1"
+    name  = "Quadro M4000 · 8 GiB · precision-5810-01"
+    value = "quadro-m4000"
+  }
+
+  option {
+    name  = "Quadro P2000 · 5 GiB · precision-7810-01"
+    value = "quadro-p2000"
   }
 }
 
 locals {
   workspace_name = "coder-${data.coder_workspace.me.id}"
-  gpu_limits = data.coder_parameter.gpu.value == "1" ? {
+  selected_node = data.coder_parameter.gpu.value != "none" ? local.gpu_nodes[data.coder_parameter.gpu.value] : local.selected_profile.node
+  node_selector = local.selected_node != "" ? {
+    "kubernetes.io/hostname" = local.selected_node
+  } : {}
+  gpu_limits = data.coder_parameter.gpu.value != "none" ? {
     "nvidia.com/gpu" = "1"
   } : {}
+  profile_environment = merge(
+    var.profile == "agent" ? {
+      "PATH" = "/home/coder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    } : {},
+    var.profile == "gpu" ? {
+      "HF_HOME"                   = "/home/coder/.cache/huggingface"
+      "JUPYTER_CONFIG_DIR"        = "/home/coder/.jupyter"
+      "MPLCONFIGDIR"              = "/home/coder/.cache/matplotlib"
+      "TORCH_HOME"                = "/home/coder/.cache/torch"
+      "TORCH_EXTENSIONS_DIR"      = "/home/coder/.cache/torch_extensions"
+      "PYTORCH_KERNEL_CACHE_PATH" = "/home/coder/.cache/torch/kernels"
+    } : {}
+  )
 }
 
 resource "coder_agent" "main" {
@@ -122,8 +233,32 @@ resource "coder_agent" "main" {
 
   startup_script = <<-EOT
     set -eu
-    curl -fsSL https://code-server.dev/install.sh | sh -s -- --method=standalone --prefix=/tmp/code-server
-    /tmp/code-server/bin/code-server --auth none --port 13337 >/tmp/code-server.log 2>&1 &
+    mkdir -p /home/coder/project
+    printf '%s\n' '${var.profile}' > /home/coder/.olympus-profile
+    %{ if var.profile == "agent" ~}
+    mkdir -p /home/coder/.local/bin
+    if ! /home/coder/.local/bin/reasonix --version >/dev/null 2>&1; then
+      npm install --global --prefix /home/coder/.local reasonix@1.19.1
+    fi
+    touch /home/coder/.profile
+    grep -Fqx 'export PATH="/home/coder/.local/bin:$PATH"' /home/coder/.profile || \
+      printf '%s\n' 'export PATH="/home/coder/.local/bin:$PATH"' >> /home/coder/.profile
+    %{ endif ~}
+    %{ if var.profile == "gpu" ~}
+    mkdir -p /home/coder/.cache/huggingface \
+      /home/coder/.cache/matplotlib \
+      /home/coder/.cache/torch/kernels \
+      /home/coder/.cache/torch_extensions \
+      /home/coder/.jupyter
+    python - <<'PY' > /home/coder/.olympus-pytorch 2>&1
+    import torch
+    print(f"PyTorch: {torch.__version__}")
+    print(f"CUDA build: {torch.version.cuda}")
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
+    PY
+    %{ endif ~}
   EOT
 
   metadata {
@@ -149,22 +284,56 @@ resource "coder_agent" "main" {
     interval     = 60
     timeout      = 1
   }
+
+  metadata {
+    display_name = "GPU"
+    key          = "3_gpu"
+    script       = "command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader || echo 'No GPU attached'"
+    interval     = 30
+    timeout      = 5
+  }
 }
 
-resource "coder_app" "code_server" {
-  agent_id     = coder_agent.main.id
-  slug         = "code-server"
-  display_name = "code-server"
-  icon         = "/icon/code.svg"
-  url          = "http://localhost:13337?folder=/home/coder"
-  subdomain    = false
-  share        = "owner"
+module "code_server" {
+  count      = data.coder_workspace.me.start_count
+  source     = "registry.coder.com/coder/code-server/coder"
+  version    = "1.5.2"
+  agent_id   = coder_agent.main.id
+  folder     = "/home/coder/project"
+  use_cached = true
+}
 
-  healthcheck {
-    url       = "http://localhost:13337/healthz"
-    interval  = 3
-    threshold = 10
-  }
+module "jupyterlab" {
+  count    = var.profile == "gpu" ? data.coder_workspace.me.start_count : 0
+  source   = "registry.coder.com/coder/jupyterlab/coder"
+  version  = "1.2.2"
+  agent_id = coder_agent.main.id
+}
+
+module "codex" {
+  count    = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  source   = "registry.coder.com/coder-labs/codex/coder"
+  version  = "5.3.0"
+  agent_id = coder_agent.main.id
+  workdir  = "/home/coder/project"
+}
+
+module "claude_code" {
+  count    = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  source   = "registry.coder.com/coder/claude-code/coder"
+  version  = "5.2.0"
+  agent_id = coder_agent.main.id
+  workdir  = "/home/coder/project"
+}
+
+module "opencode" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  source       = "registry.coder.com/coder-labs/opencode/coder"
+  version      = "0.1.2"
+  agent_id     = coder_agent.main.id
+  workdir      = "/home/coder/project"
+  report_tasks = false
+  cli_app      = true
 }
 
 resource "kubernetes_persistent_volume_claim_v1" "home" {
@@ -179,6 +348,8 @@ resource "kubernetes_persistent_volume_claim_v1" "home" {
       "com.coder.workspace.name"                         = data.coder_workspace.me.name
       "com.coder.user.id"                                = data.coder_workspace_owner.me.id
       "com.coder.user.username"                          = data.coder_workspace_owner.me.name
+      "olympus.dev/workspace-profile"                    = var.profile
+      "olympus.dev/storage-tier"                         = data.coder_parameter.storage_tier.value
       "recurring-job.longhorn.io/source"                 = "enabled"
       "recurring-job.longhorn.io/coder-workspace-backup" = "enabled"
     }
@@ -191,7 +362,7 @@ resource "kubernetes_persistent_volume_claim_v1" "home" {
 
   spec {
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = "longhorn-fast"
+    storage_class_name = local.storage_classes[data.coder_parameter.storage_tier.value]
     resources {
       requests = {
         storage = "${data.coder_parameter.home_disk_size.value}Gi"
@@ -221,6 +392,8 @@ resource "kubernetes_deployment_v1" "main" {
       "com.coder.workspace.name"  = data.coder_workspace.me.name
       "com.coder.user.id"         = data.coder_workspace_owner.me.id
       "com.coder.user.username"   = data.coder_workspace_owner.me.name
+      "olympus.dev/workspace-profile" = var.profile
+      "olympus.dev/gpu"               = data.coder_parameter.gpu.value
     }
   }
 
@@ -247,10 +420,14 @@ resource "kubernetes_deployment_v1" "main" {
           "com.coder.workspace.name"  = data.coder_workspace.me.name
           "com.coder.user.id"         = data.coder_workspace_owner.me.id
           "com.coder.user.username"   = data.coder_workspace_owner.me.name
+          "olympus.dev/workspace-profile" = var.profile
+          "olympus.dev/gpu"               = data.coder_parameter.gpu.value
         }
       }
 
       spec {
+        node_selector = local.node_selector
+
         security_context {
           run_as_non_root = true
           run_as_user     = 1000
@@ -270,6 +447,14 @@ resource "kubernetes_deployment_v1" "main" {
           env {
             name  = "CODER_AGENT_TOKEN"
             value = coder_agent.main.token
+          }
+
+          dynamic "env" {
+            for_each = local.profile_environment
+            content {
+              name  = env.key
+              value = env.value
+            }
           }
 
           security_context {
@@ -326,5 +511,30 @@ resource "kubernetes_deployment_v1" "main" {
         }
       }
     }
+  }
+}
+
+resource "coder_metadata" "workspace" {
+  count       = data.coder_workspace.me.start_count
+  resource_id = kubernetes_deployment_v1.main[0].id
+
+  item {
+    key   = "Profile"
+    value = var.profile
+  }
+
+  item {
+    key   = "Placement"
+    value = local.selected_node != "" ? local.selected_node : "Kubernetes automatic"
+  }
+
+  item {
+    key   = "GPU"
+    value = data.coder_parameter.gpu.value
+  }
+
+  item {
+    key   = "Storage"
+    value = "${data.coder_parameter.storage_tier.value} · ${data.coder_parameter.home_disk_size.value} GiB"
   }
 }
