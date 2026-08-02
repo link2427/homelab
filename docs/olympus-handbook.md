@@ -18,6 +18,7 @@ access paths, recovery model, and the work completed during the current rebuild.
 - NAS storage and backups: Atlas at `10.0.0.5`
 - Cluster console: Headlamp
 - Development platform: Coder `v2.35.3`
+- Identity provider: Authentik `2026.5.6`
 
 The active cluster has three x86-64 nodes. The former Raspberry Pi nodes are
 powered off and are not part of the active compute fleet.
@@ -136,7 +137,8 @@ Tailscale Kubernetes Operator.
 | --- | --- | --- |
 | Homepage | `http://olympus-dashboard` | command center and service status |
 | Headlamp | `http://olympus-headlamp` | Kubernetes administration |
-| Coder | `http://olympus-coder` | development workspaces |
+| Coder | `https://coder.jacob-neel.dev` | public development workspaces; Google SSO |
+| Authentik | `https://auth.jacob-neel.dev` | public identity provider and SSO portal |
 | Longhorn | `http://olympus-longhorn` | volume and backup administration |
 | Grafana | `http://olympus-grafana` | dashboards and GPU visibility |
 | Prometheus | `http://olympus-prometheus` | metrics and target health |
@@ -145,14 +147,30 @@ Tailscale Kubernetes Operator.
 | Pi-hole | `http://olympus-pihole` | DNS and ad blocking |
 | Portainer | `http://olympus-portainer:9000` | legacy workload operations |
 
-The Tailscale service names also have full `*.taild90e78.ts.net` names. Coder
-uses a split-horizon endpoint: workspace Pods resolve the in-cluster Service
-named `olympus-coder`, while tailnet clients resolve the same short name through
-MagicDNS.
+The Tailscale service names also have full `*.taild90e78.ts.net` names. Coder's
+canonical access URL is the public HTTPS hostname; its Tailscale LoadBalancer
+remains available as a private recovery path.
 
-Telchar Dynamics and Telchar Forge are public through separate Cloudflare
-Tunnels. No inbound port-forward is required; `cloudflared` establishes outbound
-connections to Cloudflare.
+Coder and Authentik share the remotely managed `olympus-access` Cloudflare
+Tunnel. Telchar Dynamics and Telchar Forge use separate tunnels. No inbound
+port-forward is required; `cloudflared` establishes outbound connections to
+Cloudflare.
+
+### Identity and public access
+
+Authentik runs in namespace `authentik` with PostgreSQL 17.9 on a 10 GiB,
+three-replica `longhorn-resilient` volume. Its declarative blueprint creates the
+Google source, Coder's OpenID Connect provider, and the Coder application policy.
+Google sign-in is restricted to `jacob.neel@gmail.com`; Coder additionally
+disables OIDC signups, so an identity cannot create a new Coder account through
+the public endpoint. Coder password authentication remains enabled as a recovery
+path until the complete OIDC flow has been repeatedly verified.
+
+Cloudflare DNS proxies `auth.jacob-neel.dev` and `coder.jacob-neel.dev` to the
+`olympus-access` tunnel. Two `cloudflared` replicas run on separate nodes and
+route directly to the cluster services. The Google OAuth client belongs to the
+Google Cloud `Homelab` project; its only Authentik callback is
+`https://auth.jacob-neel.dev/source/oauth/callback/google/`.
 
 ## Coder development platform
 
@@ -194,7 +212,7 @@ Refresh the catalog after repository access changes:
 ```powershell
 Set-Location D:\repos\homelab\apps\olympus\coder\template
 gh auth status
-coder login http://olympus-coder
+coder login https://coder.jacob-neel.dev
 .\Publish-CoderTemplates.ps1
 ```
 
@@ -310,6 +328,11 @@ plane maintenance as routine.
     launchers.
 11. Added a constrained GitHub App, automatic authenticated cloning, and a
     searchable repository selector that avoids leaking private repo names.
+12. Deployed Authentik with resilient PostgreSQL storage, Google sign-in, and a
+    Coder OIDC application restricted to the owner's Google account.
+13. Published Authentik and Coder through the redundant `olympus-access`
+    Cloudflare Tunnel and registered the public Coder callback with its GitHub
+    App.
 
 ## Known risks and follow-up work
 
@@ -321,6 +344,5 @@ plane maintenance as routine.
   Kubernetes widgets; its RBAC should be narrowed, especially around Secrets.
 - Released Longhorn volumes from disposable Coder smoke tests should be reviewed
   and removed only after confirming they contain no wanted workspace data.
-- Public Coder access and Google SSO are the next security project. Password
-  login must remain available until the new OIDC path is verified end to end.
-
+- Coder password login is intentionally retained as a recovery path; remove it
+  only after Google OIDC has been verified from multiple external networks.

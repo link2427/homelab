@@ -228,9 +228,12 @@ data:
     \        href: http://olympus-portainer:9000\n        description: Cluster operations\
     \ and workload control\n        server: kubernetes\n        namespace: portainer\n\
     \        podSelector: app.kubernetes.io/name=portainer\n    - Coder:\n        icon:\
-    \ mdi-code-braces-box\n        href: http://olympus-coder\n        description: Autonomous\
+    \ mdi-code-braces-box\n        href: https://coder.jacob-neel.dev\n        description: Autonomous\
     \ Linux workspaces and agent development\n        server: kubernetes\n        namespace:\
-    \ coder\n        podSelector: app.kubernetes.io/name=coder\n    - Grafana:\n     \
+    \ coder\n        podSelector: app.kubernetes.io/name=coder\n    - Authentik:\n   \
+    \     icon: authentik.png\n        href: https://auth.jacob-neel.dev\n        description:\
+    \ Google identity and single sign-on\n        server: kubernetes\n        namespace:\
+    \ authentik\n        podSelector: app.kubernetes.io/name=authentik\n    - Grafana:\n     \
     \   icon: grafana.png\n        href: http://olympus-grafana\n        description:\
     \ Dashboards, metrics, and GPU visibility\n        server: kubernetes\n      \
     \  namespace: monitoring\n        podSelector: app=grafana\n    - Prometheus:\n\

@@ -3,7 +3,11 @@ coder:
 
   env:
     - name: CODER_ACCESS_URL
-      value: http://olympus-coder
+      value: https://coder.jacob-neel.dev
+    - name: CODER_REDIRECT_TO_ACCESS_URL
+      value: "true"
+    - name: CODER_HOST_PREFIX_COOKIE
+      value: "true"
     - name: CODER_PG_CONNECTION_URL
       valueFrom:
         secretKeyRef:
@@ -29,6 +33,28 @@ coder:
       value: https://api.github.com/applications/$(CODER_EXTERNAL_AUTH_0_CLIENT_ID)/grant
     - name: CODER_EXTERNAL_AUTH_0_APP_INSTALL_URL
       value: https://github.com/apps/olympus-coder-agents/installations/new
+    - name: CODER_OIDC_ISSUER_URL
+      value: https://auth.jacob-neel.dev/application/o/coder/
+    - name: CODER_OIDC_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: coder-secrets
+          key: oidc-client-id
+    - name: CODER_OIDC_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: coder-secrets
+          key: oidc-client-secret
+    - name: CODER_OIDC_SCOPES
+      value: openid,profile,email,offline_access
+    - name: CODER_OIDC_ALLOW_SIGNUPS
+      value: "false"
+    - name: CODER_OIDC_IGNORE_EMAIL_VERIFIED
+      value: "true"
+    - name: CODER_OIDC_SIGN_IN_TEXT
+      value: Continue with Google
+    - name: CODER_DISABLE_PASSWORD_AUTH
+      value: "false"
     - name: CODER_TELEMETRY_ENABLE
       value: "false"
 

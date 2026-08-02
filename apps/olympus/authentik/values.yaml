@@ -11,6 +11,10 @@ authentik:
   existingSecret:
     secretName: authentik-secrets
 
+blueprints:
+  configMaps:
+    - olympus-identity-blueprint
+
 server:
   replicas: 1
   service:

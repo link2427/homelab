@@ -54,6 +54,18 @@ def secret_data(secret: dict) -> dict[str, str]:
 
 def main() -> None:
     live_mappings = {
+        ROOT / "apps/olympus/authentik/authentik-secrets.secret.yaml": (
+            "authentik",
+            "authentik-secrets",
+        ),
+        ROOT / "apps/olympus/authentik/cloudflared-token.secret.yaml": (
+            "authentik",
+            "cloudflared-token",
+        ),
+        ROOT / "apps/olympus/coder/coder-secrets.secret.yaml": (
+            "coder",
+            "coder-secrets",
+        ),
         ROOT / "infrastructure/olympus/tailscale-operator/operator-oauth.secret.yaml": (
             "tailscale",
             "operator-oauth",

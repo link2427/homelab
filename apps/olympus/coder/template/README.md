@@ -62,7 +62,7 @@ access changes or new repositories are created:
 
 ```powershell
 gh auth login
-coder login http://coder.olympus.local
+coder login https://coder.jacob-neel.dev
 .\Publish-CoderTemplates.ps1
 ```
 
