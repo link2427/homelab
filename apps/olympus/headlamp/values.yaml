@@ -27,6 +27,18 @@ service:
   type: ClusterIP
   port: 80
 
+volumes:
+  - name: headlamp-config
+    emptyDir: {}
+  - name: headlamp-plugins
+    emptyDir: {}
+
+volumeMounts:
+  - name: headlamp-config
+    mountPath: /home/headlamp/.config
+  - name: headlamp-plugins
+    mountPath: /headlamp/plugins
+
 resources:
   requests:
     cpu: 25m
