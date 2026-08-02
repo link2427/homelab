@@ -1,0 +1,302 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: '2'
+    meta.helm.sh/release-name: nvidia-device-plugin
+    meta.helm.sh/release-namespace: nvidia-device-plugin
+  labels:
+    app.kubernetes.io/instance: nvidia-device-plugin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nvidia-device-plugin
+    app.kubernetes.io/version: 0.19.3
+    helm.sh/chart: nvidia-device-plugin-0.19.3
+  name: nvidia-device-plugin
+  namespace: nvidia-device-plugin
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: nvidia-device-plugin
+      app.kubernetes.io/name: nvidia-device-plugin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: nvidia-device-plugin
+        app.kubernetes.io/name: nvidia-device-plugin
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: feature.node.kubernetes.io/pci-10de.present
+                operator: In
+                values:
+                - 'true'
+            - matchExpressions:
+              - key: feature.node.kubernetes.io/cpu-model.vendor_id
+                operator: In
+                values:
+                - NVIDIA
+            - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values:
+                - 'true'
+      containers:
+      - command:
+        - nvidia-device-plugin
+        env:
+        - name: MPS_ROOT
+          value: /run/nvidia/mps
+        - name: FAIL_ON_INIT_ERROR
+          value: 'true'
+        - name: DEVICE_DISCOVERY_STRATEGY
+          value: nvml
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: all
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: compute,utility
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.19.3
+        imagePullPolicy: IfNotPresent
+        name: nvidia-device-plugin-ctr
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/kubelet/device-plugins
+          name: kubelet-device-plugins-dir
+        - mountPath: /dev/shm
+          name: mps-shm
+        - mountPath: /mps
+          name: mps-root
+        - mountPath: /var/run/cdi
+          name: cdi-root
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        nvidia.com/gpu.present: 'true'
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      runtimeClassName: nvidia
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: nvidia-device-plugin-service-account
+      serviceAccountName: nvidia-device-plugin-service-account
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /var/lib/kubelet/device-plugins
+          type: Directory
+        name: kubelet-device-plugins-dir
+      - hostPath:
+          path: /run/nvidia/mps
+          type: DirectoryOrCreate
+        name: mps-root
+      - hostPath:
+          path: /run/nvidia/mps/shm
+          type: ''
+        name: mps-shm
+      - hostPath:
+          path: /var/run/cdi
+          type: DirectoryOrCreate
+        name: cdi-root
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: '1'
+    meta.helm.sh/release-name: nvidia-device-plugin
+    meta.helm.sh/release-namespace: nvidia-device-plugin
+  labels:
+    app.kubernetes.io/instance: nvidia-device-plugin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nvidia-device-plugin
+    app.kubernetes.io/version: 0.19.3
+    helm.sh/chart: nvidia-device-plugin-0.19.3
+  name: nvidia-device-plugin-mps-control-daemon
+  namespace: nvidia-device-plugin
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: nvidia-device-plugin
+      app.kubernetes.io/name: nvidia-device-plugin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: nvidia-device-plugin
+        app.kubernetes.io/name: nvidia-device-plugin
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: feature.node.kubernetes.io/pci-10de.present
+                operator: In
+                values:
+                - 'true'
+            - matchExpressions:
+              - key: feature.node.kubernetes.io/cpu-model.vendor_id
+                operator: In
+                values:
+                - NVIDIA
+            - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values:
+                - 'true'
+      containers:
+      - command:
+        - mps-control-daemon
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: all
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: compute,utility
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.19.3
+        imagePullPolicy: IfNotPresent
+        name: mps-control-daemon-ctr
+        resources: {}
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: mps-shm
+        - mountPath: /mps
+          name: mps-root
+      dnsPolicy: ClusterFirst
+      hostPID: true
+      initContainers:
+      - command:
+        - mps-control-daemon
+        - mount-shm
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.19.3
+        imagePullPolicy: IfNotPresent
+        name: mps-control-daemon-mounts
+        resources: {}
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /mps
+          mountPropagation: Bidirectional
+          name: mps-root
+      nodeSelector:
+        nvidia.com/gpu.present: 'true'
+        nvidia.com/mps.capable: 'true'
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      runtimeClassName: nvidia
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: nvidia-device-plugin-service-account
+      serviceAccountName: nvidia-device-plugin-service-account
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /run/nvidia/mps
+          type: DirectoryOrCreate
+        name: mps-root
+      - hostPath:
+          path: /run/nvidia/mps/shm
+          type: ''
+        name: mps-shm
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    meta.helm.sh/release-name: nvidia-device-plugin
+    meta.helm.sh/release-namespace: nvidia-device-plugin
+  labels:
+    app.kubernetes.io/instance: nvidia-device-plugin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nvidia-device-plugin
+    app.kubernetes.io/version: 0.19.3
+    helm.sh/chart: nvidia-device-plugin-0.19.3
+  name: nvidia-device-plugin-service-account
+  namespace: nvidia-device-plugin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    meta.helm.sh/release-name: nvidia-device-plugin
+    meta.helm.sh/release-namespace: nvidia-device-plugin
+  labels:
+    app.kubernetes.io/instance: nvidia-device-plugin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nvidia-device-plugin
+    app.kubernetes.io/version: 0.19.3
+    helm.sh/chart: nvidia-device-plugin-0.19.3
+  name: nvidia-device-plugin-role
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    meta.helm.sh/release-name: nvidia-device-plugin
+    meta.helm.sh/release-namespace: nvidia-device-plugin
+  labels:
+    app.kubernetes.io/instance: nvidia-device-plugin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nvidia-device-plugin
+    app.kubernetes.io/version: 0.19.3
+    helm.sh/chart: nvidia-device-plugin-0.19.3
+  name: nvidia-device-plugin-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nvidia-device-plugin-role
+subjects:
+- kind: ServiceAccount
+  name: nvidia-device-plugin-service-account
+  namespace: nvidia-device-plugin

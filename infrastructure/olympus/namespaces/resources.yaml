@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: homepage
+  name: homepage
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: nfs-provisioner
+  name: nfs-provisioner
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: tailscale
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+  name: tailscale
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: portainer
+  name: portainer
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: pihole
+    pod-security.kubernetes.io/enforce: privileged
+  name: pihole
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: n8n
+    pod-security.kubernetes.io/enforce: privileged
+  name: n8n
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: uptime-kuma
+    pod-security.kubernetes.io/enforce: privileged
+  name: uptime-kuma
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: monitoring
+    pod-security.kubernetes.io/enforce: privileged
+  name: monitoring
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    kubernetes.io/metadata.name: telchar-forge
+    telcharforge.com/environment: resume-demo
+  name: telchar-forge
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: telchar-construct
+  name: telchar-construct
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kubernetes.io/metadata.name: nvidia-device-plugin
+    name: nvidia-device-plugin
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+  name: nvidia-device-plugin

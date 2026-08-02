@@ -50,3 +50,6 @@ only needed when immediate feedback is useful.
 The existing cluster workloads remain running and unmanaged until they are
 deliberately imported into `infrastructure/olympus` or `apps/olympus`.
 
+The Olympus SOPS age private key is stored outside this repository at
+`C:\Users\Jacob\.config\sops\age\keys.txt` and in the cluster as the
+`flux-system/sops-age` Secret. Only the public age recipient is committed.
