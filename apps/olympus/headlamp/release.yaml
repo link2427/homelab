@@ -26,4 +26,3 @@ spec:
     - kind: ConfigMap
       name: headlamp-values
       valuesKey: values.yaml
-
