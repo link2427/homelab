@@ -1,0 +1,444 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: homepage
+  name: homepage
+  namespace: homepage
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: homepage
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - env:
+        - name: HOMEPAGE_ALLOWED_HOSTS
+          value: '*'
+        image: ghcr.io/gethomepage/homepage:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /api/healthcheck
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: homepage
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /api/healthcheck
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/config
+          name: config-writable
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - cp /config-source/* /config/ && mkdir -p /config/logs
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: copy-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-source
+          name: homepage-config
+        - mountPath: /config
+          name: config-writable
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1000
+      serviceAccount: homepage
+      serviceAccountName: homepage
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: config-writable
+      - configMap:
+          defaultMode: 420
+          name: homepage
+        name: homepage-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homepage
+  namespace: homepage
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - name: http
+    nodePort: 30080
+    port: 3000
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: homepage
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    tailscale.com/expose: 'true'
+    tailscale.com/hostname: olympus-dashboard
+  name: homepage-tailscale
+  namespace: homepage
+spec:
+  loadBalancerClass: tailscale
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: homepage
+  sessionAffinity: None
+  type: LoadBalancer
+---
+apiVersion: v1
+data:
+  bookmarks.yaml: "- Storage Shortcuts:\n    - DATA-1:\n        - abbr: D1\n     \
+    \     href: smb://10.0.0.5/DATA-1\n          description: Atlas primary share\n\
+    \    - DATA-2:\n        - abbr: D2\n          href: smb://10.0.0.5/DATA-2\n  \
+    \        description: Atlas secondary share\n    - Plex Library:\n        - icon:\
+    \ plex.png\n          href: http://10.0.0.5:32400/web\n          description:\
+    \ Media on atlas\n\n- Platform References:\n    - Talos Linux:\n        - icon:\
+    \ mdi-shield-crown-outline\n          href: https://docs.siderolabs.com/talos/v1.12/\n\
+    \          description: Talos 1.12 documentation\n    - Kubernetes:\n        -\
+    \ icon: kubernetes.png\n          href: https://kubernetes.io/docs/\n        \
+    \  description: Kubernetes documentation\n    - NVIDIA Device Plugin:\n      \
+    \  - icon: nvidia.png\n          href: https://github.com/NVIDIA/k8s-device-plugin\n\
+    \          description: GPU scheduling documentation\n    - Homepage:\n      \
+    \  - icon: homepage.png\n          href: https://gethomepage.dev/\n          description:\
+    \ Dashboard configuration reference\n"
+  custom.css: ":root {\n  --olympus-cyan: 34, 211, 238;\n  --olympus-blue: 59, 130,\
+    \ 246;\n  --olympus-violet: 139, 92, 246;\n  --olympus-gold: 245, 158, 11;\n}\n\
+    \nbody {\n  min-height: 100vh;\n  background-color: #070b14 !important;\n  background-image:\n\
+    \    radial-gradient(circle at 14% -8%, rgba(var(--olympus-cyan), 0.16), transparent\
+    \ 34rem),\n    radial-gradient(circle at 88% 4%, rgba(var(--olympus-violet), 0.17),\
+    \ transparent 38rem),\n    radial-gradient(circle at 52% 108%, rgba(var(--olympus-blue),\
+    \ 0.10), transparent 42rem),\n    linear-gradient(180deg, #070b14 0%, #0a1120\
+    \ 48%, #070b14 100%) !important;\n  background-attachment: fixed !important;\n\
+    }\n\nbody::before {\n  content: \"\";\n  position: fixed;\n  inset: 0;\n  z-index:\
+    \ 0;\n  pointer-events: none;\n  opacity: 0.28;\n  background-image:\n    linear-gradient(rgba(148,\
+    \ 163, 184, 0.035) 1px, transparent 1px),\n    linear-gradient(90deg, rgba(148,\
+    \ 163, 184, 0.035) 1px, transparent 1px);\n  background-size: 48px 48px;\n  mask-image:\
+    \ linear-gradient(to bottom, black, transparent 82%);\n}\n\n.container {\n  max-width:\
+    \ 1720px !important;\n  padding-bottom: 4rem;\n}\n\n#information-widgets {\n \
+    \ margin-top: 1.75rem !important;\n  padding: 0.9rem 1.1rem;\n  border: 1px solid\
+    \ rgba(148, 163, 184, 0.14);\n  border-radius: 1.35rem;\n  background: linear-gradient(135deg,\
+    \ rgba(15, 23, 42, 0.80), rgba(15, 23, 42, 0.54));\n  box-shadow: 0 24px 80px\
+    \ rgba(2, 6, 23, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);\n  backdrop-filter:\
+    \ blur(18px);\n}\n\n.service-card,\n.bookmark > a {\n  border: 1px solid rgba(148,\
+    \ 163, 184, 0.13) !important;\n  border-radius: 0.9rem !important;\n  background:\
+    \ linear-gradient(145deg, rgba(30, 41, 59, 0.70), rgba(15, 23, 42, 0.76)) !important;\n\
+    \  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.26), inset 0 1px 0 rgba(255, 255,\
+    \ 255, 0.035) !important;\n  backdrop-filter: blur(14px);\n}\n\n.service-card\
+    \ {\n  min-height: 4.7rem;\n}\n\n.service-card::after,\n.bookmark > a::after {\n\
+    \  content: \"\";\n  position: absolute;\n  inset: 0 auto 0 0;\n  width: 2px;\n\
+    \  border-radius: 0.9rem 0 0 0.9rem;\n  background: linear-gradient(to bottom,\
+    \ rgba(var(--olympus-cyan), 0.9), rgba(var(--olympus-violet), 0.4));\n  opacity:\
+    \ 0.75;\n}\n\n.bookmark > a {\n  position: relative;\n  overflow: hidden;\n}\n\
+    \n.service-card:hover,\n.bookmark > a:hover {\n  transform: translateY(-2px);\n\
+    \  border-color: rgba(var(--olympus-cyan), 0.34) !important;\n  background: linear-gradient(145deg,\
+    \ rgba(30, 50, 70, 0.84), rgba(17, 24, 39, 0.88)) !important;\n  box-shadow: 0\
+    \ 18px 38px rgba(2, 6, 23, 0.38), 0 0 0 1px rgba(var(--olympus-cyan), 0.05) !important;\n\
+    }\n\n.service-icon img,\n.service-icon svg {\n  filter: drop-shadow(0 6px 9px\
+    \ rgba(2, 6, 23, 0.48));\n}\n\n.service-group-name {\n  font-size: 0.82rem !important;\n\
+    \  font-weight: 650 !important;\n  letter-spacing: 0.13em;\n  text-transform:\
+    \ uppercase;\n  color: rgb(186, 230, 253) !important;\n}\n\n.services-group,\n\
+    .bookmark-group {\n  padding: 0.45rem !important;\n}\n\n#services,\n#bookmarks\
+    \ {\n  margin-top: 0.7rem !important;\n}\n\n@media (max-width: 640px) {\n  #information-widgets\
+    \ {\n    margin: 1rem !important;\n    padding: 0.75rem;\n    border-radius: 1rem;\n\
+    \  }\n\n  .service-card:hover,\n  .bookmark > a:hover {\n    transform: none;\n\
+    \  }\n}\n"
+  custom.js: ''
+  docker.yaml: ''
+  kubernetes.yaml: 'mode: cluster
+
+    '
+  services.yaml: "- Command Deck:\n    - Portainer:\n        icon: portainer.png\n\
+    \        href: http://olympus-portainer:9000\n        description: Cluster operations\
+    \ and workload control\n        server: kubernetes\n        namespace: portainer\n\
+    \        podSelector: app.kubernetes.io/name=portainer\n    - Grafana:\n     \
+    \   icon: grafana.png\n        href: http://olympus-grafana\n        description:\
+    \ Dashboards, metrics, and GPU visibility\n        server: kubernetes\n      \
+    \  namespace: monitoring\n        podSelector: app=grafana\n    - Prometheus:\n\
+    \        icon: prometheus.png\n        href: http://olympus-prometheus\n     \
+    \   description: Metrics database and target health\n        server: kubernetes\n\
+    \        namespace: monitoring\n        podSelector: app=prometheus\n        widget:\n\
+    \          type: prometheus\n          url: http://prometheus.monitoring.svc.cluster.local:9090\n\
+    \          fields: [targets_up, targets_down, targets_total]\n    - Uptime Kuma:\n\
+    \        icon: uptime-kuma.png\n        href: http://olympus-uptime\n        description:\
+    \ Availability and incident monitoring\n        server: kubernetes\n        namespace:\
+    \ uptime-kuma\n        podSelector: app=uptime-kuma\n\n- Apps & Automation:\n\
+    \    - n8n:\n        icon: n8n.png\n        href: http://olympus-n8n\n       \
+    \ description: Workflow and agent automation\n        server: kubernetes\n   \
+    \     namespace: n8n\n        podSelector: app=n8n\n    - Pi-hole:\n        icon:\
+    \ pi-hole.png\n        href: http://olympus-pihole\n        description: Network\
+    \ DNS and ad blocking\n        server: kubernetes\n        namespace: pihole\n\
+    \        podSelector: app=pihole\n    - Plex:\n        icon: plex.png\n      \
+    \  href: http://10.0.0.5:32400/web\n        description: Media library on atlas\n\
+    \        siteMonitor: http://10.0.0.5:32400/web\n    - Tailscale:\n        icon:\
+    \ tailscale.png\n        href: https://login.tailscale.com/admin\n        description:\
+    \ Tailnet devices, DNS, and access policy\n\n- Telchar:\n    - Telchar Dynamics:\n\
+    \        icon: mdi-domain\n        href: https://telchardynamics.com\n       \
+    \ description: Public company site\n        siteMonitor: https://telchardynamics.com\n\
+    \        server: kubernetes\n        namespace: telchar-construct\n        podSelector:\
+    \ app.kubernetes.io/name=construct-site\n    - Telchar Forge:\n        icon: mdi-shield-search-outline\n\
+    \        href: https://telcharforge.com\n        description: Intelligence platform\
+    \ site\n        siteMonitor: https://telcharforge.com\n        server: kubernetes\n\
+    \        namespace: telchar-forge\n        podSelector: app.kubernetes.io/name=forge-site\n\
+    \    - Forge App:\n        icon: mdi-radar\n        href: https://app.telcharforge.com\n\
+    \        description: Operational intelligence workspace\n        siteMonitor:\
+    \ https://app.telcharforge.com\n        server: kubernetes\n        namespace:\
+    \ telchar-forge\n        podSelector: app.kubernetes.io/name=forge-mobile-web\n\
+    \    - Forge API:\n        icon: mdi-api\n        href: https://api.telcharforge.com/health\n\
+    \        description: Public API readiness endpoint\n        siteMonitor: https://api.telcharforge.com/health\n\
+    \        server: kubernetes\n        namespace: telchar-forge\n        podSelector:\
+    \ app.kubernetes.io/name=forge-api\n\n- Network & Storage:\n    - HP 2920 Switch:\n\
+    \        icon: mdi-switch\n        href: http://10.0.0.95\n        description:\
+    \ Rack switching and port console\n    - Network Gateway:\n        icon: mdi-router-network\n\
+    \        href: http://10.0.0.1\n        description: LAN gateway and DHCP\n  \
+    \      siteMonitor: http://10.0.0.1\n    - Atlas:\n        icon: mdi-nas\n   \
+    \     href: smb://10.0.0.5\n        description: Primary NAS and media host \xB7\
+    \ 10.0.0.5\n    - Olympus DNS:\n        icon: mdi-dns\n        href: http://olympus-pihole\n\
+    \        description: Pi-hole web and tailnet DNS\n        server: kubernetes\n\
+    \        namespace: pihole\n        podSelector: app=pihole\n\n- Compute Fleet:\n\
+    \    - optiplex-hermes:\n        icon: mdi-server-network\n        description:\
+    \ 12 threads \xB7 16 GiB \xB7 control plane + etcd\n        siteMonitor: http://10.0.0.57:30080\n\
+    \    - precision-5810-01:\n        icon: mdi-nvidia\n        description: 12 threads\
+    \ \xB7 16 GiB \xB7 Quadro M4000 8 GiB\n        siteMonitor: http://10.0.0.25:30080\n\
+    \    - precision-7810-01:\n        icon: mdi-nvidia\n        description: 8 threads\
+    \ \xB7 32 GiB \xB7 Quadro P2000 5 GiB\n        siteMonitor: http://10.0.0.171:30080\n\
+    \n- Kubernetes Core:\n    - Homepage:\n        icon: homepage.png\n        href:\
+    \ http://olympus-dashboard\n        description: Olympus command center\n    \
+    \    server: kubernetes\n        namespace: homepage\n        podSelector: app=homepage\n\
+    \    - CoreDNS:\n        icon: mdi-dns-outline\n        description: Cluster service\
+    \ discovery\n        server: kubernetes\n        namespace: kube-system\n    \
+    \    podSelector: k8s-app=kube-dns\n    - Metrics Server:\n        icon: mdi-chart-box-outline\n\
+    \        description: Kubernetes resource metrics API\n        server: kubernetes\n\
+    \        namespace: kube-system\n        podSelector: k8s-app=metrics-server\n\
+    \    - Flannel:\n        icon: mdi-lan-connect\n        description: Pod overlay\
+    \ network\n        server: kubernetes\n        namespace: kube-system\n      \
+    \  podSelector: k8s-app=flannel\n    - kube-proxy:\n        icon: mdi-swap-horizontal-bold\n\
+    \        description: Node service networking\n        server: kubernetes\n  \
+    \      namespace: kube-system\n        podSelector: k8s-app=kube-proxy\n    -\
+    \ NFS \xB7 DATA-1:\n        icon: mdi-folder-network-outline\n        description:\
+    \ Dynamic storage provisioner\n        server: kubernetes\n        namespace:\
+    \ nfs-provisioner\n        podSelector: app=nfs-subdir-external-provisioner\n\
+    \    - NFS \xB7 DATA-2:\n        icon: mdi-folder-network-outline\n        description:\
+    \ Secondary storage provisioner\n        server: kubernetes\n        namespace:\
+    \ nfs-provisioner\n        podSelector: app=nfs-subdir-external-provisioner-data2\n\
+    \    - NVIDIA GPU Runtime:\n        icon: nvidia.png\n        description: 2 GPUs\
+    \ allocatable \xB7 R580 LTS\n        server: kubernetes\n        namespace: nvidia-device-plugin\n\
+    \        podSelector: app.kubernetes.io/instance=nvidia-device-plugin\n\n- Observability\
+    \ Internals:\n    - kube-state-metrics:\n        icon: kubernetes.png\n      \
+    \  description: Kubernetes object metrics exporter\n        server: kubernetes\n\
+    \        namespace: monitoring\n        podSelector: app=kube-state-metrics\n\
+    \    - node-exporter:\n        icon: prometheus.png\n        description: Host\
+    \ metrics from all three nodes\n        server: kubernetes\n        namespace:\
+    \ monitoring\n        podSelector: app=node-exporter\n    - Portainer Agent:\n\
+    \        icon: portainer.png\n        description: Cluster management agent\n\
+    \        server: kubernetes\n        namespace: portainer\n        podSelector:\
+    \ app=portainer-agent\n\n- Forge Workers:\n    - Forge MCP:\n        icon: mdi-connection\n\
+    \        description: Model Context Protocol service\n        server: kubernetes\n\
+    \        namespace: telchar-forge\n        podSelector: app.kubernetes.io/name=forge-mcp\n\
+    \    - Ingester:\n        icon: mdi-download-network-outline\n        description:\
+    \ Source ingestion pipeline\n        server: kubernetes\n        namespace: telchar-forge\n\
+    \        podSelector: app.kubernetes.io/name=forge-ingester\n    - Processor:\n\
+    \        icon: mdi-cog-sync-outline\n        description: Event normalization\
+    \ and enrichment\n        server: kubernetes\n        namespace: telchar-forge\n\
+    \        podSelector: app.kubernetes.io/name=forge-processor\n    - Distributor:\n\
+    \        icon: mdi-send-circle-outline\n        description: Alert and delivery\
+    \ pipeline\n        server: kubernetes\n        namespace: telchar-forge\n   \
+    \     podSelector: app.kubernetes.io/name=forge-distributor\n    - Briefing:\n\
+    \        icon: mdi-file-document-edit-outline\n        description: Automated\
+    \ intelligence briefings\n        server: kubernetes\n        namespace: telchar-forge\n\
+    \        podSelector: app.kubernetes.io/name=forge-briefing\n\n- Data Plane:\n\
+    \    - PostgreSQL + PostGIS:\n        icon: postgres.png\n        description:\
+    \ Forge system of record and geospatial data\n        server: kubernetes\n   \
+    \     namespace: telchar-forge\n        podSelector: app.kubernetes.io/name=forge-postgres\n\
+    \    - Redis:\n        icon: redis.png\n        description: Cache and coordination\
+    \ layer\n        server: kubernetes\n        namespace: telchar-forge\n      \
+    \  podSelector: app.kubernetes.io/name=forge-redis\n    - NATS JetStream:\n  \
+    \      icon: mdi-bus\n        description: Event transport and durable streams\n\
+    \        server: kubernetes\n        namespace: telchar-forge\n        podSelector:\
+    \ app.kubernetes.io/name=forge-nats\n\n- Operator & Tunnels:\n    - Tailscale\
+    \ Operator:\n        icon: tailscale.png\n        href: https://login.tailscale.com/admin\n\
+    \        description: Tailnet service exposure controller\n        server: kubernetes\n\
+    \        namespace: tailscale\n        podSelector: app=operator\n    - Forge\
+    \ Cloudflare Tunnel:\n        icon: cloudflare.png\n        href: https://one.dash.cloudflare.com\n\
+    \        description: Public routing for Forge site, app, and API\n        server:\
+    \ kubernetes\n        namespace: telchar-forge\n        podSelector: app.kubernetes.io/name=cloudflared\n\
+    \    - Construct Cloudflare Tunnel:\n        icon: cloudflare.png\n        href:\
+    \ https://one.dash.cloudflare.com\n        description: Public routing for Telchar\
+    \ Dynamics\n        server: kubernetes\n        namespace: telchar-construct\n\
+    \        podSelector: app.kubernetes.io/name=cloudflared\n"
+  settings.yaml: "title: OLYMPUS\ndescription: Olympus homelab command center\nstartUrl:\
+    \ http://olympus-dashboard/\ntheme: dark\ncolor: slate\niconStyle: theme\nheaderStyle:\
+    \ boxedWidgets\ntarget: _blank\nfullWidth: true\nmaxGroupColumns: 4\nmaxBookmarkGroupColumns:\
+    \ 4\nuseEqualHeights: true\nstatusStyle: dot\nhideVersion: true\ndisableIndexing:\
+    \ true\nquicklaunch:\n  provider: google\n  searchDescriptions: true\n  showSearchSuggestions:\
+    \ true\n  mobileButtonPosition: bottom-right\nlayout:\n  Command Deck:\n    tab:\
+    \ Home\n    style: row\n    columns: 4\n    icon: mdi-view-dashboard-outline\n\
+    \  Apps & Automation:\n    tab: Home\n    style: row\n    columns: 4\n    icon:\
+    \ mdi-rocket-launch-outline\n  Telchar:\n    tab: Home\n    style: row\n    columns:\
+    \ 4\n    icon: mdi-domain\n  Network & Storage:\n    tab: Infrastructure\n   \
+    \ style: row\n    columns: 4\n    icon: mdi-lan\n  Compute Fleet:\n    tab: Infrastructure\n\
+    \    style: row\n    columns: 3\n    icon: mdi-server-network\n  Storage Shortcuts:\n\
+    \    tab: Infrastructure\n    style: row\n    columns: 4\n    icon: mdi-folder-network-outline\n\
+    \  Kubernetes Core:\n    tab: Platform\n    style: row\n    columns: 4\n    icon:\
+    \ kubernetes.png\n  Observability Internals:\n    tab: Platform\n    style: row\n\
+    \    columns: 4\n    icon: mdi-chart-timeline-variant-shimmer\n  Forge Workers:\n\
+    \    tab: Platform\n    style: row\n    columns: 4\n    icon: mdi-cog-sync-outline\n\
+    \  Data Plane:\n    tab: Platform\n    style: row\n    columns: 4\n    icon: mdi-database-outline\n\
+    \  Operator & Tunnels:\n    tab: Platform\n    style: row\n    columns: 4\n  \
+    \  icon: mdi-cloud-sync-outline\n  Platform References:\n    tab: Platform\n \
+    \   style: row\n    columns: 4\n    icon: mdi-book-open-page-variant-outline\n"
+  widgets.yaml: "- greeting:\n    text_size: 2xl\n    text: OLYMPUS // COMMAND CENTER\n\
+    - kubernetes:\n    cluster:\n      show: true\n      cpu: true\n      memory:\
+    \ true\n      showLabel: true\n      label: Olympus\n    nodes:\n      show: true\n\
+    \      cpu: true\n      memory: true\n      showLabel: true\n- search:\n    provider:\
+    \ google\n    focus: false\n    showSearchSuggestions: true\n    target: _blank\n\
+    - datetime:\n    text_size: md\n    format:\n      dateStyle: medium\n      timeStyle:\
+    \ short\n      hour12: true\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: homepage
+  name: homepage
+  namespace: homepage
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homepage
+  namespace: homepage
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homepage
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - namespaces
+  - pods
+  - nodes
+  - services
+  - configmaps
+  - secrets
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  - daemonsets
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  - nodes
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homepage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homepage
+subjects:
+- kind: ServiceAccount
+  name: homepage
+  namespace: homepage
