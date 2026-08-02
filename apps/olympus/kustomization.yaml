@@ -7,3 +7,5 @@ resources:
 - pihole
 - n8n
 - uptime-kuma
+- telchar-construct
+- telchar-forge

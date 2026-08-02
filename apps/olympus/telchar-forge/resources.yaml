@@ -1,0 +1,1281 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: cloudflared
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: cloudflared
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: cloudflared
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - args:
+        - tunnel
+        - --no-autoupdate
+        - run
+        - --token
+        - $(CLOUDFLARED_TOKEN)
+        env:
+        - name: CLOUDFLARED_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: CLOUDFLARED_TOKEN
+              name: cloudflared-token
+        image: cloudflare/cloudflared:latest
+        imagePullPolicy: Always
+        name: cloudflared
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-api
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-api
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-api
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: forge-config
+        - secretRef:
+            name: forge-secrets
+        image: ghcr.io/telchar-dynamics/forge-api@sha256:cefe79d335362acefd49b7751e5dfafe9d4d496d2ed587d9763fbd06c01db024
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 45
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: api
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: '2'
+            memory: 2Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-briefing
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-briefing
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-briefing
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: forge-config
+        - secretRef:
+            name: forge-secrets
+        image: ghcr.io/telchar-dynamics/forge-briefing@sha256:0c12799e637e6ce7ad439f56d4671b02de5e6e15be3f00a5ac4265f550cb5222
+        imagePullPolicy: Always
+        name: briefing
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-distributor
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-distributor
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-distributor
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: forge-config
+        - secretRef:
+            name: forge-secrets
+        image: ghcr.io/telchar-dynamics/forge-distributor@sha256:ad45e570a8cfdd217c9ee23c0bfca08d6ede0aa772f0f1a09df45e5ed63a914b
+        imagePullPolicy: Always
+        name: distributor
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-ingester
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-ingester
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-ingester
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: forge-config
+        - secretRef:
+            name: forge-secrets
+        image: ghcr.io/telchar-dynamics/forge-ingester@sha256:23b088dc1554bd178f2f503b672cfaa91c51db9008b9210255b18f450d75489c
+        imagePullPolicy: Always
+        name: ingester
+        resources:
+          limits:
+            cpu: '2'
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 768Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-mcp
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-mcp
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-mcp
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: forge-config
+        - secretRef:
+            name: forge-secrets
+        image: ghcr.io/telchar-dynamics/forge-mcp@sha256:da9a20638a24b14b6f91b907eb83ac82288e15d365b24fe9e174842d861b0300
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: mcp
+        ports:
+        - containerPort: 8090
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-mobile-web
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-mobile-web
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-mobile-web
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - image: ghcr.io/telchar-dynamics/forge-mobile-web:3dc67c1d5c232662f39fe940d4c81a427b7ea233
+        imagePullPolicy: Always
+        name: mobile-web
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-processor
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-processor
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-processor
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: forge-config
+        - secretRef:
+            name: forge-secrets
+        image: ghcr.io/telchar-dynamics/forge-processor@sha256:a962ea7d995e10bddff8cb1029b86c698582d99df454f5361755f62dc66e24e9
+        imagePullPolicy: Always
+        name: processor
+        resources:
+          limits:
+            cpu: '3'
+            memory: 3Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-site
+  namespace: telchar-forge
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-site
+      telcharforge.com/environment: resume-demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        telcharforge.com/site-dist-revision: 9da9d65-site-card-layout-20260630185719
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-site
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - image: ghcr.io/telchar-dynamics/forge-site:c6e8e8f6cfac4b74dcbf4a91cb5458c54026f1cc
+        imagePullPolicy: Always
+        name: site
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-nats
+  namespace: telchar-forge
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-nats
+      telcharforge.com/environment: resume-demo
+  serviceName: forge-nats
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-nats
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - args:
+        - -c
+        - /etc/nats/nats-server.conf
+        image: nats:2-alpine
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: monitor
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: nats
+        ports:
+        - containerPort: 4222
+          name: client
+          protocol: TCP
+        - containerPort: 8222
+          name: monitor
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: monitor
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/nats
+          name: config
+          readOnly: true
+        - mountPath: /data
+          name: data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: forge-nats-config
+        name: config
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        telcharforge.com/environment: resume-demo
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: nfs-data1
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-postgres
+  namespace: telchar-forge
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-postgres
+      telcharforge.com/environment: resume-demo
+  serviceName: forge-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-postgres
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: telchar_forge
+        - name: POSTGRES_USER
+          value: forge
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_PASSWORD
+              name: forge-secrets
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        image: postgis/postgis:16-3.4
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - forge
+            - -d
+            - telchar_forge
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: postgres
+        ports:
+        - containerPort: 5432
+          name: postgres
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - forge
+            - -d
+            - telchar_forge
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: '4'
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        telcharforge.com/environment: resume-demo
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 30Gi
+      storageClassName: nfs-data2
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-redis
+  namespace: telchar-forge
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/name: forge-redis
+      telcharforge.com/environment: resume-demo
+  serviceName: forge-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: forge-redis
+        app.kubernetes.io/part-of: telchar-forge
+        telcharforge.com/environment: resume-demo
+    spec:
+      containers:
+      - args:
+        - redis-server
+        - --appendonly
+        - 'yes'
+        - --maxmemory
+        - 768mb
+        - --maxmemory-policy
+        - allkeys-lru
+        image: redis:7-alpine
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          failureThreshold: 3
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: redis
+        ports:
+        - containerPort: 6379
+          name: redis
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data
+          name: data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: forge
+      serviceAccountName: forge
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        telcharforge.com/environment: resume-demo
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: nfs-data1
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-api
+  namespace: telchar-forge
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-api
+    telcharforge.com/environment: resume-demo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-mcp
+  namespace: telchar-forge
+spec:
+  ports:
+  - name: http
+    port: 8090
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-mcp
+    telcharforge.com/environment: resume-demo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-mobile-web
+  namespace: telchar-forge
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-mobile-web
+    telcharforge.com/environment: resume-demo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forge-nats
+  namespace: telchar-forge
+spec:
+  ports:
+  - name: client
+    port: 4222
+    protocol: TCP
+    targetPort: client
+  - name: monitor
+    port: 8222
+    protocol: TCP
+    targetPort: monitor
+  selector:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-nats
+    telcharforge.com/environment: resume-demo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-postgres
+  namespace: telchar-forge
+spec:
+  ports:
+  - name: postgres
+    port: 5432
+    protocol: TCP
+    targetPort: postgres
+  selector:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-postgres
+    telcharforge.com/environment: resume-demo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-redis
+  namespace: telchar-forge
+spec:
+  ports:
+  - name: redis
+    port: 6379
+    protocol: TCP
+    targetPort: redis
+  selector:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-redis
+    telcharforge.com/environment: resume-demo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-site
+  namespace: telchar-forge
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-site
+    telcharforge.com/environment: resume-demo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+data:
+  API_HOST: 0.0.0.0
+  API_PORT: '8080'
+  CORS_ALLOWED_ORIGINS: https://app.telcharforge.com,https://telcharforge.com,https://www.telcharforge.com
+  GEOGRAPHIC_FOCUS_ENFORCEMENT: 'true'
+  GOOGLE_OAUTH_CLIENT_IDS: ''
+  JWT_EXPIRY_MINUTES: '15'
+  LLM_BASE_URL: https://openrouter.ai/api/v1
+  LLM_CIRCUIT_BREAKER_ENABLED: 'true'
+  LLM_CIRCUIT_FAILURE_THRESHOLD: '3'
+  LLM_CIRCUIT_OPEN_SECONDS: '60'
+  LLM_DATA_COLLECTION: deny
+  LLM_FALLBACK_MODELS: deepseek/deepseek-v4-pro,anthropic/claude-sonnet-4.6
+  LLM_MAX_CONCURRENCY: '3'
+  LLM_MAX_TOKENS: '4096'
+  LLM_MODEL_CHAT: deepseek/deepseek-v4-flash
+  LLM_MODEL_COMPLEX: deepseek/deepseek-v4-pro
+  LLM_MODEL_DAILY: deepseek/deepseek-v4-flash
+  LLM_MODEL_FAST: deepseek/deepseek-v4-flash
+  LLM_MODEL_HOURLY: deepseek/deepseek-v4-flash
+  LLM_MODEL_SITUATION_REPORT: deepseek/deepseek-v4-pro
+  LLM_PROVIDER: openrouter
+  LLM_REQUIRE_ZDR: 'false'
+  LLM_TIMEOUT_SECONDS: '60'
+  MCP_ALLOWED_HOSTS: forge-mcp,forge-mcp:8090,forge-mcp.telchar-forge.svc.cluster.local,forge-mcp.telchar-forge.svc.cluster.local:8090
+  MCP_ALLOWED_ORIGINS: http://forge-api:8080,http://forge-mcp:8090
+  MCP_BIND: 0.0.0.0:8090
+  MCP_PUBLIC_ENABLED: 'false'
+  NATS_URL: nats://forge-nats:4222
+  REDIS_URL: redis://forge-redis:6379
+  REFRESH_TOKEN_DAYS: '30'
+  RUST_LOG: info,forge_ingester=debug,forge_processor=debug,forge_api=debug,sqlx=warn
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-config
+  namespace: telchar-forge
+---
+apiVersion: v1
+data:
+  nats-server.conf: "jetstream {\n  store_dir: \"/data\"\n  max_mem: 512MB\n  max_file:\
+    \ 4GB\n}\n\nhttp_port: 8222\n"
+kind: ConfigMap
+metadata:
+  name: forge-nats-config
+  namespace: telchar-forge
+---
+apiVersion: v1
+imagePullSecrets:
+- name: ghcr-creds
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge
+  namespace: telchar-forge
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    pv.kubernetes.io/bind-completed: 'yes'
+    pv.kubernetes.io/bound-by-controller: 'yes'
+    volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+    volume.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-nats
+    telcharforge.com/environment: resume-demo
+  name: data-forge-nats-0
+  namespace: telchar-forge
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: nfs-data1
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    pv.kubernetes.io/bind-completed: 'yes'
+    pv.kubernetes.io/bound-by-controller: 'yes'
+    volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner-data2
+    volume.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner-data2
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-postgres
+    telcharforge.com/environment: resume-demo
+  name: data-forge-postgres-0
+  namespace: telchar-forge
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 30Gi
+  storageClassName: nfs-data2
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    pv.kubernetes.io/bind-completed: 'yes'
+    pv.kubernetes.io/bound-by-controller: 'yes'
+    volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+    volume.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: forge-redis
+    telcharforge.com/environment: resume-demo
+  name: data-forge-redis-0
+  namespace: telchar-forge
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: nfs-data1
+  volumeMode: Filesystem
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    telcharforge.com/environment: resume-demo
+  name: forge-static-import
+  namespace: telchar-forge
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: kustomize
+        telcharforge.com/environment: resume-demo
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/managed-by: kustomize
+            app.kubernetes.io/name: forge-static-import
+            app.kubernetes.io/part-of: telchar-forge
+            telcharforge.com/environment: resume-demo
+        spec:
+          containers:
+          - args:
+            - import
+            - --source
+            - all
+            command:
+            - service
+            envFrom:
+            - configMapRef:
+                name: forge-config
+            - secretRef:
+                name: forge-secrets
+            image: ghcr.io/telchar-dynamics/forge-processor@sha256:ca0aa845dad36a77b144033859d2d7da1baf5494eba87382ed361b4de8b953db
+            imagePullPolicy: Always
+            name: static-import
+            resources:
+              limits:
+                cpu: '2'
+                memory: 2Gi
+              requests:
+                cpu: 250m
+                memory: 512Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          serviceAccount: forge
+          serviceAccountName: forge
+          terminationGracePeriodSeconds: 30
+  schedule: 0 6 1 * *
+  successfulJobsHistoryLimit: 2
+  suspend: false
