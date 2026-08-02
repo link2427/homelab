@@ -1,6 +1,5 @@
 persistence:
   createStorageClass: false
-  reclaimPolicy: Retain
 
 defaultSettings:
   createDefaultDiskLabeledNodes: true

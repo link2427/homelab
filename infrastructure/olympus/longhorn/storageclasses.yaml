@@ -51,18 +51,3 @@ parameters:
   fsType: ext4
   dataLocality: disabled
   diskSelector: bulk
----
-# Longhorn creates this non-default class for binding restored/static volumes.
-# Manage it here so deleting a claim never silently deletes the restored volume.
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: longhorn-static
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
-provisioner: driver.longhorn.io
-allowVolumeExpansion: true
-reclaimPolicy: Retain
-volumeBindingMode: Immediate
-parameters:
-  staleReplicaTimeout: "30"
