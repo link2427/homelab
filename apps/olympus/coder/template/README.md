@@ -22,19 +22,26 @@ select the exact physical card:
 GPU selection adds both the `nvidia.com/gpu: 1` limit and a hostname node
 selector, so Kubernetes cannot silently assign the other card.
 
-Every template can start from a GitHub repository. Paste its HTTPS URL when
-creating the workspace; Coder requests GitHub authorization if needed, clones
-the repository into `/home/coder/project/<repository>`, and opens every editor
-and agent in that directory. The repository URL is remembered for later builds.
-Leave it blank to use an empty `/home/coder/project` directory.
+Every template can start from a GitHub repository. The creation form provides a
+searchable dropdown of repositories available through the Olympus GitHub App;
+Coder requests GitHub authorization if needed, clones the selection into
+`/home/coder/project/<repository>`, and opens every editor and agent in that
+directory. Choose **Empty project** to use `/home/coder/project` without a clone.
+
+Coder intentionally does not fetch external data while rendering dynamic
+parameters. `Publish-CoderTemplates.ps1` therefore reads the current repository
+list from the authenticated GitHub CLI and injects it as a template variable
+while publishing all four versions. The generated catalog is held only in a
+temporary file and is never written into this public Git repository, so private
+repository names do not leak into Git history. Archived repositories are omitted
+unless the helper is called with `-IncludeArchived`.
 
 Git authentication uses Coder's `github` external-auth provider and short-lived
 GitHub App user tokens. Git operations receive credentials through Coder's
 askpass helper, and the `olympus-agent` profile wraps `gh` so GitHub CLI commands
-receive a fresh token without saving it to the workspace. The GitHub App is
-installed only on explicitly selected repositories and deliberately has no
-repository Administration permission, so agents cannot delete repositories or
-change their core settings.
+receive a fresh token without saving it to the workspace. The GitHub App
+deliberately has no repository Administration permission, so agents cannot
+delete repositories or change their core settings.
 
 `olympus-agent` exposes the official Coder integrations for Codex, Claude Code,
 and OpenCode. It provides correctly branded launcher tiles for Codex, Claude
@@ -50,11 +57,13 @@ Jupyter caches live on the persistent home volume.
 
 ## Publishing
 
-```sh
-coder templates push olympus-linux -d . --var profile=linux --var image=codercom/example-base:ubuntu -y
-coder templates push olympus-agent -d . --var profile=agent --var image=codercom/example-universal:ubuntu -y
-coder templates push olympus-gpu -d . --var profile=gpu --var image=pytorch/pytorch:2.13.0-cuda12.6-cudnn9-runtime -y
-coder templates push olympus-build -d . --var profile=build --var image=codercom/example-universal:ubuntu -y
+Authenticate both CLIs, then run the publishing helper whenever repository
+access changes or new repositories are created:
+
+```powershell
+gh auth login
+coder login http://coder.olympus.local
+.\Publish-CoderTemplates.ps1
 ```
 
 Workspace Kubernetes permissions remain confined to the `coder` namespace.

@@ -39,10 +39,27 @@ variable "image" {
   default     = "codercom/example-base:ubuntu"
 }
 
+variable "github_repositories_json" {
+  type        = string
+  description = "JSON repository catalog generated at publish time. Keep private repository names out of Git."
+  default     = "[]"
+
+  validation {
+    condition = can(alltrue([
+      for repo in jsondecode(var.github_repositories_json) :
+      trimspace(repo.name) != "" &&
+      can(regex("^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\\.git$", repo.url)) &&
+      contains(["private", "public"], repo.visibility)
+    ])) && can(length(jsondecode(var.github_repositories_json)) <= 63)
+    error_message = "github_repositories_json must contain at most 63 GitHub repositories with name, .git URL, and private/public visibility fields."
+  }
+}
+
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
 locals {
+  github_repositories = jsondecode(var.github_repositories_json)
   profiles = {
     linux = {
       cpu          = "4"
@@ -206,16 +223,34 @@ data "coder_parameter" "gpu" {
 data "coder_parameter" "git_repo" {
   name         = "git_repo"
   display_name = "GitHub repository"
-  description  = "HTTPS URL of a GitHub repository to clone automatically. Leave blank for an empty project directory."
+  description  = "Search repositories available through the Olympus GitHub App, or choose Empty project."
   type         = "string"
-  form_type    = "input"
-  default      = ""
+  form_type    = "dropdown"
+  default      = "__empty_project__"
   mutable      = true
   icon         = "/icon/github.svg"
 
-  validation {
-    regex = "^$|^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\\.git)?/?$"
-    error = "Use an HTTPS GitHub repository URL such as https://github.com/owner/repository.git, or leave it blank."
+  option {
+    name        = "Empty project"
+    value       = "__empty_project__"
+    description = "Create a workspace without cloning a repository."
+    icon        = "/icon/folder.svg"
+  }
+
+  dynamic "option" {
+    for_each = local.github_repositories
+
+    content {
+      name  = option.value.name
+      value = option.value.url
+      description = join(" · ", compact([
+        title(option.value.visibility),
+        option.value.archived ? "Archived (read-only)" : "",
+        option.value.fork ? "Fork" : "",
+        trimspace(option.value.description),
+      ]))
+      icon = "/icon/github.svg"
+    }
   }
 }
 
@@ -226,7 +261,7 @@ data "coder_external_auth" "github" {
 
 locals {
   workspace_name = "coder-${data.coder_workspace.me.id}"
-  git_repo_url   = trimsuffix(trimspace(data.coder_parameter.git_repo.value), "/")
+  git_repo_url   = data.coder_parameter.git_repo.value == "__empty_project__" ? "" : trimsuffix(trimspace(data.coder_parameter.git_repo.value), "/")
   git_repo_set   = local.git_repo_url != ""
   git_repo_name  = local.git_repo_set ? trimsuffix(basename(local.git_repo_url), ".git") : ""
   workspace_dir  = local.git_repo_set ? "/home/coder/project/${local.git_repo_name}" : "/home/coder/project"
