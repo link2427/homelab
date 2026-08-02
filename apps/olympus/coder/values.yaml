@@ -1,0 +1,39 @@
+coder:
+  replicaCount: 1
+
+  env:
+    - name: CODER_ACCESS_URL
+      value: http://olympus-coder
+    - name: CODER_PG_CONNECTION_URL
+      valueFrom:
+        secretKeyRef:
+          name: coder-secrets
+          key: postgres-url
+    - name: CODER_EXTERNAL_TOKEN_ENCRYPTION_KEYS
+      valueFrom:
+        secretKeyRef:
+          name: coder-secrets
+          key: token-encryption-key
+    - name: CODER_OAUTH2_GITHUB_DEFAULT_PROVIDER_ENABLE
+      value: "false"
+    - name: CODER_TELEMETRY_ENABLE
+      value: "false"
+
+  service:
+    type: LoadBalancer
+    loadBalancerClass: tailscale
+    sessionAffinity: None
+    annotations:
+      tailscale.com/hostname: olympus-coder
+
+  serviceAccount:
+    workspacePerms: true
+    enableDeployments: true
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 4Gi

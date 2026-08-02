@@ -222,7 +222,10 @@ data:
   services.yaml: "- Command Deck:\n    - Portainer:\n        icon: portainer.png\n\
     \        href: http://olympus-portainer:9000\n        description: Cluster operations\
     \ and workload control\n        server: kubernetes\n        namespace: portainer\n\
-    \        podSelector: app.kubernetes.io/name=portainer\n    - Grafana:\n     \
+    \        podSelector: app.kubernetes.io/name=portainer\n    - Coder:\n        icon:\
+    \ mdi-code-braces-box\n        href: http://olympus-coder\n        description: Autonomous\
+    \ Linux workspaces and agent development\n        server: kubernetes\n        namespace:\
+    \ coder\n        podSelector: app.kubernetes.io/name=coder\n    - Grafana:\n     \
     \   icon: grafana.png\n        href: http://olympus-grafana\n        description:\
     \ Dashboards, metrics, and GPU visibility\n        server: kubernetes\n      \
     \  namespace: monitoring\n        podSelector: app=grafana\n    - Prometheus:\n\

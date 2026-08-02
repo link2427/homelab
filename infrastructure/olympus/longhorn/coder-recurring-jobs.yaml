@@ -1,0 +1,31 @@
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: coder-db-backup
+  namespace: longhorn-system
+spec:
+  cron: "30 3 * * *"
+  task: backup
+  retain: 7
+  concurrency: 1
+  groups: []
+  labels:
+    app.kubernetes.io/name: coder-postgres
+  parameters:
+    full-backup-interval: "7"
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: coder-workspace-backup
+  namespace: longhorn-system
+spec:
+  cron: "0 4 * * *"
+  task: backup
+  retain: 3
+  concurrency: 1
+  groups: []
+  labels:
+    app.kubernetes.io/part-of: coder
+  parameters:
+    full-backup-interval: "7"

@@ -2,6 +2,7 @@ persistence:
   createStorageClass: false
 
 defaultSettings:
+  allowRecurringJobWhileVolumeDetached: true
   createDefaultDiskLabeledNodes: true
   defaultDataPath: /var/lib/longhorn
   defaultReplicaCount: 3
