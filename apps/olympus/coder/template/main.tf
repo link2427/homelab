@@ -203,9 +203,34 @@ data "coder_parameter" "gpu" {
   }
 }
 
+data "coder_parameter" "git_repo" {
+  name         = "git_repo"
+  display_name = "GitHub repository"
+  description  = "HTTPS URL of a GitHub repository to clone automatically. Leave blank for an empty project directory."
+  type         = "string"
+  form_type    = "input"
+  default      = ""
+  mutable      = true
+  icon         = "/icon/github.svg"
+
+  validation {
+    regex = "^$|^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\\.git)?/?$"
+    error = "Use an HTTPS GitHub repository URL such as https://github.com/owner/repository.git, or leave it blank."
+  }
+}
+
+data "coder_external_auth" "github" {
+  count = local.git_repo_set ? 1 : 0
+  id    = "github"
+}
+
 locals {
   workspace_name = "coder-${data.coder_workspace.me.id}"
-  selected_node = data.coder_parameter.gpu.value != "none" ? local.gpu_nodes[data.coder_parameter.gpu.value] : local.selected_profile.node
+  git_repo_url   = trimsuffix(trimspace(data.coder_parameter.git_repo.value), "/")
+  git_repo_set   = local.git_repo_url != ""
+  git_repo_name  = local.git_repo_set ? trimsuffix(basename(local.git_repo_url), ".git") : ""
+  workspace_dir  = local.git_repo_set ? "/home/coder/project/${local.git_repo_name}" : "/home/coder/project"
+  selected_node  = data.coder_parameter.gpu.value != "none" ? local.gpu_nodes[data.coder_parameter.gpu.value] : local.selected_profile.node
   node_selector = local.selected_node != "" ? {
     "kubernetes.io/hostname" = local.selected_node
   } : {}
@@ -234,8 +259,12 @@ resource "coder_agent" "main" {
   startup_script = <<-EOT
     set -eu
     mkdir -p /home/coder/project
+    if command -v git >/dev/null 2>&1; then
+      git config --global credential.useHttpPath true
+      git config --global push.autoSetupRemote true
+    fi
     printf '%s\n' '${var.profile}' > /home/coder/.olympus-profile
-    %{ if var.profile == "agent" ~}
+    %{if var.profile == "agent"~}
     mkdir -p /home/coder/.local/bin /home/coder/.local/lib
     if ! command -v npm >/dev/null 2>&1; then
       node_version="v24.18.1"
@@ -257,8 +286,22 @@ resource "coder_agent" "main" {
     touch /home/coder/.profile
     grep -Fqx 'export PATH="/home/coder/.local/bin:$PATH"' /home/coder/.profile || \
       printf '%s\n' 'export PATH="/home/coder/.local/bin:$PATH"' >> /home/coder/.profile
-    %{ endif ~}
-    %{ if var.profile == "gpu" ~}
+    if [ -x /usr/bin/gh ]; then
+      cat > /home/coder/.local/bin/gh <<'GH_WRAPPER'
+    #!/bin/sh
+    set -eu
+    coder_cli="$(find /tmp -maxdepth 2 -type f -path '/tmp/coder.*/coder' -print -quit)"
+    if [ -n "$coder_cli" ]; then
+      GH_TOKEN="$($coder_cli external-auth access-token github)"
+      export GH_TOKEN
+      export GITHUB_TOKEN="$GH_TOKEN"
+    fi
+    exec /usr/bin/gh "$@"
+    GH_WRAPPER
+      chmod +x /home/coder/.local/bin/gh
+    fi
+    %{endif~}
+    %{if var.profile == "gpu"~}
     mkdir -p /home/coder/.cache/huggingface \
       /home/coder/.cache/matplotlib \
       /home/coder/.cache/torch/kernels \
@@ -272,7 +315,7 @@ resource "coder_agent" "main" {
     if torch.cuda.is_available():
         print(f"GPU: {torch.cuda.get_device_name(0)}")
     PY
-    %{ endif ~}
+    %{endif~}
   EOT
 
   metadata {
@@ -308,12 +351,22 @@ resource "coder_agent" "main" {
   }
 }
 
+module "git_clone" {
+  count      = data.coder_workspace.me.start_count > 0 && local.git_repo_set ? 1 : 0
+  source     = "registry.coder.com/coder/git-clone/coder"
+  version    = "2.0.2"
+  agent_id   = coder_agent.main.id
+  url        = local.git_repo_url
+  base_dir   = "/home/coder/project"
+  depends_on = [data.coder_external_auth.github]
+}
+
 module "code_server" {
   count      = data.coder_workspace.me.start_count
   source     = "registry.coder.com/coder/code-server/coder"
   version    = "1.5.2"
   agent_id   = coder_agent.main.id
-  folder     = "/home/coder/project"
+  folder     = local.workspace_dir
   use_cached = true
 }
 
@@ -329,7 +382,7 @@ module "codex" {
   source   = "registry.coder.com/coder-labs/codex/coder"
   version  = "5.3.0"
   agent_id = coder_agent.main.id
-  workdir  = "/home/coder/project"
+  workdir  = local.workspace_dir
 }
 
 module "claude_code" {
@@ -337,7 +390,7 @@ module "claude_code" {
   source   = "registry.coder.com/coder/claude-code/coder"
   version  = "5.2.0"
   agent_id = coder_agent.main.id
-  workdir  = "/home/coder/project"
+  workdir  = local.workspace_dir
 }
 
 module "opencode" {
@@ -345,7 +398,7 @@ module "opencode" {
   source           = "registry.coder.com/coder-labs/opencode/coder"
   version          = "0.1.2"
   agent_id         = coder_agent.main.id
-  workdir          = "/home/coder/project"
+  workdir          = local.workspace_dir
   icon             = "/icon/opencode.svg"
   report_tasks     = false
   cli_app          = false
@@ -377,7 +430,7 @@ resource "coder_app" "codex" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
-    cd /home/coder/project
+    cd ${local.workspace_dir}
     exec codex
   EOT
 }
@@ -395,7 +448,7 @@ resource "coder_app" "claude_code" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
-    cd /home/coder/project
+    cd ${local.workspace_dir}
     exec claude
   EOT
 }
@@ -413,7 +466,7 @@ resource "coder_app" "opencode_cli" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.opencode/bin:/home/coder/.local/bin:$PATH"
-    cd /home/coder/project
+    cd ${local.workspace_dir}
     exec opencode
   EOT
 }
@@ -431,9 +484,21 @@ resource "coder_app" "reasonix" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
-    cd /home/coder/project
+    cd ${local.workspace_dir}
     exec reasonix
   EOT
+}
+
+resource "coder_app" "github_repository" {
+  count        = data.coder_workspace.me.start_count > 0 && local.git_repo_set ? 1 : 0
+  agent_id     = coder_agent.main.id
+  slug         = "github-repository"
+  display_name = local.git_repo_name
+  icon         = "/icon/github.svg"
+  group        = "Development"
+  order        = 5
+  external     = true
+  url          = local.git_repo_url
 }
 
 resource "kubernetes_persistent_volume_claim_v1" "home" {
@@ -485,13 +550,13 @@ resource "kubernetes_deployment_v1" "main" {
     name      = local.workspace_name
     namespace = var.namespace
     labels = {
-      "app.kubernetes.io/name"    = "coder-workspace"
-      "app.kubernetes.io/part-of" = "coder"
-      "com.coder.resource"        = "true"
-      "com.coder.workspace.id"    = data.coder_workspace.me.id
-      "com.coder.workspace.name"  = data.coder_workspace.me.name
-      "com.coder.user.id"         = data.coder_workspace_owner.me.id
-      "com.coder.user.username"   = data.coder_workspace_owner.me.name
+      "app.kubernetes.io/name"        = "coder-workspace"
+      "app.kubernetes.io/part-of"     = "coder"
+      "com.coder.resource"            = "true"
+      "com.coder.workspace.id"        = data.coder_workspace.me.id
+      "com.coder.workspace.name"      = data.coder_workspace.me.name
+      "com.coder.user.id"             = data.coder_workspace_owner.me.id
+      "com.coder.user.username"       = data.coder_workspace_owner.me.name
       "olympus.dev/workspace-profile" = var.profile
       "olympus.dev/gpu"               = data.coder_parameter.gpu.value
     }
@@ -513,13 +578,13 @@ resource "kubernetes_deployment_v1" "main" {
     template {
       metadata {
         labels = {
-          "app.kubernetes.io/name"    = "coder-workspace"
-          "app.kubernetes.io/part-of" = "coder"
-          "com.coder.resource"        = "true"
-          "com.coder.workspace.id"    = data.coder_workspace.me.id
-          "com.coder.workspace.name"  = data.coder_workspace.me.name
-          "com.coder.user.id"         = data.coder_workspace_owner.me.id
-          "com.coder.user.username"   = data.coder_workspace_owner.me.name
+          "app.kubernetes.io/name"        = "coder-workspace"
+          "app.kubernetes.io/part-of"     = "coder"
+          "com.coder.resource"            = "true"
+          "com.coder.workspace.id"        = data.coder_workspace.me.id
+          "com.coder.workspace.name"      = data.coder_workspace.me.name
+          "com.coder.user.id"             = data.coder_workspace_owner.me.id
+          "com.coder.user.username"       = data.coder_workspace_owner.me.name
           "olympus.dev/workspace-profile" = var.profile
           "olympus.dev/gpu"               = data.coder_parameter.gpu.value
         }
@@ -636,5 +701,15 @@ resource "coder_metadata" "workspace" {
   item {
     key   = "Storage"
     value = "${data.coder_parameter.storage_tier.value} · ${data.coder_parameter.home_disk_size.value} GiB"
+  }
+
+  item {
+    key   = "Repository"
+    value = local.git_repo_set ? local.git_repo_url : "Empty project"
+  }
+
+  item {
+    key   = "Working directory"
+    value = local.workspace_dir
   }
 }

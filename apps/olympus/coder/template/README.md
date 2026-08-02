@@ -22,6 +22,20 @@ select the exact physical card:
 GPU selection adds both the `nvidia.com/gpu: 1` limit and a hostname node
 selector, so Kubernetes cannot silently assign the other card.
 
+Every template can start from a GitHub repository. Paste its HTTPS URL when
+creating the workspace; Coder requests GitHub authorization if needed, clones
+the repository into `/home/coder/project/<repository>`, and opens every editor
+and agent in that directory. The repository URL is remembered for later builds.
+Leave it blank to use an empty `/home/coder/project` directory.
+
+Git authentication uses Coder's `github` external-auth provider and short-lived
+GitHub App user tokens. Git operations receive credentials through Coder's
+askpass helper, and the `olympus-agent` profile wraps `gh` so GitHub CLI commands
+receive a fresh token without saving it to the workspace. The GitHub App is
+installed only on explicitly selected repositories and deliberately has no
+repository Administration permission, so agents cannot delete repositories or
+change their core settings.
+
 `olympus-agent` exposes the official Coder integrations for Codex, Claude Code,
 and OpenCode. It provides correctly branded launcher tiles for Codex, Claude
 Code, OpenCode CLI, and Reasonix, plus the OpenCode web interface. Node.js

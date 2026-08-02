@@ -11,6 +11,24 @@ coder:
           key: postgres-url
     - name: CODER_OAUTH2_GITHUB_DEFAULT_PROVIDER_ENABLE
       value: "false"
+    - name: CODER_EXTERNAL_AUTH_0_ID
+      value: github
+    - name: CODER_EXTERNAL_AUTH_0_TYPE
+      value: github
+    - name: CODER_EXTERNAL_AUTH_0_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: coder-secrets
+          key: github-client-id
+    - name: CODER_EXTERNAL_AUTH_0_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: coder-secrets
+          key: github-client-secret
+    - name: CODER_EXTERNAL_AUTH_0_REVOKE_URL
+      value: https://api.github.com/applications/$(CODER_EXTERNAL_AUTH_0_CLIENT_ID)/grant
+    - name: CODER_EXTERNAL_AUTH_0_APP_INSTALL_URL
+      value: https://github.com/apps/olympus-coder-agents/installations/new
     - name: CODER_TELEMETRY_ENABLE
       value: "false"
 
