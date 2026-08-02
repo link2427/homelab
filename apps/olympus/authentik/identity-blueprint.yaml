@@ -16,6 +16,7 @@ data:
         blueprints.goauthentik.io/description: Google sign-in and restricted Coder OIDC
     entries:
       - model: authentik_sources_oauth.oauthsource
+        id: google-source
         identifiers:
           slug: google
         attrs:
@@ -29,6 +30,13 @@ data:
           user_matching_mode: email_link
           authentication_flow: !Find [authentik_flows.flow, [slug, default-source-authentication]]
           enrollment_flow: !Find [authentik_flows.flow, [slug, default-source-enrollment]]
+
+      - model: authentik_stages_identification.identificationstage
+        identifiers:
+          name: default-authentication-identification
+        attrs:
+          sources:
+            - !KeyOf google-source
 
       - model: authentik_providers_oauth2.oauth2provider
         id: coder-provider
