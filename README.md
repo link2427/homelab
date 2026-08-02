@@ -12,6 +12,16 @@ infrastructure/olympus/    Cluster-wide controllers, storage, networking, and po
 apps/olympus/              User-facing workloads and their configuration
 ```
 
+## Documentation
+
+- [Olympus homelab handbook](docs/olympus-handbook.md) — hardware inventory,
+  architecture, networking, storage, GPUs, Coder, access, operations, recovery,
+  installation guardrails, completed work, and known risks
+- [Cluster composition](clusters/olympus/README.md)
+- [Application import workflow](apps/olympus/README.md)
+- [Coder workspace templates](apps/olympus/coder/template/README.md)
+- [Headlamp access](apps/olympus/headlamp/README.md)
+
 Reconciliation is ordered deliberately:
 
 1. `flux-system` installs and updates Flux itself.

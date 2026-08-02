@@ -1,0 +1,38 @@
+global:
+  envFrom:
+    - secretRef:
+        name: authentik-secrets
+
+# Configuration is supplied as environment variables from the SOPS-encrypted
+# Secret so no credential material is copied into Helm release history.
+authentik:
+  enabled: false
+
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+worker:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+postgresql:
+  enabled: false
+
+geoip:
+  enabled: false
+

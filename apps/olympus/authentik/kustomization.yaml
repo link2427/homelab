@@ -1,17 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: longhorn-system
+namespace: authentik
 resources:
   - namespace.yaml
   - repository.yaml
   - release.yaml
-  - storageclasses.yaml
-  - coder-recurring-jobs.yaml
-  - identity-recurring-job.yaml
-  - ui-service.yaml
+  - authentik-secrets.secret.yaml
+  - cloudflared-token.secret.yaml
+  - database.yaml
+  - cloudflared.yaml
 configMapGenerator:
-  - name: longhorn-values
+  - name: authentik-values
     files:
       - values.yaml=values.yaml
 generatorOptions:
   disableNameSuffixHash: true
+

@@ -1,0 +1,16 @@
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: identity-db-backup
+  namespace: longhorn-system
+spec:
+  cron: "45 3 * * *"
+  task: backup
+  retain: 7
+  concurrency: 1
+  groups: []
+  labels:
+    app.kubernetes.io/name: authentik-postgres
+  parameters:
+    full-backup-interval: "7"
+

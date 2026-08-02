@@ -8,6 +8,7 @@ resources:
 - n8n
 - uptime-kuma
 - coder
+- authentik
 - headlamp
 - telchar-construct
 - telchar-forge
