@@ -520,7 +520,7 @@ resource "coder_app" "reasonix" {
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
     cd ${local.workspace_dir}
-    exec reasonix
+    exec reasonix code .
   EOT
 }
 
