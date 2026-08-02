@@ -318,6 +318,33 @@ resource "coder_agent" "main" {
     if ! /home/coder/.local/bin/reasonix --version >/dev/null 2>&1; then
       npm install --global --prefix /home/coder/.local reasonix@1.19.1
     fi
+    python3 - <<'PY'
+    import os
+    from pathlib import Path
+
+    key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if key:
+        reasonix_home = Path("/home/coder/.reasonix")
+        reasonix_home.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(reasonix_home, 0o700)
+
+        credentials = reasonix_home / ".env"
+        retained = []
+        if credentials.exists():
+            for line in credentials.read_text(encoding="utf-8").splitlines():
+                normalized = line.strip()
+                if normalized.startswith("DEEPSEEK_API_KEY="):
+                    continue
+                if normalized.startswith("export DEEPSEEK_API_KEY="):
+                    continue
+                retained.append(line)
+
+        retained.append(f"DEEPSEEK_API_KEY={key}")
+        temporary = reasonix_home / ".env.coder.tmp"
+        temporary.write_text("\n".join(retained) + "\n", encoding="utf-8")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, credentials)
+    PY
     touch /home/coder/.profile
     grep -Fqx 'export PATH="/home/coder/.local/bin:$PATH"' /home/coder/.profile || \
       printf '%s\n' 'export PATH="/home/coder/.local/bin:$PATH"' >> /home/coder/.profile
@@ -520,7 +547,7 @@ resource "coder_app" "reasonix" {
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
     cd ${local.workspace_dir}
-    exec reasonix code .
+    exec reasonix
   EOT
 }
 
