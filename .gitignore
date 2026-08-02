@@ -1,0 +1,20 @@
+# Local credentials and decrypted secrets
+*.agekey
+*.dec.yaml
+*.decrypted.yaml
+.env
+.env.*
+!.env.example
+kubeconfig*
+talosconfig*
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local tool output
+.flux-local/
+tmp/
+
