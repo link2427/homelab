@@ -9,11 +9,6 @@ coder:
         secretKeyRef:
           name: coder-secrets
           key: postgres-url
-    - name: CODER_EXTERNAL_TOKEN_ENCRYPTION_KEYS
-      valueFrom:
-        secretKeyRef:
-          name: coder-secrets
-          key: token-encryption-key
     - name: CODER_OAUTH2_GITHUB_DEFAULT_PROVIDER_ENABLE
       value: "false"
     - name: CODER_TELEMETRY_ENABLE
