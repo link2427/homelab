@@ -161,10 +161,13 @@ Cloudflare.
 Authentik runs in namespace `authentik` with PostgreSQL 17.9 on a 10 GiB,
 three-replica `longhorn-resilient` volume. Its declarative blueprint creates the
 Google source, Coder's OpenID Connect provider, and the Coder application policy.
-Google sign-in is restricted to `jacob.neel@gmail.com`; Coder additionally
-disables OIDC signups, so an identity cannot create a new Coder account through
-the public endpoint. Coder password authentication remains enabled as a recovery
-path until the complete OIDC flow has been repeatedly verified.
+Google sign-in to Coder is restricted to `jacob.neel@gmail.com`; Coder
+additionally disables OIDC signups, so an identity cannot create a new Coder
+account through the public endpoint. The Google identity links to Authentik's
+bootstrap username `akadmin` and to the existing Coder username `jacob-neel`.
+Those different usernames refer to the same owner, not duplicate users. The
+Coder owner account now uses OIDC; the built-in password form remains globally
+enabled during the initial burn-in period.
 
 Cloudflare DNS proxies `auth.jacob-neel.dev` and `coder.jacob-neel.dev` to the
 `olympus-access` tunnel. Two `cloudflared` replicas run on separate nodes and
@@ -333,6 +336,9 @@ plane maintenance as routine.
 13. Published Authentik and Coder through the redundant `olympus-access`
     Cloudflare Tunnel and registered the public Coder callback with its GitHub
     App.
+14. Converted the existing `jacob-neel` Coder account from password to OIDC and
+    verified a fresh Google login returns to the same account and running
+    workspace.
 
 ## Known risks and follow-up work
 
@@ -344,5 +350,6 @@ plane maintenance as routine.
   Kubernetes widgets; its RBAC should be narrowed, especially around Secrets.
 - Released Longhorn volumes from disposable Coder smoke tests should be reviewed
   and removed only after confirming they contain no wanted workspace data.
-- Coder password login is intentionally retained as a recovery path; remove it
-  only after Google OIDC has been verified from multiple external networks.
+- Coder's password form is intentionally still enabled during OIDC burn-in, but
+  the owner account now uses OIDC. Create and test a separate break-glass local
+  administrator before disabling the form or relying on it for recovery.
