@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: longhorn-frontend-tailscale
+  namespace: longhorn-system
+  annotations:
+    tailscale.com/hostname: olympus-longhorn
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app: longhorn-ui
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http

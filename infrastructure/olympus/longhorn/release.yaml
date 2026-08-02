@@ -1,0 +1,28 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn
+  namespace: longhorn-system
+spec:
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+      chart: longhorn
+      version: 1.12.0
+      interval: 1h
+      sourceRef:
+        kind: HelmRepository
+        name: longhorn
+        namespace: longhorn-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: longhorn-values
+      valuesKey: values.yaml
