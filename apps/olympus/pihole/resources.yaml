@@ -1,0 +1,181 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pihole
+  namespace: pihole
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: pihole
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: pihole
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: pihole-env
+        image: pihole/pihole:latest
+        imagePullPolicy: Always
+        name: pihole
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 53
+          name: dns-udp
+          protocol: UDP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/pihole
+          name: config
+        env:
+        - name: FTLCONF_webserver_api_password
+          valueFrom:
+            secretKeyRef:
+              name: pihole-api-password
+              key: FTLCONF_webserver_api_password
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-dns
+  namespace: pihole
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - name: dns-tcp
+    nodePort: 30054
+    port: 53
+    protocol: TCP
+    targetPort: 53
+  - name: dns-udp
+    nodePort: 30055
+    port: 53
+    protocol: UDP
+    targetPort: 53
+  selector:
+    app: pihole
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    tailscale.com/expose: 'true'
+    tailscale.com/hostname: olympus-dns
+  name: pihole-dns-ts
+  namespace: pihole
+spec:
+  loadBalancerClass: tailscale
+  ports:
+  - name: dns-udp
+    port: 53
+    protocol: UDP
+    targetPort: 53
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
+    targetPort: 53
+  selector:
+    app: pihole
+  sessionAffinity: None
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    tailscale.com/expose: 'true'
+    tailscale.com/hostname: olympus-pihole
+  name: pihole-tailscale
+  namespace: pihole
+spec:
+  loadBalancerClass: tailscale
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: pihole
+  sessionAffinity: None
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-web
+  namespace: pihole
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - name: http
+    nodePort: 30053
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: pihole
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+data:
+  FTLCONF_dns_interface: end0
+  FTLCONF_dns_listeningMode: all
+  FTLCONF_dns_upstreams: 1.1.1.1;8.8.8.8
+  TZ: America/New_York
+kind: ConfigMap
+metadata:
+  name: pihole-env
+  namespace: pihole
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    pv.kubernetes.io/bind-completed: 'yes'
+    pv.kubernetes.io/bound-by-controller: 'yes'
+    volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+    volume.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+  name: pihole-config
+  namespace: pihole
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: nfs-data1
+  volumeMode: Filesystem

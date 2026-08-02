@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 from pathlib import Path
@@ -44,6 +45,13 @@ def decrypt(path: Path) -> dict:
     return yaml.safe_load(result.stdout)
 
 
+def secret_data(secret: dict) -> dict[str, str]:
+    data = dict(secret.get("data", {}))
+    for key, value in secret.get("stringData", {}).items():
+        data[key] = base64.b64encode(value.encode("utf-8")).decode("ascii")
+    return data
+
+
 def main() -> None:
     live_mappings = {
         ROOT / "infrastructure/olympus/tailscale-operator/operator-oauth.secret.yaml": (
@@ -66,38 +74,56 @@ def main() -> None:
             "telchar-forge",
             "ghcr-creds",
         ),
+        ROOT / "apps/olympus/monitoring/grafana-admin.secret.yaml": (
+            "monitoring",
+            "grafana-admin",
+        ),
+        ROOT / "apps/olympus/pihole/pihole-api-password.secret.yaml": (
+            "pihole",
+            "pihole-api-password",
+        ),
     }
     for path, (namespace, name) in live_mappings.items():
         expected = live_secret(namespace, name)
         actual = decrypt(path)
-        assert actual.get("data", {}) == expected.get("data", {}), path
+        assert secret_data(actual) == expected.get("data", {}), path
         assert actual.get("type", "Opaque") == expected.get("type", "Opaque"), path
         print(f"verified {path.relative_to(ROOT)}")
 
     grafana = command_json(
         ["kubectl", "get", "deployment", "grafana", "-n", "monitoring", "-o", "json"]
     )
-    expected_grafana = next(
-        env["value"]
+    grafana_password = next(
+        env
         for container in grafana["spec"]["template"]["spec"]["containers"]
         for env in container.get("env", [])
         if env.get("name") == "GF_SECURITY_ADMIN_PASSWORD"
     )
-    actual_grafana = decrypt(
-        ROOT / "apps/olympus/monitoring/grafana-admin.secret.yaml"
-    )["stringData"]["admin-password"]
-    assert actual_grafana == expected_grafana
-    print("verified apps/olympus/monitoring/grafana-admin.secret.yaml")
+    assert "value" not in grafana_password
+    assert grafana_password["valueFrom"]["secretKeyRef"] == {
+        "name": "grafana-admin",
+        "key": "admin-password",
+    }
+    print("verified Grafana uses its encrypted-source Secret")
 
     pihole = command_json(
         ["kubectl", "get", "configmap", "pihole-env", "-n", "pihole", "-o", "json"]
     )
-    expected_pihole = pihole["data"]["FTLCONF_webserver_api_password"]
-    actual_pihole = decrypt(
-        ROOT / "apps/olympus/pihole/pihole-api-password.secret.yaml"
-    )["stringData"]["FTLCONF_webserver_api_password"]
-    assert actual_pihole == expected_pihole
-    print("verified apps/olympus/pihole/pihole-api-password.secret.yaml")
+    assert "FTLCONF_webserver_api_password" not in pihole.get("data", {})
+    pihole_deployment = command_json(
+        ["kubectl", "get", "deployment", "pihole", "-n", "pihole", "-o", "json"]
+    )
+    pihole_password = next(
+        env
+        for container in pihole_deployment["spec"]["template"]["spec"]["containers"]
+        for env in container.get("env", [])
+        if env.get("name") == "FTLCONF_webserver_api_password"
+    )
+    assert pihole_password["valueFrom"]["secretKeyRef"] == {
+        "name": "pihole-api-password",
+        "key": "FTLCONF_webserver_api_password",
+    }
+    print("verified Pi-hole uses its encrypted-source Secret")
 
 
 if __name__ == "__main__":

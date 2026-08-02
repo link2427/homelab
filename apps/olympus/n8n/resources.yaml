@@ -1,0 +1,118 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: n8n
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: n8n
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      containers:
+      - env:
+        - name: N8N_HOST
+          value: olympus-n8n
+        - name: N8N_PROTOCOL
+          value: http
+        - name: WEBHOOK_URL
+          value: http://olympus-n8n/
+        - name: GENERIC_TIMEZONE
+          value: America/New_York
+        - name: N8N_SECURE_COOKIE
+          value: 'false'
+        image: n8nio/n8n:latest
+        imagePullPolicy: Always
+        name: n8n
+        ports:
+        - containerPort: 5678
+          protocol: TCP
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /home/node/.n8n
+          name: data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: n8n-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n
+  namespace: n8n
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - nodePort: 30078
+    port: 5678
+    protocol: TCP
+    targetPort: 5678
+  selector:
+    app: n8n
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    tailscale.com/expose: 'true'
+    tailscale.com/hostname: olympus-n8n
+  name: n8n-tailscale
+  namespace: n8n
+spec:
+  loadBalancerClass: tailscale
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 5678
+  selector:
+    app: n8n
+  sessionAffinity: None
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    pv.kubernetes.io/bind-completed: 'yes'
+    pv.kubernetes.io/bound-by-controller: 'yes'
+    volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+    volume.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+  name: n8n-data
+  namespace: n8n
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-data1
+  volumeMode: Filesystem
