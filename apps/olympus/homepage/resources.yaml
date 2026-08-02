@@ -285,8 +285,11 @@ data:
     \ network\n        server: kubernetes\n        namespace: kube-system\n      \
     \  podSelector: k8s-app=flannel\n    - kube-proxy:\n        icon: mdi-swap-horizontal-bold\n\
     \        description: Node service networking\n        server: kubernetes\n  \
-    \      namespace: kube-system\n        podSelector: k8s-app=kube-proxy\n    -\
-    \ NFS \xB7 DATA-1:\n        icon: mdi-folder-network-outline\n        description:\
+    \      namespace: kube-system\n        podSelector: k8s-app=kube-proxy\n    - Longhorn:\n\
+    \        icon: mdi-database-sync\n        href: http://olympus-longhorn\n        description:\
+    \ Distributed NVMe, SSD, and HDD storage\n        server: kubernetes\n        namespace:\
+    \ longhorn-system\n        podSelector: app=longhorn-ui\n    - NFS \xB7 DATA-1:\n\
+    \        icon: mdi-folder-network-outline\n        description:\
     \ Dynamic storage provisioner\n        server: kubernetes\n        namespace:\
     \ nfs-provisioner\n        podSelector: app=nfs-subdir-external-provisioner\n\
     \    - NFS \xB7 DATA-2:\n        icon: mdi-folder-network-outline\n        description:\
