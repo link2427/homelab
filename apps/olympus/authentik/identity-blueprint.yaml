@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/part-of: olympus-identity
 data:
   olympus-identity.yaml: |
+    # Mounted from the Flux-managed olympus-identity-blueprint ConfigMap.
     version: 1
     metadata:
       name: Olympus identity and Coder SSO
@@ -86,4 +87,3 @@ data:
           enabled: true
           negate: false
           timeout: 30
-
