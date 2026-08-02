@@ -4,6 +4,8 @@ coder:
   env:
     - name: CODER_ACCESS_URL
       value: https://coder.jacob-neel.dev
+    - name: CODER_EXPERIMENTS
+      value: oauth2,mcp-server-http
     - name: CODER_HOST_PREFIX_COOKIE
       value: "true"
     - name: CODER_PG_CONNECTION_URL
