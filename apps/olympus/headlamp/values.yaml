@@ -1,0 +1,49 @@
+fullnameOverride: headlamp
+
+replicaCount: 1
+
+config:
+  inCluster: true
+  inClusterContextName: Olympus
+  sessionTTL: 86400
+  unsafeUseServiceAccountToken: false
+  enableHelm: false
+  staticPlugins:
+    enabled: true
+  oidc:
+    secret:
+      create: false
+
+serviceAccount:
+  create: true
+  name: headlamp
+
+# Users authenticate with their own short-lived Kubernetes token. The Headlamp
+# pod itself deliberately has no cluster-wide RBAC permissions.
+clusterRoleBinding:
+  create: false
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 100
+  runAsGroup: 101
+  seccompProfile:
+    type: RuntimeDefault

@@ -21,7 +21,7 @@ spec:
   template:
     metadata:
       annotations:
-        homelab.olympus/config-generation: "2026-08-01-coder"
+        homelab.olympus/config-generation: "2026-08-01-headlamp"
       labels:
         app: homepage
     spec:
@@ -221,7 +221,10 @@ data:
   kubernetes.yaml: 'mode: cluster
 
     '
-  services.yaml: "- Command Deck:\n    - Portainer:\n        icon: portainer.png\n\
+  services.yaml: "- Command Deck:\n    - Headlamp:\n        icon: kubernetes.png\n\
+    \        href: http://olympus-headlamp\n        description: Kubernetes workloads, logs, and cluster administration\n\
+    \        server: kubernetes\n        namespace: headlamp\n        podSelector: app.kubernetes.io/name=headlamp\n\
+    \    - Portainer:\n        icon: portainer.png\n\
     \        href: http://olympus-portainer:9000\n        description: Cluster operations\
     \ and workload control\n        server: kubernetes\n        namespace: portainer\n\
     \        podSelector: app.kubernetes.io/name=portainer\n    - Coder:\n        icon:\
