@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: coder-image-cache
+  labels:
+    app.kubernetes.io/name: coder-image-cache
+    app.kubernetes.io/part-of: spegel
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: coder-image-cache
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: coder-image-cache
+        app.kubernetes.io/part-of: spegel
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: universal
+          image: codercom/example-universal:ubuntu
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - trap 'exit 0' TERM INT; while true; do sleep 3600; done
+          resources:
+            requests:
+              cpu: 1m
+              memory: 8Mi
+            limits:
+              cpu: 25m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        - name: base
+          image: codercom/example-base:ubuntu
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - trap 'exit 0' TERM INT; while true; do sleep 3600; done
+          resources:
+            requests:
+              cpu: 1m
+              memory: 8Mi
+            limits:
+              cpu: 25m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: coder-gpu-image-cache
+  labels:
+    app.kubernetes.io/name: coder-gpu-image-cache
+    app.kubernetes.io/part-of: spegel
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: coder-gpu-image-cache
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: coder-gpu-image-cache
+        app.kubernetes.io/part-of: spegel
+    spec:
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: pytorch
+          image: pytorch/pytorch:2.13.0-cuda12.6-cudnn9-runtime
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - trap 'exit 0' TERM INT; while true; do sleep 3600; done
+          resources:
+            requests:
+              cpu: 1m
+              memory: 8Mi
+            limits:
+              cpu: 25m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL

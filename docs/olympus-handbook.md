@@ -15,6 +15,7 @@ access paths, recovery model, and the work completed during the current rebuild.
 - Primary remote network: Tailscale
 - Public application ingress: Cloudflare Tunnel
 - Distributed storage: Longhorn `v1.12.0`
+- Distributed image cache: Spegel `v0.7.4`
 - NAS storage and backups: Atlas at `10.0.0.5`
 - Cluster console: Headlamp
 - Development platform: Coder `v2.35.3`
@@ -63,7 +64,7 @@ Flux source-controller
        +--> infrastructure
        |      +-- namespaces, metrics-server, NFS provisioners
        |      +-- Tailscale operator, NVIDIA device plugin
-       |      `-- Longhorn and storage classes
+       |      `-- Longhorn, storage classes, and Spegel image cache
        `--> apps
               +-- Homepage, Headlamp, Coder
               +-- Grafana, Prometheus, Uptime Kuma
@@ -111,6 +112,27 @@ NAS placement. Existing Grafana, Prometheus, Pi-hole, n8n, Portainer, Uptime
 Kuma, and Telchar Forge data claims remain on Atlas. If Atlas is unavailable,
 those claims and applications are affected; Longhorn-backed Coder data can keep
 running locally, but its backup destination is unavailable.
+
+### Container image cache
+
+Spegel `v0.7.4` runs one peer-registry mirror on every node and advertises the
+OCI layers retained in that node's Talos containerd content store. Image pulls
+try peers before falling back to the upstream registry. This reduces repeated
+multi-gigabyte downloads when Coder workspaces move between nodes or GPU
+workspaces use the common PyTorch runtime.
+
+Talos is configured through the existing
+`/etc/cri/conf.d/20-customization.part` file with
+`discard_unpacked_layers = false`. The Spegel chart uses Talos' registry host
+directory at `/etc/cri/conf.d/hosts`. `coder-image-cache` keeps the standard
+Coder base and universal images referenced on all three nodes;
+`coder-gpu-image-cache` keeps the CUDA 12.6 PyTorch image referenced on both GPU
+nodes. Mutable `latest` tags bypass the peer cache.
+
+The image cache lives on each node's Talos ephemeral partition. It is not
+Longhorn storage, a registry of record, or a backup: a cache miss still needs an
+available upstream registry, and cached layers disappear if the node's
+ephemeral data is lost.
 
 ## GPU compute
 
@@ -296,6 +318,19 @@ flux get kustomizations -A
 flux get helmreleases -A
 ```
 
+### Image-cache health
+
+```powershell
+kubectl -n spegel get pods -o wide
+kubectl -n spegel rollout status daemonset/spegel
+kubectl -n spegel get daemonset coder-image-cache coder-gpu-image-cache
+```
+
+Spegel exposes Prometheus metrics on port `9090`. Its upstream fallback can hide
+a broken peer path, so validate a new installation by pulling the same pinned
+image on two different nodes and confirming a mirror success in metrics or the
+debug view before relying on cache timings alone.
+
 ### Worker maintenance
 
 Before shutting down a Precision worker, stop or move GPU workspaces pinned to
@@ -358,6 +393,8 @@ plane maintenance as routine.
     workspace.
 15. Added persistent browser-downloadable workspace exports and configured
     Codex to use Coder's local CLI MCP transport.
+16. Added a Talos-compatible Spegel peer cache and Coder/PyTorch image
+    pre-pullers to avoid repeated large downloads across the compute fleet.
 
 ## Known risks and follow-up work
 

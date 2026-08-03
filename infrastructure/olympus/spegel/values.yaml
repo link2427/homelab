@@ -1,0 +1,29 @@
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: /metrics
+  prometheus.io/port: "9090"
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+spegel:
+  containerdRegistryConfigPath: /etc/cri/conf.d/hosts
+  debugWebEnabled: false
+  persistence:
+    enabled: true
+    path: /var/lib/spegel
+    hostPath: /var/lib/spegel
+  registryFilters:
+    - ".*:latest$"
+
+livenessProbe:
+  enabled: true

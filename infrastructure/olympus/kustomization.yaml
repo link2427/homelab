@@ -8,3 +8,4 @@ resources:
   - tailscale-operator
   - nvidia-device-plugin
   - longhorn
+  - spegel
