@@ -30,7 +30,7 @@ powered off and are not part of the active compute fleet.
 | System | Address | Role | Capacity | Accelerator | Longhorn role |
 | --- | --- | --- | --- | --- | --- |
 | `optiplex-hermes` | `10.0.0.57` | control plane + etcd + worker | 12 CPU threads, 16 GiB RAM, ~473 GiB NVMe | none | `fast`, `nvme`, `storage`; 200 GiB reserved |
-| `precision-5810-01` | `10.0.0.25` | worker | 12 CPU threads, 16 GiB RAM, ~231 GiB SSD | Quadro M4000, 8 GiB | `fast`, `ssd`, `storage`; 80 GiB reserved |
+| `precision-5810-01` | `10.0.0.25` | worker | 12 CPU threads, 16 GiB RAM, ~231 GiB SSD | Quadro M4000, 8 GiB | `fast`, `ssd`, `storage`; 40 GiB reserved |
 | `precision-7810-01` | `10.0.0.171` | worker | 8 CPU threads, 32 GiB RAM, ~1.86 TiB HDD | Quadro P2000, 5 GiB | `bulk`, `hdd`, `storage`; 300 GiB reserved |
 | `atlas` | `10.0.0.5` (iLO `10.0.0.24`) | Talos worker + NAS + Plex | 72 CPU threads, ~64 GiB RAM, 500 GB SSD; existing 5.4 TB DATA-2 | Tesla P40, 24 GiB | `fast`, `ssd`, `storage`; 150 GiB reserved |
 | HP 2920 | `10.0.0.95` | rack switch | managed Ethernet | none | n/a |
@@ -96,7 +96,10 @@ Olympus deliberately has two storage planes.
 All custom Longhorn classes use `Retain`, allow expansion, and reserve space for
 Talos and image/container storage. Coder PostgreSQL uses a 10 GiB
 `longhorn-resilient` claim. Normal Coder workspaces default to fast storage;
-the build template defaults to bulk storage.
+the build template defaults to bulk storage. Longhorn permits a conservative
+110% of post-reservation logical provisioning so sparse volume capacity does
+not strand a disk at a few percent over 100%; the 20% real-free-space floor
+still blocks placement before physical space becomes critically low.
 
 Longhorn backs up directly to the private Cloudflare R2 bucket
 `s3://olympus-longhorn-backups@auto/`:

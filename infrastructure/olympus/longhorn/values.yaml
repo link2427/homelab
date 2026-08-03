@@ -8,7 +8,7 @@ defaultSettings:
   defaultReplicaCount: 3
   defaultDataLocality: best-effort
   replicaAutoBalance: best-effort
-  storageOverProvisioningPercentage: 100
+  storageOverProvisioningPercentage: 110
   storageMinimalAvailablePercentage: 20
   upgradeChecker: false
   allowCollectingLonghornUsageMetrics: false
