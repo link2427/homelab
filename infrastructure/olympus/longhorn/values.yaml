@@ -15,7 +15,8 @@ defaultSettings:
   v2DataEngine: false
 
 defaultBackupStore:
-  backupTarget: nfs://10.0.0.5:/media/DATA-1/longhorn-backups
+  backupTarget: s3://olympus-longhorn-backups@auto/
+  backupTargetCredentialSecret: longhorn-r2-credentials
 
 longhornUI:
   replicas: 1
