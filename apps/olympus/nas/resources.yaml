@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nas
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: samba
+  namespace: nas
+  labels:
+    app.kubernetes.io/name: samba
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: samba
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: samba
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: atlas
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: samba
+          image: ghcr.io/servercontainers/samba:smbd-only-latest@sha256:a789aa42c2e5db804fab5fb5dd5f2d4343a9a8a7789e4a191aab45e993c15d4f
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ACCOUNT_jacob
+              valueFrom:
+                secretKeyRef:
+                  name: samba-account
+                  key: ACCOUNT_jacob
+            - name: UID_jacob
+              value: "1000"
+            - name: TZ
+              value: America/Chicago
+            - name: AVAHI_DISABLE
+              value: "true"
+            - name: WSDD2_DISABLE
+              value: "true"
+            - name: NETBIOS_DISABLE
+              value: "true"
+            - name: SAMBA_CONF_WORKGROUP
+              value: WORKGROUP
+            - name: SAMBA_CONF_SERVER_STRING
+              value: Atlas NAS
+            - name: SAMBA_VOLUME_CONFIG_data2
+              value: "[DATA-2]; path = /shares/DATA-2; browseable = yes; guest ok = no; valid users = jacob; read only = yes; force user = jacob; create mask = 0777; directory mask = 0777"
+          ports:
+            - name: smb
+              containerPort: 445
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: smb
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: smb
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          volumeMounts:
+            - name: data2
+              mountPath: /shares/DATA-2
+              readOnly: true
+      volumes:
+        - name: data2
+          hostPath:
+            path: /var/mnt/data-2
+            type: Directory
