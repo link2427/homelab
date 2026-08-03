@@ -15,7 +15,7 @@ metadata:
   labels:
     app.kubernetes.io/name: samba
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -56,7 +56,7 @@ spec:
             - name: SAMBA_CONF_SERVER_STRING
               value: Atlas NAS
             - name: SAMBA_VOLUME_CONFIG_data2
-              value: "[DATA-2]; path = /shares/DATA-2; browseable = yes; guest ok = no; valid users = jacob; read only = yes; force user = jacob; create mask = 0777; directory mask = 0777"
+              value: "[DATA-2]; path = /shares/DATA-2; browseable = yes; guest ok = no; valid users = jacob; read only = no; force user = jacob; create mask = 0777; directory mask = 0777"
           ports:
             - name: smb
               containerPort: 445
@@ -81,7 +81,6 @@ spec:
           volumeMounts:
             - name: data2
               mountPath: /shares/DATA-2
-              readOnly: true
       volumes:
         - name: data2
           hostPath:
