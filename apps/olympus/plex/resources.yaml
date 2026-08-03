@@ -89,7 +89,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       runtimeClassName: nvidia
       nodeSelector:
-        kubernetes.io/hostname: atlas
+        kubernetes.io/hostname: precision-7810-01
       terminationGracePeriodSeconds: 120
       containers:
         - name: plex
@@ -109,7 +109,7 @@ spec:
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: compute,video,utility
             - name: ADVERTISE_IP
-              value: http://10.0.0.5:32400/
+              value: http://10.0.0.171:32400/
           ports:
             - name: plex
               containerPort: 32400
@@ -151,9 +151,9 @@ spec:
           persistentVolumeClaim:
             claimName: plex-config
         - name: media
-          hostPath:
-            path: /var/mnt/data-2/Plex Media
-            type: Directory
+          persistentVolumeClaim:
+            claimName: plex-media-data2
+            readOnly: true
         - name: transcode
           emptyDir:
             sizeLimit: 32Gi

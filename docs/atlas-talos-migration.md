@@ -26,13 +26,14 @@ stable SSD WWID and DATA-2 filesystem UUID.
 - DATA-1 is not mounted, scheduled, formatted, or used by Longhorn.
 - Samba exports DATA-2 at `\\10.0.0.5\DATA-2` with authenticated read/write
   access.
-- Plex metadata is on replicated Longhorn storage. Media is mounted read-only
-  from `/var/mnt/data-2/Plex Media`.
+- Plex metadata is on replicated Longhorn storage. A user-space NFS-Ganesha
+  service on Atlas exports `/var/mnt/data-2/Plex Media` read-only and only to
+  `precision-7810-01` (`10.0.0.171`), where the Plex pod runs.
 - Plex retained machine identifier
   `8d12412f4798ffc375c821bd549bf795a56cf331` and version
   `1.42.2.10156-f737b826c`.
-- Plex sees Tesla P40 UUID `GPU-263abd8a-ce4b-a904-435b-ba79c2a3186a`, 24 GiB,
-  through the Talos NVIDIA runtime.
+- Plex sees the Quadro P2000 on `precision-7810-01` through the Talos NVIDIA
+  runtime. Atlas's Tesla P40 remains available for compute workloads.
 - Forge PostgreSQL and the other migrated application volumes are healthy with
   three Longhorn replicas. Forge PostgreSQL's Atlas replica completed its final
   rebuild after the image-cache pulls finished.

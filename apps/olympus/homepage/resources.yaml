@@ -163,8 +163,8 @@ apiVersion: v1
 data:
   bookmarks.yaml: "- Storage Shortcuts:\n    - DATA-2:\n        - abbr: D2\n          href: smb://10.0.0.5/DATA-2\n  \
     \        description: Atlas authenticated NAS share\n    - Plex Library:\n        - icon:\
-    \ plex.png\n          href: http://10.0.0.5:32400/web\n          description:\
-    \ Media on atlas\n\n- Platform References:\n    - Talos Linux:\n        - icon:\
+    \ plex.png\n          href: http://10.0.0.171:32400/web\n          description:\
+    \ P2000 on precision-7810-01; media on Atlas\n\n- Platform References:\n    - Talos Linux:\n        - icon:\
     \ mdi-shield-crown-outline\n          href: https://docs.siderolabs.com/talos/v1.12/\n\
     \          description: Talos 1.12 documentation\n    - Kubernetes:\n        -\
     \ icon: kubernetes.png\n          href: https://kubernetes.io/docs/\n        \
@@ -249,8 +249,8 @@ data:
     \ pi-hole.png\n        href: http://olympus-pihole\n        description: Network\
     \ DNS and ad blocking\n        server: kubernetes\n        namespace: pihole\n\
     \        podSelector: app=pihole\n    - Plex:\n        icon: plex.png\n      \
-    \  href: http://10.0.0.5:32400/web\n        description: Media library on atlas\n\
-    \        siteMonitor: http://10.0.0.5:32400/web\n    - Tailscale:\n        icon:\
+    \  href: http://10.0.0.171:32400/web\n        description: P2000 Plex; media on Atlas\n\
+    \        siteMonitor: http://10.0.0.171:32400/web\n    - Tailscale:\n        icon:\
     \ tailscale.png\n        href: https://login.tailscale.com/admin\n        description:\
     \ Tailnet devices, DNS, and access policy\n\n- Telchar:\n    - Telchar Dynamics:\n\
     \        icon: mdi-domain\n        href: https://telchardynamics.com\n       \

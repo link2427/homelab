@@ -221,7 +221,7 @@ data "coder_parameter" "gpu" {
   }
 
   option {
-    name  = "Tesla P40 · 24 GiB · atlas (shared with Plex)"
+    name  = "Tesla P40 · 24 GiB · atlas"
     value = "tesla-p40"
   }
 }

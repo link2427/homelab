@@ -17,7 +17,7 @@ select the exact physical card:
 
 - Quadro M4000, 8 GiB, on `precision-5810-01`
 - Quadro P2000, 5 GiB, on `precision-7810-01`
-- Tesla P40, 24 GiB, on `atlas` (the workspace waits while Plex owns the GPU)
+- Tesla P40, 24 GiB, on `atlas`
 - No GPU, with normal Kubernetes placement
 
 GPU selection adds both the `nvidia.com/gpu: 1` limit and a hostname node

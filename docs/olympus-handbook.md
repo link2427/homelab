@@ -32,7 +32,7 @@ powered off and are not part of the active compute fleet.
 | `optiplex-hermes` | `10.0.0.57` | control plane + etcd + worker | 12 CPU threads, 16 GiB RAM, ~473 GiB NVMe | none | `fast`, `nvme`, `storage`; 200 GiB reserved |
 | `precision-5810-01` | `10.0.0.25` | worker | 12 CPU threads, 16 GiB RAM, ~231 GiB SSD | Quadro M4000, 8 GiB | `fast`, `ssd`, `storage`; 40 GiB reserved |
 | `precision-7810-01` | `10.0.0.171` | worker | 8 CPU threads, 32 GiB RAM, ~1.86 TiB HDD | Quadro P2000, 5 GiB | `bulk`, `hdd`, `storage`; 300 GiB reserved |
-| `atlas` | `10.0.0.5` (iLO `10.0.0.24`) | Talos worker + NAS + Plex | 72 CPU threads, ~64 GiB RAM, 500 GB SSD; existing 5.4 TB DATA-2 | Tesla P40, 24 GiB | `fast`, `ssd`, `storage`; 150 GiB reserved |
+| `atlas` | `10.0.0.5` (iLO `10.0.0.24`) | Talos worker + NAS | 72 CPU threads, ~64 GiB RAM, 500 GB SSD; existing 5.4 TB DATA-2 | Tesla P40, 24 GiB | `fast`, `ssd`, `storage`; 150 GiB reserved |
 | HP 2920 | `10.0.0.95` | rack switch | managed Ethernet | none | n/a |
 | Gateway | `10.0.0.1` | LAN router and DHCP | n/a | none | n/a |
 
@@ -160,17 +160,18 @@ Coder GPU selection is physical and explicit:
 
 - `quadro-m4000` pins the workspace to `precision-5810-01`
 - `quadro-p2000` pins the workspace to `precision-7810-01`
-- `tesla-p40` pins the workspace to `atlas`; it remains Pending while Plex owns
-  Atlas's single GPU
+- `tesla-p40` pins the workspace to `atlas`
 - `none` leaves the workspace on normal Kubernetes scheduling
 
 The GPU template uses the PyTorch CUDA 12.6 runtime. CUDA 12.6 retains binary
 support for both the Maxwell M4000 and Pascal P2000; a CUDA 13-only image would
 drop the M4000.
 
-Plex is pinned to Atlas, requests the `nvidia` runtime class and one
-`nvidia.com/gpu`, and has been validated against Tesla P40 UUID
-`GPU-263abd8a-ce4b-a904-435b-ba79c2a3186a`.
+Plex is pinned to `precision-7810-01`, requests the `nvidia` runtime class and
+one `nvidia.com/gpu`, and uses its Quadro P2000. Atlas serves DATA-2's Plex
+media to that node through a source-restricted, read-only NFSv4 export; Plex
+metadata remains on replicated Longhorn storage. Atlas's Tesla P40 is therefore
+available for Coder and other compute workloads.
 
 ## Access and service catalog
 
@@ -478,7 +479,8 @@ plane maintenance as routine.
     only the exact 500 GB SSD WWID and preserving DATA-1 and DATA-2 unchanged.
 19. Mounted existing DATA-2 directly in Talos, restored authenticated Samba
     service, migrated Plex metadata to Longhorn, and validated the original Plex
-    identity, libraries, media access, and Tesla P40 inside Kubernetes.
+    identity, libraries, read-only media access, and Quadro P2000 transcoding
+    device inside Kubernetes.
 
 ## Known risks and follow-up work
 
