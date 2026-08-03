@@ -54,7 +54,7 @@ spec:
       volumes:
       - name: data
         persistentVolumeClaim:
-          claimName: grafana-data
+          claimName: grafana-data-longhorn
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -168,7 +168,7 @@ spec:
         name: config
       - name: data
         persistentVolumeClaim:
-          claimName: prometheus-data
+          claimName: prometheus-data-longhorn
 ---
 apiVersion: apps/v1
 kind: DaemonSet

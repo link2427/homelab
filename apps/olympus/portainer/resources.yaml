@@ -75,7 +75,7 @@ spec:
       volumes:
       - name: data
         persistentVolumeClaim:
-          claimName: portainer
+          claimName: portainer-longhorn
 ---
 apiVersion: apps/v1
 kind: Deployment
