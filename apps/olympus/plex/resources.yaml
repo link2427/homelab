@@ -8,6 +8,46 @@ metadata:
     pod-security.kubernetes.io/warn: restricted
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: plex-media-data2
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  capacity:
+    storage: 4Ti
+  accessModes:
+    - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  volumeMode: Filesystem
+  mountOptions:
+    - nfsvers=4.2
+    - proto=tcp
+    - ro
+  nfs:
+    server: 10.0.0.5
+    path: /
+    readOnly: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plex-media-data2
+  namespace: plex
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: ""
+  volumeName: plex-media-data2
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Ti
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: plex-config

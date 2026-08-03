@@ -7,6 +7,183 @@ metadata:
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: plex-media-nfs-config
+  namespace: nas
+data:
+  ganesha.conf: |
+    NFS_Core_Param {
+      NFS_Port = 2049;
+      Protocols = NFSv4;
+      Fsid_Device = true;
+    }
+    NFSV4 {
+      RecoveryBackend = fs_ng;
+      RecoveryRoot = /recovery;
+      Lease_Lifetime = 40;
+      Grace_Period = 50;
+    }
+    VFS {
+      Link_Support = true;
+      Symlink_Support = true;
+      CanSetTime = false;
+      umask = 0022;
+    }
+    EXPORT {
+      Export_Id = 1;
+      Path = /export;
+      Pseudo = /;
+      SecType = sys;
+      Protocols = NFSv4;
+      Access_Type = RO;
+      Squash = Root_Squash;
+      FSAL {
+        Name = VFS;
+      }
+      CLIENT {
+        Clients = 10.0.0.171;
+        Access_Type = RO;
+        Squash = Root_Squash;
+        Protocols = NFSv4;
+      }
+    }
+    LOG {
+      Default_Log_Level = EVENT;
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plex-media-nfs
+  namespace: nas
+  labels:
+    app.kubernetes.io/name: plex-media-nfs
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: plex-media-nfs
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: plex-media-nfs
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: atlas
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: build-mtab
+          image: busybox:1.37.0@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - set -eu; cp /proc/self/mounts /mtab/mtab; grep ' /export ' /mtab/mtab
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 1m
+              memory: 8Mi
+            limits:
+              cpu: 25m
+              memory: 32Mi
+          volumeMounts:
+            - name: media
+              mountPath: /export
+              readOnly: true
+            - name: mtab
+              mountPath: /mtab
+      containers:
+        - name: nfs-ganesha
+          image: hectorm/nfs-ganesha:v10@sha256:93df70b78aae56957f4a4f5c606c4250d84b729435f76132dca07b7290f5bfce
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: nfs
+              containerPort: 2049
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - DAC_READ_SEARCH
+                - FOWNER
+                - FSETID
+                - SETGID
+                - SETUID
+                - SYS_RESOURCE
+          readinessProbe:
+            tcpSocket:
+              port: nfs
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: nfs
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+          volumeMounts:
+            - name: media
+              mountPath: /export
+              readOnly: true
+            - name: config
+              mountPath: /etc/ganesha/ganesha.conf
+              subPath: ganesha.conf
+              readOnly: true
+            - name: mtab
+              mountPath: /etc/mtab
+              subPath: mtab
+              readOnly: true
+            - name: run
+              mountPath: /run
+            - name: tmp
+              mountPath: /tmp
+            - name: recovery
+              mountPath: /recovery
+      volumes:
+        - name: media
+          hostPath:
+            path: /var/mnt/data-2/Plex Media
+            type: Directory
+        - name: config
+          configMap:
+            name: plex-media-nfs-config
+        - name: mtab
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: recovery
+          emptyDir: {}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
