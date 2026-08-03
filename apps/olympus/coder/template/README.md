@@ -50,6 +50,12 @@ Code, OpenCode CLI, and Reasonix, plus the OpenCode web interface. Node.js
 24.18.1 LTS, Reasonix 1.19.1, and AgentAPI are installed into the persistent
 home directory without requiring root privileges, so all four tools survive
 workspace rebuilds and keep their user-level configuration with the workspace.
+Reasonix runs with `sandbox.bash = "off"` because Talos deliberately disables
+the nested user namespaces Bubblewrap requires and the Coder namespace rejects
+unconfined seccomp profiles. The enclosing workspace remains a non-root pod
+with every Linux capability dropped, RuntimeDefault seccomp, Coder auth, and
+namespace-scoped RBAC; this keeps Bash functional without weakening cluster
+Pod Security.
 
 The owner-only **Exports** app serves `/home/coder/exports` through Coder's
 authenticated application proxy. It listens only on the workspace loopback

@@ -373,14 +373,46 @@ resource "coder_agent" "main" {
     fi
     python3 - <<'PY'
     import os
+    import re
     from pathlib import Path
+
+    reasonix_home = Path("/home/coder/.reasonix")
+    reasonix_home.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(reasonix_home, 0o700)
+
+    # Talos keeps unprivileged user namespaces disabled and the Coder namespace
+    # enforces the Kubernetes Baseline policy, so Bubblewrap cannot create its
+    # nested namespace. Keep Reasonix's Bash tool usable while the outer Coder
+    # pod remains non-root, capability-free, and protected by RuntimeDefault
+    # seccomp. File writer tools still honor Reasonix's workspace-root policy.
+    config = reasonix_home / "config.toml"
+    if config.exists():
+        content = config.read_text(encoding="utf-8")
+        section = re.search(r"(?ms)^\[sandbox\]\s*\n(?P<body>.*?)(?=^\[|\Z)", content)
+        if section:
+            body = section.group("body")
+            if re.search(r"(?m)^\s*bash\s*=", body):
+                updated_body = re.sub(
+                    r'(?m)^\s*bash\s*=.*$',
+                    'bash = "off"',
+                    body,
+                    count=1,
+                )
+            else:
+                updated_body = body + 'bash = "off"\n'
+            content = content[:section.start("body")] + updated_body + content[section.end("body"):]
+        else:
+            content = content.rstrip() + '\n\n[sandbox]\nbash = "off"\nnetwork = true\n'
+    else:
+        content = '[sandbox]\nbash = "off"\nnetwork = true\n'
+
+    config_tmp = reasonix_home / "config.toml.coder.tmp"
+    config_tmp.write_text(content, encoding="utf-8")
+    os.chmod(config_tmp, 0o600)
+    os.replace(config_tmp, config)
 
     key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
     if key:
-        reasonix_home = Path("/home/coder/.reasonix")
-        reasonix_home.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(reasonix_home, 0o700)
-
         credentials = reasonix_home / ".env"
         retained = []
         if credentials.exists():
