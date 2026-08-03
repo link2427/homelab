@@ -33,7 +33,15 @@ stable SSD WWID and DATA-2 filesystem UUID.
   `1.42.2.10156-f737b826c`.
 - Plex sees Tesla P40 UUID `GPU-263abd8a-ce4b-a904-435b-ba79c2a3186a`, 24 GiB,
   through the Talos NVIDIA runtime.
+- Forge PostgreSQL and the other migrated application volumes are healthy with
+  three Longhorn replicas. Forge PostgreSQL's Atlas replica completed its final
+  rebuild after the image-cache pulls finished.
 - Bulk DATA-2 media was deliberately not copied to Longhorn or R2.
+
+The temporary Talos ISO server is scaled to zero and its NodePort has been
+removed. Its deployment and 2 GiB Longhorn recovery volume remain available,
+along with the local migration artifacts, so virtual-media recovery can be
+re-enabled deliberately without leaving an installer exposed.
 
 ## Rollback material
 
@@ -50,6 +58,35 @@ application state; the Plex archive contains the pre-conversion Plex metadata.
 Hermes was intentionally excluded. Keep these archives until a later, explicit
 retention decision. Do not commit their encryption identity or decrypted
 contents.
+
+## Final backup and health gate
+
+The final application backup run completed on August 3, 2026. The following
+Longhorn backups report `Completed`, 100% progress, and Cloudflare R2 URLs:
+
+| Application data | Backup |
+| --- | --- |
+| Grafana | `backup-2adccc16f29e4490` |
+| Plex metadata | `backup-40b19bdecd614e90` |
+| Forge PostgreSQL | `backup-2a5ab8b1f8cf4356` |
+| Forge NATS | `backup-4860da24d61043ee` |
+| Uptime Kuma | `backup-c8eb4f1ccbc8486a` |
+| Portainer | `backup-35b8f64e35ac4835` |
+| n8n | `backup-bb5cb7216c734c22` |
+| Prometheus | `backup-9e0871773e474cd0` |
+| Forge Redis | `backup-4282dbb56a2f4593` |
+| NetBox PostgreSQL | `backup-dbd926fa3c214e77` |
+
+The R2 backup target was available and synced after this run. A disposable
+backup/restore checksum gate also passed before the migration. These backups
+contain application volumes only; the bulk DATA-2 library remains excluded.
+
+The final Talos cluster health gate passed for the control plane and all three
+workers: etcd membership, apid, diagnostics, boot sequence, kubelet, Kubernetes
+node readiness, control-plane static pods, kube-proxy, CoreDNS, and scheduling
+all reported healthy. All Flux Kustomizations and Helm releases reconciled to
+the latest `main` revision, all image-cache DaemonSets reached their desired
+count, and all attached Longhorn volumes reported healthy.
 
 ## Operational validation
 
