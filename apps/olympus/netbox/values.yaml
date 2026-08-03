@@ -1,0 +1,120 @@
+fullnameOverride: netbox
+
+allowedHosts:
+  - olympus-netbox
+  - olympus-netbox.taild90e78.ts.net
+  - netbox.netbox.svc
+  - netbox.netbox.svc.cluster.local
+
+csrf:
+  trustedOrigins:
+    - http://olympus-netbox
+    - http://olympus-netbox.taild90e78.ts.net
+
+timeZone: America/Chicago
+loginRequired: true
+loginTimeout: 1209600
+releaseCheck:
+  url: ""
+
+superuser:
+  existingSecret: netbox-secrets
+
+existingSecret: netbox-secrets
+
+remoteAuth:
+  enabled: true
+  backends:
+    - social_core.backends.open_id_connect.OpenIdConnectAuth
+  autoCreateUser: true
+  autoCreateGroups: false
+  superusers:
+    - admin
+    - akadmin
+  staffUsers:
+    - admin
+    - akadmin
+
+extraConfig:
+  - secret:
+      secretName: netbox-oidc
+  - values:
+      LOGIN_FORM_HIDDEN: false
+      SOCIAL_AUTH_BACKEND_ATTRS:
+        oidc:
+          - Google via Authentik
+          - google
+
+logoutRedirectUrl: https://auth.jacob-neel.dev/application/o/netbox/end-session/
+
+postgresql:
+  enabled: false
+externalDatabase:
+  host: netbox-postgres
+  port: 5432
+  database: netbox
+  username: netbox
+  existingSecretName: netbox-secrets
+  existingSecretKey: postgresql-password
+
+valkey:
+  enabled: false
+tasksDatabase:
+  host: netbox-valkey
+  port: 6379
+  database: 0
+  existingSecretName: netbox-secrets
+  existingSecretKey: tasks-password
+cachingDatabase:
+  host: netbox-valkey
+  port: 6379
+  database: 1
+  existingSecretName: netbox-secrets
+  existingSecretKey: cache-password
+
+replicaCount: 1
+updateStrategy:
+  type: RollingUpdate
+
+persistence:
+  enabled: true
+  storageClass: longhorn-resilient
+  accessMode: ReadWriteMany
+  size: 5Gi
+  annotations:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/netbox-media-backup: enabled
+
+resourcesPreset: none
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+
+worker:
+  enabled: true
+  replicaCount: 1
+  resourcesPreset: none
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+housekeeping:
+  enabled: true
+  schedule: "15 2 * * *"
+  timezone: America/Chicago
+  resourcesPreset: none
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

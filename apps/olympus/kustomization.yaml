@@ -10,5 +10,6 @@ resources:
 - coder
 - authentik
 - headlamp
+- netbox
 - telchar-construct
 - telchar-forge

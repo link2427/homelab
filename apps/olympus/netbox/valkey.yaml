@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: netbox-valkey
+  namespace: netbox
+  labels:
+    app.kubernetes.io/name: netbox-valkey
+    app.kubernetes.io/part-of: netbox
+spec:
+  selector:
+    app.kubernetes.io/name: netbox-valkey
+  ports:
+    - name: valkey
+      port: 6379
+      protocol: TCP
+      targetPort: valkey
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netbox-valkey
+  namespace: netbox
+  labels:
+    app.kubernetes.io/name: netbox-valkey
+    app.kubernetes.io/part-of: netbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: netbox-valkey
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: netbox-valkey
+        app.kubernetes.io/part-of: netbox
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: valkey
+          image: valkey/valkey:9.1.1-alpine
+          imagePullPolicy: IfNotPresent
+          command: [sh, -ec]
+          args:
+            - |
+              exec valkey-server \
+                --bind 0.0.0.0 \
+                --protected-mode yes \
+                --appendonly no \
+                --save "" \
+                --requirepass "$VALKEY_PASSWORD"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: netbox-secrets
+                  key: tasks-password
+          ports:
+            - name: valkey
+              containerPort: 6379
+              protocol: TCP
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - test "$(valkey-cli -a "$VALKEY_PASSWORD" ping 2>/dev/null)" = PONG
+            failureThreshold: 30
+            periodSeconds: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - test "$(valkey-cli -a "$VALKEY_PASSWORD" ping 2>/dev/null)" = PONG
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - test "$(valkey-cli -a "$VALKEY_PASSWORD" ping 2>/dev/null)" = PONG
+            periodSeconds: 30
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: netbox-valkey
+  namespace: netbox
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: netbox-valkey
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 6379
+          protocol: TCP

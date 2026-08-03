@@ -1,0 +1,28 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: netbox
+  namespace: netbox
+spec:
+  interval: 30m
+  timeout: 20m
+  chart:
+    spec:
+      chart: netbox
+      version: 8.3.47
+      interval: 1h
+      sourceRef:
+        kind: HelmRepository
+        name: netbox
+        namespace: netbox
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: netbox-values
+      valuesKey: values.yaml

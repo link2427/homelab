@@ -1,17 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: longhorn-system
+namespace: netbox
 resources:
   - namespace.yaml
   - repository.yaml
   - release.yaml
-  - storageclasses.yaml
-  - coder-recurring-jobs.yaml
-  - identity-recurring-job.yaml
-  - netbox-recurring-jobs.yaml
-  - ui-service.yaml
+  - netbox-secrets.secret.yaml
+  - netbox-oidc.secret.yaml
+  - database.yaml
+  - valkey.yaml
+  - access.yaml
 configMapGenerator:
-  - name: longhorn-values
+  - name: netbox-values
     files:
       - values.yaml=values.yaml
 generatorOptions:

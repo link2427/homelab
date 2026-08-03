@@ -159,6 +159,7 @@ Tailscale Kubernetes Operator.
 | --- | --- | --- |
 | Homepage | `http://olympus-dashboard` | command center and service status |
 | Headlamp | `http://olympus-headlamp` | Kubernetes administration |
+| NetBox | `http://olympus-netbox` | infrastructure source of truth, IPAM, racks, and cabling |
 | Coder | `https://coder.jacob-neel.dev` | public development workspaces; Google SSO |
 | Authentik | `https://auth.jacob-neel.dev` | public identity provider and SSO portal |
 | Longhorn | `http://olympus-longhorn` | volume and backup administration |
@@ -182,7 +183,8 @@ Cloudflare.
 
 Authentik runs in namespace `authentik` with PostgreSQL 17.9 on a 10 GiB,
 three-replica `longhorn-resilient` volume. Its declarative blueprint creates the
-Google source, Coder's OpenID Connect provider, and the Coder application policy.
+Google source, the Coder and NetBox OpenID Connect providers, and each
+application's account policy.
 Google sign-in to Coder is restricted to `jacob.neel@gmail.com`; Coder
 additionally disables OIDC signups, so an identity cannot create a new Coder
 account through the public endpoint. The Google identity links to Authentik's
@@ -196,6 +198,29 @@ Cloudflare DNS proxies `auth.jacob-neel.dev` and `coder.jacob-neel.dev` to the
 route directly to the cluster services. The Google OAuth client belongs to the
 Google Cloud `Homelab` project; its only Authentik callback is
 `https://auth.jacob-neel.dev/source/oauth/callback/google/`.
+
+## NetBox infrastructure source of truth
+
+NetBox 4.6.7 runs from the official community Helm chart in namespace
+`netbox`. It is private to the tailnet at `http://olympus-netbox`; Authentik
+provides the interactive Google sign-in and restricts the application to
+`jacob.neel@gmail.com`. A random local administrator is retained only as a
+SOPS-encrypted break-glass account.
+
+PostgreSQL 17.9 holds all authoritative inventory on a 10 GiB,
+three-replica `longhorn-resilient` volume. Uploaded images use a 5 GiB Longhorn
+RWX volume so the web, worker, and housekeeping pods can mount it from different
+nodes. The database and media volumes are backed up nightly to Atlas and retain
+seven backups. Valkey holds only queues and cache entries and is intentionally
+ephemeral.
+
+Operational checks:
+
+```powershell
+kubectl -n netbox get pods,pvc,service
+kubectl -n netbox get helmrelease netbox
+kubectl -n longhorn-system get recurringjob netbox-db-backup netbox-media-backup
+```
 
 ## Coder development platform
 

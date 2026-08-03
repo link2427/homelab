@@ -269,7 +269,11 @@ data:
     \    - Forge API:\n        icon: mdi-api\n        href: https://api.telcharforge.com/health\n\
     \        description: Public API readiness endpoint\n        siteMonitor: https://api.telcharforge.com/health\n\
     \        server: kubernetes\n        namespace: telchar-forge\n        podSelector:\
-    \ app.kubernetes.io/name=forge-api\n\n- Network & Storage:\n    - HP 2920 Switch:\n\
+    \ app.kubernetes.io/name=forge-api\n\n- Network & Storage:\n    - NetBox:\n\
+    \        icon: netbox.png\n        href: http://olympus-netbox\n        description:\
+    \ Infrastructure source of truth, IPAM, racks, and cabling\n        server: kubernetes\n\
+    \        namespace: netbox\n        podSelector: app.kubernetes.io/name=netbox\n\
+    \    - HP 2920 Switch:\n\
     \        icon: mdi-switch\n        href: http://10.0.0.95\n        description:\
     \ Rack switching and port console\n    - Network Gateway:\n        icon: mdi-router-network\n\
     \        href: http://10.0.0.1\n        description: LAN gateway and DHCP\n  \
