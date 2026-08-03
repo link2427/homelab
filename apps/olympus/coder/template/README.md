@@ -50,6 +50,14 @@ Code, OpenCode CLI, and Reasonix, plus the OpenCode web interface. Node.js
 home directory without requiring root privileges, so all four tools survive
 workspace rebuilds and keep their user-level configuration with the workspace.
 
+The owner-only **Exports** app serves `/home/coder/exports` through Coder's
+authenticated application proxy. It listens only on the workspace loopback
+interface, so it cannot be reached directly from the cluster network. Agents
+can place a finished file or directory in the download area with
+`olympus-export SOURCE [DOWNLOAD_NAME]`; the workspace owner can then preview or
+download it from a normal browser after signing in to Coder. File Browser is
+pinned to v2.63.5 and its release checksum is verified before installation.
+
 `olympus-gpu` uses the official PyTorch 2.13.0 CUDA 12.6 runtime image. CUDA
 12.6 is intentional: unlike CUDA 13, it retains binary support for both the
 Maxwell M4000 and Pascal P2000. Hugging Face, Torch, extension, Matplotlib, and

@@ -265,6 +265,11 @@ locals {
   git_repo_set   = local.git_repo_url != ""
   git_repo_name  = local.git_repo_set ? trimsuffix(basename(local.git_repo_url), ".git") : ""
   workspace_dir  = local.git_repo_set ? "/home/coder/project/${local.git_repo_name}" : "/home/coder/project"
+  exports_base_path = format(
+    "/@%s/%s.main/apps/exports",
+    data.coder_workspace_owner.me.name,
+    data.coder_workspace.me.name,
+  )
   selected_node  = data.coder_parameter.gpu.value != "none" ? local.gpu_nodes[data.coder_parameter.gpu.value] : local.selected_profile.node
   node_selector = local.selected_node != "" ? {
     "kubernetes.io/hostname" = local.selected_node
@@ -300,7 +305,49 @@ resource "coder_agent" "main" {
     fi
     printf '%s\n' '${var.profile}' > /home/coder/.olympus-profile
     %{if var.profile == "agent"~}
-    mkdir -p /home/coder/.local/bin /home/coder/.local/lib
+    mkdir -p /home/coder/.local/bin \
+      /home/coder/.local/lib \
+      /home/coder/.local/share/filebrowser \
+      /home/coder/exports
+    filebrowser_version="v2.63.5"
+    filebrowser_checksum="b36ad6296db0a749a5adbc792ab5321d11b307106123d44e171b7c158fcca2d9"
+    filebrowser_marker="/home/coder/.local/share/filebrowser/version"
+    installed_filebrowser_version="$(cat "$${filebrowser_marker}" 2>/dev/null || true)"
+    if [ ! -x /home/coder/.local/bin/filebrowser ] || [ "$${installed_filebrowser_version}" != "$${filebrowser_version}" ]; then
+      filebrowser_archive="/tmp/olympus-filebrowser-$${filebrowser_version}.tar.gz"
+      filebrowser_extract_dir="$(mktemp -d /tmp/olympus-filebrowser.XXXXXX)"
+      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
+        -o "$${filebrowser_archive}" \
+        "https://github.com/filebrowser/filebrowser/releases/download/$${filebrowser_version}/linux-amd64-filebrowser.tar.gz"
+      printf '%s  %s\n' "$${filebrowser_checksum}" "$${filebrowser_archive}" | sha256sum -c -
+      tar -xzf "$${filebrowser_archive}" -C "$${filebrowser_extract_dir}" filebrowser
+      install -m 0755 "$${filebrowser_extract_dir}/filebrowser" /home/coder/.local/bin/filebrowser
+      printf '%s\n' "$${filebrowser_version}" > "$${filebrowser_marker}"
+      rm -f "$${filebrowser_extract_dir}/filebrowser" "$${filebrowser_archive}"
+      rmdir "$${filebrowser_extract_dir}"
+    fi
+    cat > /home/coder/.local/bin/olympus-export <<'EXPORT_HELPER'
+    #!/bin/sh
+    set -eu
+    if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+      echo "Usage: olympus-export SOURCE [DOWNLOAD_NAME]" >&2
+      exit 2
+    fi
+    source_path="$1"
+    download_name="$${2:-$(basename "$${source_path}")}"
+    case "$${download_name}" in
+      ""|.|..|*/*) echo "DOWNLOAD_NAME must be a single file or directory name." >&2; exit 2 ;;
+    esac
+    if [ ! -e "$${source_path}" ]; then
+      echo "Source does not exist: $${source_path}" >&2
+      exit 1
+    fi
+    mkdir -p /home/coder/exports
+    rm -rf -- "/home/coder/exports/$${download_name}"
+    cp -a -- "$${source_path}" "/home/coder/exports/$${download_name}"
+    printf 'Export ready: /home/coder/exports/%s\n' "$${download_name}"
+    EXPORT_HELPER
+    chmod +x /home/coder/.local/bin/olympus-export
     if ! command -v npm >/dev/null 2>&1; then
       node_version="v24.18.1"
       node_dir="/home/coder/.local/lib/node-$${node_version}-linux-x64"
@@ -361,6 +408,16 @@ resource "coder_agent" "main" {
     exec /usr/bin/gh "$@"
     GH_WRAPPER
       chmod +x /home/coder/.local/bin/gh
+    fi
+    if ! curl -fsS "http://127.0.0.1:13339${local.exports_base_path}/" >/dev/null 2>&1; then
+      nohup /home/coder/.local/bin/filebrowser \
+        --address 127.0.0.1 \
+        --port 13339 \
+        --root /home/coder/exports \
+        --database /home/coder/.local/share/filebrowser/filebrowser.db \
+        --baseURL '${local.exports_base_path}' \
+        --noauth \
+        > /home/coder/.local/share/filebrowser/server.log 2>&1 &
     fi
     %{endif~}
     %{if var.profile == "gpu"~}
@@ -477,6 +534,25 @@ module "opencode" {
       chmod +x /home/coder/.local/bin/agentapi
     fi
   EOT
+}
+
+resource "coder_app" "exports" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id     = coder_agent.main.id
+  slug         = "exports"
+  display_name = "Exports"
+  icon         = "/icon/folder.svg"
+  group        = "Development"
+  order        = 1
+  url          = "http://localhost:13339${local.exports_base_path}"
+  subdomain    = false
+  share        = "owner"
+
+  healthcheck {
+    url       = "http://localhost:13339${local.exports_base_path}/"
+    interval  = 5
+    threshold = 12
+  }
 }
 
 resource "coder_app" "codex" {

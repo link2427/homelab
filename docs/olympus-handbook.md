@@ -194,6 +194,23 @@ The agent image installs Codex, Claude Code, OpenCode, Reasonix, AgentAPI, and
 Node.js 24 into persistent user storage. Editor and agent launchers open in the
 selected repository directory.
 
+The `olympus-agent` template also provides an owner-only **Exports** app. Agents
+run `olympus-export SOURCE [DOWNLOAD_NAME]` to copy an artifact into the
+persistent `/home/coder/exports` directory; the owner can then preview or
+download it through Coder in a normal authenticated browser session. The file
+service binds only to workspace loopback and is not directly exposed to the
+cluster network.
+
+Codex connects to Coder through the authenticated local CLI MCP transport:
+
+```powershell
+coder login https://coder.jacob-neel.dev
+codex mcp add coder -- C:\Users\Jacob\.local\bin\coder.exe exp mcp server
+```
+
+This mode uses the Coder CLI session stored in the operating-system keyring. It
+does not require Coder's experimental remote HTTP MCP or OAuth provider flags.
+
 ### GitHub integration
 
 The `Olympus Coder Agents` GitHub App provides repository-scoped user tokens.
@@ -339,6 +356,8 @@ plane maintenance as routine.
 14. Converted the existing `jacob-neel` Coder account from password to OIDC and
     verified a fresh Google login returns to the same account and running
     workspace.
+15. Added persistent browser-downloadable workspace exports and configured
+    Codex to use Coder's local CLI MCP transport.
 
 ## Known risks and follow-up work
 
