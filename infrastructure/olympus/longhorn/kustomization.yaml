@@ -10,6 +10,7 @@ resources:
   - coder-recurring-jobs.yaml
   - identity-recurring-job.yaml
   - netbox-recurring-jobs.yaml
+  - olympus-app-recurring-job.yaml
   - ui-service.yaml
 configMapGenerator:
   - name: longhorn-values

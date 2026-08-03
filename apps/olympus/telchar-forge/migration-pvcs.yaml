@@ -3,6 +3,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: forge-nats-longhorn
   namespace: telchar-forge
+  labels:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/olympus-app-backup: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
@@ -18,6 +21,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: forge-postgres-longhorn
   namespace: telchar-forge
+  labels:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/olympus-app-backup: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
@@ -33,6 +39,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: forge-redis-longhorn
   namespace: telchar-forge
+  labels:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/olympus-app-backup: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:

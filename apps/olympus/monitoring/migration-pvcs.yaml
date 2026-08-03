@@ -3,6 +3,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: grafana-data-longhorn
   namespace: monitoring
+  labels:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/olympus-app-backup: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
@@ -18,6 +21,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: prometheus-data-longhorn
   namespace: monitoring
+  labels:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/olympus-app-backup: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
