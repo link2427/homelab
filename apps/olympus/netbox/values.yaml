@@ -22,6 +22,10 @@ superuser:
 
 existingSecret: netbox-secrets
 
+email:
+  existingSecretName: netbox-secrets
+  existingSecretKey: email-password
+
 remoteAuth:
   enabled: true
   backends:
