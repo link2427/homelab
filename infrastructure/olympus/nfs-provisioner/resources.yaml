@@ -8,7 +8,9 @@ metadata:
   namespace: nfs-provisioner
 spec:
   progressDeadlineSeconds: 600
-  replicas: 1
+  # Atlas is being retired as an Ubuntu NFS host.  Keep the StorageClass and
+  # rollback PVC definitions, but do not leave a provisioner mounted to it.
+  replicas: 0
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -69,7 +71,9 @@ metadata:
   namespace: nfs-provisioner
 spec:
   progressDeadlineSeconds: 600
-  replicas: 1
+  # DATA-2 is served directly from the Talos Atlas node; legacy NFS claims are
+  # retained only as rollback copies during migration validation.
+  replicas: 0
   revisionHistoryLimit: 10
   selector:
     matchLabels:
