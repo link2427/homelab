@@ -8,6 +8,12 @@ Interactive login uses Google through Authentik. A randomly generated local
 administrator remains in the SOPS-encrypted `netbox-secrets` Secret for
 break-glass recovery; it is not exposed outside the tailnet.
 
+NetBox's social-auth pipeline creates a local user record but does not apply the
+header-auth-only `REMOTE_AUTH_SUPERUSERS` setting. After the first OIDC login,
+the local `akadmin` record was explicitly promoted to superuser in PostgreSQL.
+That authorization is durable database state and is included in the database
+backups.
+
 Authoritative inventory is stored in PostgreSQL on a 10 GiB
 `longhorn-resilient` volume. Uploaded media uses a 5 GiB Longhorn RWX volume.
 Both volumes are backed up to the Atlas Longhorn target every night. Valkey is

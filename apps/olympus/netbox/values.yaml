@@ -32,12 +32,6 @@ remoteAuth:
     - social_core.backends.open_id_connect.OpenIdConnectAuth
   autoCreateUser: true
   autoCreateGroups: false
-  superusers:
-    - admin
-    - akadmin
-  staffUsers:
-    - admin
-    - akadmin
 
 extraConfig:
   - secret:

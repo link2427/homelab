@@ -207,6 +207,11 @@ provides the interactive Google sign-in and restricts the application to
 `jacob.neel@gmail.com`. A random local administrator is retained only as a
 SOPS-encrypted break-glass account.
 
+The OIDC identity is stored locally by NetBox as `akadmin` and has been granted
+superuser access. NetBox's social-auth pipeline does not use the
+header-auth-only `REMOTE_AUTH_SUPERUSERS` promotion setting, so this permission
+is durable PostgreSQL state and is protected by the NetBox database backups.
+
 PostgreSQL 17.9 holds all authoritative inventory on a 10 GiB,
 three-replica `longhorn-resilient` volume. Uploaded images use a 5 GiB Longhorn
 RWX volume so the web, worker, and housekeeping pods can mount it from different
