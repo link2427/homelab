@@ -7,7 +7,7 @@ upstream registry. Mutable `latest` tags bypass Spegel.
 
 The `coder-image-cache` DaemonSet keeps the standard Coder base and universal
 workspace images present on all nodes. `coder-gpu-image-cache` does the same for
-the PyTorch CUDA image on the two GPU nodes. These images use `IfNotPresent`, so
+the PyTorch CUDA image on the three GPU nodes. These images use `IfNotPresent`, so
 the pre-pullers do not repeatedly contact the upstream registry after a node has
 the image.
 

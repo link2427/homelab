@@ -1,6 +1,6 @@
 # Olympus homelab handbook
 
-This handbook records the Olympus cluster as it exists on August 2, 2026. It
+This handbook records the Olympus cluster as it exists on August 3, 2026. It
 is the operational companion to the manifests in this repository: Git remains
 the source of truth, while this document explains the hardware, design choices,
 access paths, recovery model, and the work completed during the current rebuild.
@@ -16,12 +16,13 @@ access paths, recovery model, and the work completed during the current rebuild.
 - Public application ingress: Cloudflare Tunnel
 - Distributed storage: Longhorn `v1.12.0`
 - Distributed image cache: Spegel `v0.7.4`
-- NAS storage and backups: Atlas at `10.0.0.5`
+- NAS and media storage: Atlas DATA-2 at `10.0.0.5`
+- Off-site volume backups: Cloudflare R2
 - Cluster console: Headlamp
 - Development platform: Coder `v2.35.3`
 - Identity provider: Authentik `2026.5.6`
 
-The active cluster has three x86-64 nodes. The former Raspberry Pi nodes are
+The active cluster has four x86-64 nodes. The former Raspberry Pi nodes are
 powered off and are not part of the active compute fleet.
 
 ## Physical and network inventory
@@ -31,14 +32,14 @@ powered off and are not part of the active compute fleet.
 | `optiplex-hermes` | `10.0.0.57` | control plane + etcd + worker | 12 CPU threads, 16 GiB RAM, ~473 GiB NVMe | none | `fast`, `nvme`, `storage`; 200 GiB reserved |
 | `precision-5810-01` | `10.0.0.25` | worker | 12 CPU threads, 16 GiB RAM, ~231 GiB SSD | Quadro M4000, 8 GiB | `fast`, `ssd`, `storage`; 80 GiB reserved |
 | `precision-7810-01` | `10.0.0.171` | worker | 8 CPU threads, 32 GiB RAM, ~1.86 TiB HDD | Quadro P2000, 5 GiB | `bulk`, `hdd`, `storage`; 300 GiB reserved |
-| Atlas | `10.0.0.5` | NAS, media, NFS, backup target | `DATA-1`, `DATA-2` | none | NFS and Longhorn backups |
+| `atlas` | `10.0.0.5` (iLO `10.0.0.24`) | Talos worker + NAS + Plex | 72 CPU threads, ~64 GiB RAM, 500 GB SSD; existing 5.4 TB DATA-2 | Tesla P40, 24 GiB | `fast`, `ssd`, `storage`; 150 GiB reserved |
 | HP 2920 | `10.0.0.95` | rack switch | managed Ethernet | none | n/a |
 | Gateway | `10.0.0.1` | LAN router and DHCP | n/a | none | n/a |
 
-Both Precision workstations were converted from Windows to Talos. They boot in
-UEFI mode from their internal system disk, and the reusable Talos installer USB
-was removed after each installation. A GPU or monitor is not required for
-headless operation.
+The two Precision workstations and Atlas were converted to Talos and boot in
+UEFI mode from their internal system disks. The Precisions were installed from
+a reusable USB that was removed afterward; Atlas was installed through iLO
+virtual media. A GPU or monitor is not required for headless operation.
 
 ### Control-plane availability
 
@@ -62,7 +63,7 @@ Flux source-controller
        |
        +--> flux-system
        +--> infrastructure
-       |      +-- namespaces, metrics-server, NFS provisioners
+       |      +-- namespaces and metrics-server
        |      +-- Tailscale operator, NVIDIA device plugin
        |      `-- Longhorn, storage classes, and Spegel image cache
        `--> apps
@@ -97,21 +98,33 @@ Talos and image/container storage. Coder PostgreSQL uses a 10 GiB
 `longhorn-resilient` claim. Normal Coder workspaces default to fast storage;
 the build template defaults to bulk storage.
 
-Longhorn backs up to `nfs://10.0.0.5:/media/DATA-1/longhorn-backups`:
+Longhorn backs up directly to the private Cloudflare R2 bucket
+`s3://olympus-longhorn-backups@auto/`:
 
+- migrated application state: daily at 02:00, seven retained backups
 - Coder database: daily at 03:30, seven retained backups
 - Coder workspace volumes: daily at 04:00, three retained backups
+- Authentik database: daily at 03:45, seven retained backups
+- NetBox database and media: daily, seven retained backups
 
 Replicas protect against a cluster disk or node failure. Backups protect against
-volume loss, but Atlas is still a shared dependency for backup recovery.
+volume loss and no longer depend on Atlas being available.
 
-### Atlas NFS storage
+### Atlas direct-attached NAS storage
 
-`nfs-data1` remains the default StorageClass and `nfs-data2` provides secondary
-NAS placement. Existing Grafana, Prometheus, Pi-hole, n8n, Portainer, Uptime
-Kuma, and Telchar Forge data claims remain on Atlas. If Atlas is unavailable,
-those claims and applications are affected; Longhorn-backed Coder data can keep
-running locally, but its backup destination is unavailable.
+Atlas mounts the pre-existing DATA-2 ext4 filesystem by UUID at
+`/var/mnt/data-2`. Samba serves the `DATA-2` share from `10.0.0.5`, and Plex uses
+the same filesystem read-only for its media library. Plex metadata and database
+state live on a three-replica Longhorn volume; only the large, replaceable media
+library stays on DATA-2. Bulk DATA-2 media is deliberately neither replicated
+by Longhorn nor copied to R2.
+
+DATA-1 remains physically present but is omitted from the Talos machine
+configuration and is not mounted or served. The old NFS provisioners are scaled
+to zero. Grafana, Prometheus, n8n, Portainer, Uptime Kuma, and Telchar Forge
+state have been migrated from their old NFS claims to Longhorn. Those old NFS
+PVCs remain retained as rollback references until their contents are no longer
+needed.
 
 ### Container image cache
 
@@ -125,9 +138,9 @@ Talos is configured through the existing
 `/etc/cri/conf.d/20-customization.part` file with
 `discard_unpacked_layers = false`. The Spegel chart uses Talos' registry host
 directory at `/etc/cri/conf.d/hosts`. `coder-image-cache` keeps the standard
-Coder base and universal images referenced on all three nodes;
-`coder-gpu-image-cache` keeps the CUDA 12.6 PyTorch image referenced on both GPU
-nodes. Mutable `latest` tags bypass the peer cache.
+Coder base and universal images referenced across the worker fleet;
+`coder-gpu-image-cache` keeps the CUDA 12.6 PyTorch image referenced on the GPU
+workers. Mutable `latest` tags bypass the peer cache.
 
 The image cache lives on each node's Talos ephemeral partition. It is not
 Longhorn storage, a registry of record, or a backup: a cache miss still needs an
@@ -136,19 +149,25 @@ ephemeral data is lost.
 
 ## GPU compute
 
-Talos on both Precision workers includes the NVIDIA R580 LTS kernel modules and
-container toolkit. NVIDIA device plugin `v0.19.3` advertises one GPU from each
-node as `nvidia.com/gpu`.
+Talos on both Precision workers and Atlas includes the NVIDIA R580 LTS kernel
+modules and container toolkit. NVIDIA device plugin `v0.19.3` advertises one GPU
+from each node as `nvidia.com/gpu`.
 
 Coder GPU selection is physical and explicit:
 
 - `quadro-m4000` pins the workspace to `precision-5810-01`
 - `quadro-p2000` pins the workspace to `precision-7810-01`
+- `tesla-p40` pins the workspace to `atlas`; it remains Pending while Plex owns
+  Atlas's single GPU
 - `none` leaves the workspace on normal Kubernetes scheduling
 
 The GPU template uses the PyTorch CUDA 12.6 runtime. CUDA 12.6 retains binary
 support for both the Maxwell M4000 and Pascal P2000; a CUDA 13-only image would
 drop the M4000.
+
+Plex is pinned to Atlas, requests the `nvidia` runtime class and one
+`nvidia.com/gpu`, and has been validated against Tesla P40 UUID
+`GPU-263abd8a-ce4b-a904-435b-ba79c2a3186a`.
 
 ## Access and service catalog
 
@@ -215,7 +234,7 @@ is durable PostgreSQL state and is protected by the NetBox database backups.
 PostgreSQL 17.9 holds all authoritative inventory on a 10 GiB,
 three-replica `longhorn-resilient` volume. Uploaded images use a 5 GiB Longhorn
 RWX volume so the web, worker, and housekeeping pods can mount it from different
-nodes. The database and media volumes are backed up nightly to Atlas and retain
+nodes. The database and media volumes are backed up nightly to R2 and retain
 seven backups. Valkey holds only queues and cache entries and is intentionally
 ephemeral.
 
@@ -330,6 +349,22 @@ future node installation:
 Do not copy an install-disk path from one Dell to another. Disk enumeration can
 change between models, firmware modes, and USB ports.
 
+Atlas has stricter permanent disk guards:
+
+- Talos system disk: 500 GB SSD, WWID
+  `naa.600508b1001ccc3727510b6fbcfa400f`
+- DATA-1: 2 TB logical volume, WWID
+  `naa.600508b1001cb89e4d374bdd3944d264`; never an install target and currently
+  not mounted
+- DATA-2: 5.4 TB logical volume, WWID
+  `naa.600508b1001c26ef283a748b0dc931a4`; existing partition UUID
+  `dc8063bd-b33c-409a-83ea-7d98fb74ad8b`, mounted without formatting
+
+Atlas was installed from the Talos ISO through iLO virtual media. Its machine
+configuration selects the SSD by exact WWID, not `/dev/sdX`; the DATA-2 mount
+selects the existing filesystem by UUID. Never apply a generated Atlas machine
+configuration until all three identifiers are revalidated.
+
 ## Routine operations
 
 ### Reconcile and inspect GitOps
@@ -393,10 +428,11 @@ plane maintenance as routine.
 - Coder identity, templates, users, and workspace metadata live in its
   PostgreSQL volume; restore that database before workspace homes when doing a
   full Coder recovery.
-- Longhorn backups depend on Atlas `DATA-1`; a NAS failure must be resolved
-  before restoring from the backup store.
-- NFS application data is not recreated by Flux. Restore it from Atlas backups
-  or application-specific exports.
+- Longhorn backups restore from R2 and do not depend on either Atlas data disk.
+- DATA-2 bulk media has no independent backup. Plex metadata is protected by
+  Longhorn and R2, but lost media must be reacquired or restored separately.
+- The retained old NFS claims and encrypted pre-conversion archives are rollback
+  aids, not a substitute for a tested long-term media backup policy.
 - `Retain` reclaim policies intentionally leave Longhorn volumes behind after a
   PVC is deleted. Confirm ownership before manually removing released volumes.
 
@@ -432,11 +468,21 @@ plane maintenance as routine.
     Codex to use Coder's local CLI MCP transport.
 16. Added a Talos-compatible Spegel peer cache and Coder/PyTorch image
     pre-pullers to avoid repeated large downloads across the compute fleet.
+17. Migrated Grafana, Prometheus, n8n, Portainer, Uptime Kuma, and Telchar Forge
+    application state from Atlas NFS to replicated Longhorn volumes and verified
+    their off-site R2 backups.
+18. Converted Atlas from Ubuntu to Talos through iLO virtual media, targeting
+    only the exact 500 GB SSD WWID and preserving DATA-1 and DATA-2 unchanged.
+19. Mounted existing DATA-2 directly in Talos, restored authenticated Samba
+    service, migrated Plex metadata to Longhorn, and validated the original Plex
+    identity, libraries, media access, and Tesla P40 inside Kubernetes.
 
 ## Known risks and follow-up work
 
 - The cluster has only one control-plane/etcd member.
-- Many older applications still depend entirely on the Atlas NFS server.
+- Bulk DATA-2 media is intentionally a single NAS filesystem with no separate
+  backup; RAID protects availability from a member-disk failure, not deletion,
+  corruption, controller failure, or site loss.
 - Several imported applications still use mutable `latest` image tags and
   should be pinned during normal maintenance.
 - Homepage currently has broad read access to cluster objects to populate its

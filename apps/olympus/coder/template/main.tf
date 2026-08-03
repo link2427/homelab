@@ -104,6 +104,7 @@ locals {
   gpu_nodes = {
     quadro-m4000 = "precision-5810-01"
     quadro-p2000 = "precision-7810-01"
+    tesla-p40    = "atlas"
   }
 }
 
@@ -217,6 +218,11 @@ data "coder_parameter" "gpu" {
   option {
     name  = "Quadro P2000 · 5 GiB · precision-7810-01"
     value = "quadro-p2000"
+  }
+
+  option {
+    name  = "Tesla P40 · 24 GiB · atlas (shared with Plex)"
+    value = "tesla-p40"
   }
 }
 

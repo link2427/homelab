@@ -161,10 +161,8 @@ spec:
 ---
 apiVersion: v1
 data:
-  bookmarks.yaml: "- Storage Shortcuts:\n    - DATA-1:\n        - abbr: D1\n     \
-    \     href: smb://10.0.0.5/DATA-1\n          description: Atlas primary share\n\
-    \    - DATA-2:\n        - abbr: D2\n          href: smb://10.0.0.5/DATA-2\n  \
-    \        description: Atlas secondary share\n    - Plex Library:\n        - icon:\
+  bookmarks.yaml: "- Storage Shortcuts:\n    - DATA-2:\n        - abbr: D2\n          href: smb://10.0.0.5/DATA-2\n  \
+    \        description: Atlas authenticated NAS share\n    - Plex Library:\n        - icon:\
     \ plex.png\n          href: http://10.0.0.5:32400/web\n          description:\
     \ Media on atlas\n\n- Platform References:\n    - Talos Linux:\n        - icon:\
     \ mdi-shield-crown-outline\n          href: https://docs.siderolabs.com/talos/v1.12/\n\
@@ -278,7 +276,7 @@ data:
     \ Rack switching and port console\n    - Network Gateway:\n        icon: mdi-router-network\n\
     \        href: http://10.0.0.1\n        description: LAN gateway and DHCP\n  \
     \      siteMonitor: http://10.0.0.1\n    - Atlas:\n        icon: mdi-nas\n   \
-    \     href: smb://10.0.0.5\n        description: Primary NAS and media host \xB7\
+    \     href: smb://10.0.0.5\n        description: Talos NAS worker \xB7 DATA-2 + Plex \xB7\
     \ 10.0.0.5\n    - Olympus DNS:\n        icon: mdi-dns\n        href: http://olympus-pihole\n\
     \        description: Pi-hole web and tailnet DNS\n        server: kubernetes\n\
     \        namespace: pihole\n        podSelector: app=pihole\n\n- Compute Fleet:\n\
@@ -288,7 +286,7 @@ data:
     \ \xB7 16 GiB \xB7 Quadro M4000 8 GiB\n        siteMonitor: http://10.0.0.25:30080\n\
     \    - precision-7810-01:\n        icon: mdi-nvidia\n        description: 8 threads\
     \ \xB7 32 GiB \xB7 Quadro P2000 5 GiB\n        siteMonitor: http://10.0.0.171:30080\n\
-    \n- Kubernetes Core:\n    - Homepage:\n        icon: homepage.png\n        href:\
+    \    - atlas:\n        icon: mdi-nvidia\n        description: 72 threads \xB7 ~64 GiB \xB7 Tesla P40 24 GiB \xB7 DATA-2 NAS\n        siteMonitor: http://10.0.0.5:30080\n\n- Kubernetes Core:\n    - Homepage:\n        icon: homepage.png\n        href:\
     \ http://olympus-dashboard\n        description: Olympus command center\n    \
     \    server: kubernetes\n        namespace: homepage\n        podSelector: app=homepage\n\
     \    - CoreDNS:\n        icon: mdi-dns-outline\n        description: Cluster service\
@@ -303,21 +301,16 @@ data:
     \      namespace: kube-system\n        podSelector: k8s-app=kube-proxy\n    - Longhorn:\n\
     \        icon: mdi-database-sync\n        href: http://olympus-longhorn\n        description:\
     \ Distributed NVMe, SSD, and HDD storage\n        server: kubernetes\n        namespace:\
-    \ longhorn-system\n        podSelector: app=longhorn-ui\n    - NFS \xB7 DATA-1:\n\
-    \        icon: mdi-folder-network-outline\n        description:\
-    \ Dynamic storage provisioner\n        server: kubernetes\n        namespace:\
-    \ nfs-provisioner\n        podSelector: app=nfs-subdir-external-provisioner\n\
-    \    - NFS \xB7 DATA-2:\n        icon: mdi-folder-network-outline\n        description:\
-    \ Secondary storage provisioner\n        server: kubernetes\n        namespace:\
-    \ nfs-provisioner\n        podSelector: app=nfs-subdir-external-provisioner-data2\n\
-    \    - NVIDIA GPU Runtime:\n        icon: nvidia.png\n        description: 2 GPUs\
+    \ longhorn-system\n        podSelector: app=longhorn-ui\n    - Samba \xB7 DATA-2:\n\
+    \        icon: mdi-folder-network-outline\n        href: smb://10.0.0.5/DATA-2\n        description: Authenticated NAS share from Atlas\n        server: kubernetes\n        namespace: nas\n        podSelector: app=samba\n\
+    \    - NVIDIA GPU Runtime:\n        icon: nvidia.png\n        description: 3 GPUs\
     \ allocatable \xB7 R580 LTS\n        server: kubernetes\n        namespace: nvidia-device-plugin\n\
     \        podSelector: app.kubernetes.io/instance=nvidia-device-plugin\n\n- Observability\
     \ Internals:\n    - kube-state-metrics:\n        icon: kubernetes.png\n      \
     \  description: Kubernetes object metrics exporter\n        server: kubernetes\n\
     \        namespace: monitoring\n        podSelector: app=kube-state-metrics\n\
     \    - node-exporter:\n        icon: prometheus.png\n        description: Host\
-    \ metrics from all three nodes\n        server: kubernetes\n        namespace:\
+    \ metrics from all four nodes\n        server: kubernetes\n        namespace:\
     \ monitoring\n        podSelector: app=node-exporter\n    - Portainer Agent:\n\
     \        icon: portainer.png\n        description: Cluster management agent\n\
     \        server: kubernetes\n        namespace: portainer\n        podSelector:\

@@ -16,7 +16,7 @@ backups.
 
 Authoritative inventory is stored in PostgreSQL on a 10 GiB
 `longhorn-resilient` volume. Uploaded media uses a 5 GiB Longhorn RWX volume.
-Both volumes are backed up to the Atlas Longhorn target every night. Valkey is
+Both volumes are backed up to Cloudflare R2 every night. Valkey is
 an intentionally ephemeral queue/cache and is rebuilt automatically.
 
 The initial inventory covers the Olympus LAN and the known always-on hardware:
@@ -27,7 +27,7 @@ The initial inventory covers the Olympus LAN and the known always-on hardware:
 | `precision-5810-01` | `10.0.0.25/24` | Kubernetes Compute | Talos worker; NVIDIA Quadro M4000 |
 | `precision-7810-01` | `10.0.0.171/24` | Kubernetes Compute | Talos worker; NVIDIA Quadro P2000 |
 | `hp-2920` | `10.0.0.95/24` | Network | Switch management console |
-| `atlas` | `10.0.0.5/24` | Storage | NAS and Longhorn backup target |
+| `atlas` | `10.0.0.5/24` | Kubernetes Compute | Talos worker; DATA-2 NAS/Plex; NVIDIA Tesla P40; iLO `10.0.0.24` |
 
 The `10.0.0.0/24` prefix and `10.0.0.1/24` gateway are also recorded. Rack
 dimensions, rack units, switch ports, and cabling are intentionally left unset

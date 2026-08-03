@@ -17,6 +17,8 @@ apps/olympus/              User-facing workloads and their configuration
 - [Olympus homelab handbook](docs/olympus-handbook.md) — hardware inventory,
   architecture, networking, storage, GPUs, Coder, access, operations, recovery,
   installation guardrails, completed work, and known risks
+- [Atlas Talos migration and recovery record](docs/atlas-talos-migration.md) —
+  immutable disk map, preserved data, rollback archives, and validation steps
 - [Cluster composition](clusters/olympus/README.md)
 - [Application import workflow](apps/olympus/README.md)
 - [Coder workspace templates](apps/olympus/coder/template/README.md)
