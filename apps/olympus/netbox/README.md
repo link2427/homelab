@@ -13,6 +13,20 @@ Authoritative inventory is stored in PostgreSQL on a 10 GiB
 Both volumes are backed up to the Atlas Longhorn target every night. Valkey is
 an intentionally ephemeral queue/cache and is rebuilt automatically.
 
+The initial inventory covers the Olympus LAN and the known always-on hardware:
+
+| Device | Management IP | Role | Notes |
+| --- | --- | --- | --- |
+| `optiplex-hermes` | `10.0.0.57/24` | Kubernetes Control Plane | Talos control plane/etcd; M.2 workspace storage |
+| `precision-5810-01` | `10.0.0.25/24` | Kubernetes Compute | Talos worker; NVIDIA Quadro M4000 |
+| `precision-7810-01` | `10.0.0.171/24` | Kubernetes Compute | Talos worker; NVIDIA Quadro P2000 |
+| `hp-2920` | `10.0.0.95/24` | Network | Switch management console |
+| `atlas` | `10.0.0.5/24` | Storage | NAS and Longhorn backup target |
+
+The `10.0.0.0/24` prefix and `10.0.0.1/24` gateway are also recorded. Rack
+dimensions, rack units, switch ports, and cabling are intentionally left unset
+until they can be measured or traced instead of guessed.
+
 Useful checks:
 
 ```powershell

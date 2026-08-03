@@ -85,9 +85,6 @@ persistence:
   storageClass: longhorn-resilient
   accessMode: ReadWriteMany
   size: 5Gi
-  annotations:
-    recurring-job.longhorn.io/source: enabled
-    recurring-job.longhorn.io/netbox-media-backup: enabled
 
 resourcesPreset: none
 resources:

@@ -214,6 +214,13 @@ nodes. The database and media volumes are backed up nightly to Atlas and retain
 seven backups. Valkey holds only queues and cache entries and is intentionally
 ephemeral.
 
+The initial source of truth records the `10.0.0.0/24` Olympus LAN, its
+`10.0.0.1/24` gateway, and management interfaces for `optiplex-hermes`
+(`10.0.0.57/24`), `precision-5810-01` (`10.0.0.25/24`),
+`precision-7810-01` (`10.0.0.171/24`), `hp-2920` (`10.0.0.95/24`), and
+`atlas` (`10.0.0.5/24`). Rack dimensions, device positions, switch ports, and
+cabling remain unset until the physical topology can be verified.
+
 Operational checks:
 
 ```powershell
