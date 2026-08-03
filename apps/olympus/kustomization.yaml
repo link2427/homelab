@@ -5,6 +5,7 @@ resources:
 - monitoring
 - portainer
 - pihole
+- plex
 - n8n
 - uptime-kuma
 - coder
