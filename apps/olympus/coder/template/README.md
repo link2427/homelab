@@ -43,6 +43,21 @@ Coder requests GitHub authorization if needed, clones the selection into
 `/home/coder/project/<repository>`, and opens every editor and agent in that
 directory. Choose **Empty project** to use `/home/coder/project` without a clone.
 
+The dropdown also offers **Create new GitHub repository** and **Fork public OSS
+repository**. Enter the requested repository name or upstream GitHub URL, create
+the workspace, then use the GitHub action tile to approve the operation in the
+signed-in browser. A non-blocking startup task waits for the repository and
+clones it automatically into the normal project directory. Keep the prefilled
+repository name when confirming the action; restart the workspace to retry if
+the 15-minute watcher expires. The form only shows the repository-name field
+for Create and the upstream-URL field for Fork.
+
+The browser confirmation is deliberate. GitHub requires Administration-write
+for a GitHub App to create repositories or forks, and that same permission can
+delete repositories. Olympus does not grant it. The existing short-lived App
+token remains limited to normal repository work while the signed-in GitHub page
+performs the one privileged creation action.
+
 Coder intentionally does not fetch external data while rendering dynamic
 parameters. `Publish-CoderTemplates.ps1` therefore reads the current repository
 list from the authenticated GitHub CLI and injects it as a template variable
@@ -92,7 +107,9 @@ Jupyter caches live on the persistent home volume.
 ## Publishing
 
 Authenticate both CLIs, then run the publishing helper whenever repository
-access changes or new repositories are created:
+access changes or new repositories are created. The special action rows reserve
+three of Coder's 64 dropdown choices, so the generated catalog may contain at
+most 61 repositories:
 
 ```powershell
 gh auth login
