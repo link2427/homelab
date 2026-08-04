@@ -87,6 +87,7 @@ try {
   $forgeDirectory = Join-Path $PSScriptRoot "..\container-forge"
   $forgeVariables = [ordered]@{
     github_repositories_json = $catalogJson
+    namespace                = "coder-forge"
   }
   ConvertTo-Json -InputObject $forgeVariables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
   Write-Host "Publishing container-forge with $($catalog.Count) GitHub repositories..."
