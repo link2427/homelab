@@ -341,12 +341,14 @@ resource "coder_agent" "main" {
       exec zellij attach "$session"
     fi
     if [ "$#" -eq 0 ]; then
-      layout="layout { pane cwd=\"$workdir\"; }"
+      command="/bin/bash"
     else
-      command="$1"
-      layout="layout { pane command=\"$command\" { cwd \"$workdir\"; close_on_exit true; } }"
+      command="$(command -v "$1")"
     fi
-    exec zellij --session "$session" --layout-string "$layout"
+    exec zellij --session "$session" options \
+      --default-cwd "$workdir" \
+      --default-shell "$command" \
+      --show-startup-tips false
     SESSION_HELPER
     chmod +x /home/coder/.local/bin/olympus-session
     filebrowser_version="v2.63.5"

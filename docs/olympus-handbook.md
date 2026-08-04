@@ -260,10 +260,15 @@ kubectl -n longhorn-system get recurringjob netbox-db-backup netbox-media-backup
 ## Coder development platform
 
 Coder runs in namespace `coder` with a dedicated PostgreSQL 17.9 database on
-three-replica Longhorn storage. Kubernetes permissions for workspaces are
-confined to that namespace.
+three-replica Longhorn storage. Normal workspaces are confined to that
+namespace. Container Forge workspaces use the separate `coder-forge` namespace
+and a scoped provisioner role that can create only their required pods,
+deployments, StatefulSets, services, claims, service accounts, roles, and role
+bindings there.
 
-Four templates are published from one Terraform source:
+Five templates are published. Four share the normal workspace Terraform source;
+Container Forge has a separate source because it also provisions an isolated
+builder:
 
 | Template | Purpose | Defaults |
 | --- | --- | --- |
@@ -271,10 +276,19 @@ Four templates are published from one Terraform source:
 | `olympus-agent` | autonomous coding agents | 6 CPU, 12 GiB RAM, 60 GiB fast disk |
 | `olympus-gpu` | PyTorch, CUDA, JupyterLab | 4 CPU, 8 GiB RAM, 80 GiB fast disk, M4000 |
 | `olympus-build` | large builds and caches | 8 CPU, 16 GiB RAM, 120 GiB bulk disk, 7810 |
+| `container-forge` | build offline Docker image bundles for SCIF | 80 GiB home, 40 GiB disposable build cache, 7810 |
 
 The agent image installs Codex, Claude Code, OpenCode, Reasonix, AgentAPI, and
 Node.js 24 into persistent user storage. Editor and agent launchers open in the
 selected repository directory.
+
+The agent launchers use checksum-verified Zellij `v0.44.3` named sessions. If a
+browser tab or launcher window closes, reopening the same agent button attaches
+to the existing session and its running process instead of opening a second
+terminal. This lasts only while the workspace pod remains running. Stopping the
+workspace, updating it, or rescheduling its pod ends live processes; the
+Longhorn home volume and each agent's own saved history remain available for a
+normal resume after restart.
 
 The `olympus-agent` template also provides an owner-only **Exports** app. Agents
 run `olympus-export SOURCE [DOWNLOAD_NAME]` to copy an artifact into the
@@ -282,6 +296,24 @@ persistent `/home/coder/exports` directory; the owner can then preview or
 download it through Coder in a normal authenticated browser session. The file
 service binds only to workspace loopback and is not directly exposed to the
 cluster network.
+
+### Container Forge
+
+`container-forge` authors Dockerfiles with the same GitHub repository selector
+and agent launchers, but builds images through a disposable, daemonless Kaniko
+pod. The maintained `osscontainertools/kaniko` `v1.28.2-alpine` image is pinned
+by digest. The workspace has no Docker socket, Docker-in-Docker daemon,
+privileged container, or permission to modify unrelated namespaces.
+
+Run `container-build IMAGE CONTEXT -f Dockerfile` to produce a Linux/amd64
+Docker-save archive. Each timestamped directory in `/home/coder/exports`
+contains the archive, `SHA256SUMS`, a JSON manifest, the complete build log, and
+exact `docker load` instructions. **Container Exports** serves these bundles
+through Coder's owner-authenticated proxy. `container-split ARCHIVE 3900M`
+creates checksummed disc-sized parts and reassembly instructions when a bundle
+will not fit on one approved disc. The project/export volume persists; the
+separate builder cache is deliberately disposable, and the builder pod is
+recycled after every build.
 
 Codex connects to Coder through the authenticated local CLI MCP transport:
 
@@ -454,7 +486,7 @@ plane maintenance as routine.
    Construct, and Telchar Forge under Flux reconciliation.
 7. Deployed Longhorn with NVMe/SSD/HDD tiers and Atlas backup jobs.
 8. Rebuilt the Olympus Homepage command center and installed Headlamp.
-9. Deployed Coder, its resilient PostgreSQL database, and four development
+9. Deployed Coder, its resilient PostgreSQL database, and five development
    templates.
 10. Added explicit GPU selection, PyTorch/Jupyter tooling, and autonomous-agent
     launchers.
@@ -481,6 +513,9 @@ plane maintenance as routine.
     service, migrated Plex metadata to Longhorn, and validated the original Plex
     identity, libraries, read-only media access, and Quadro P2000 transcoding
     device inside Kubernetes.
+20. Added persistent named Zellij sessions to agent launchers and repaired
+    Container Forge as an isolated, daemonless Kaniko workflow that emits
+    checksummed Docker archives for offline SCIF transfer.
 
 ## Known risks and follow-up work
 

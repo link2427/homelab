@@ -2,7 +2,9 @@
 
 One source publishes four focused Kubernetes workspace templates. The `profile`
 and `image` Terraform variables are fixed per template version; developers only
-see the relevant resource, storage, and GPU parameters.
+see the relevant resource, storage, and GPU parameters. A fifth,
+`container-forge`, is published from its own source because it also provisions
+a disposable image-builder pod in the isolated `coder-forge` namespace.
 
 | Template | Profile | Purpose | Default storage |
 | --- | --- | --- | --- |
@@ -11,7 +13,7 @@ see the relevant resource, storage, and GPU parameters.
 | `olympus-gpu` | `gpu` | CUDA 12.6 PyTorch development with JupyterLab and persistent model/kernel caches | Fast SSD, 2 replicas |
 | `olympus-build` | `build` | Large builds and caches pinned to the 7810 | Bulk HDD, 1 replica + backup |
 
-All persistent home volumes receive daily Longhorn backups to Atlas. CPU,
+Persistent home volumes receive scheduled Longhorn backups to Cloudflare R2. CPU,
 memory, home size, and storage tier are selectable. GPU-capable profiles can
 select the exact physical card:
 
@@ -32,7 +34,7 @@ directory. Choose **Empty project** to use `/home/coder/project` without a clone
 Coder intentionally does not fetch external data while rendering dynamic
 parameters. `Publish-CoderTemplates.ps1` therefore reads the current repository
 list from the authenticated GitHub CLI and injects it as a template variable
-while publishing all four versions. The generated catalog is held only in a
+while publishing all five templates. The generated catalog is held only in a
 temporary file and is never written into this public Git repository, so private
 repository names do not leak into Git history. Archived repositories are omitted
 unless the helper is called with `-IncludeArchived`.
@@ -50,6 +52,11 @@ Code, OpenCode CLI, and Reasonix, plus the OpenCode web interface. Node.js
 24.18.1 LTS, Reasonix 1.19.1, and AgentAPI are installed into the persistent
 home directory without requiring root privileges, so all four tools survive
 workspace rebuilds and keep their user-level configuration with the workspace.
+The four launcher buttons enter named Zellij `v0.44.3` sessions, so closing and
+reopening a browser terminal reattaches to the same running agent while the
+workspace stays started. A workspace stop, update, or pod reschedule still ends
+live processes; files and agent history on the Longhorn home volume persist for
+normal resume afterward.
 Reasonix runs with `sandbox.bash = "off"` because Talos deliberately disables
 the nested user namespaces Bubblewrap requires and the Coder namespace rejects
 unconfined seccomp profiles. The enclosing workspace remains a non-root pod
@@ -81,4 +88,6 @@ coder login https://coder.jacob-neel.dev
 .\Publish-CoderTemplates.ps1
 ```
 
-Workspace Kubernetes permissions remain confined to the `coder` namespace.
+Normal workspace Kubernetes permissions remain confined to `coder`. Container
+Forge uses the separate `coder-forge` namespace and its own narrowly scoped
+provisioner role; see [`../container-forge/README.md`](../container-forge/README.md).

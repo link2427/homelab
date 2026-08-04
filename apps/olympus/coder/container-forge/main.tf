@@ -295,12 +295,14 @@ resource "coder_agent" "main" {
       exec zellij attach "$session"
     fi
     if [ "$#" -eq 0 ]; then
-      layout="layout { pane cwd=\"$workdir\"; }"
+      command="/bin/bash"
     else
-      command="$1"
-      layout="layout { pane command=\"$command\" { cwd \"$workdir\"; close_on_exit true; } }"
+      command="$(command -v "$1")"
     fi
-    exec zellij --session "$session" --layout-string "$layout"
+    exec zellij --session "$session" options \
+      --default-cwd "$workdir" \
+      --default-shell "$command" \
+      --show-startup-tips false
     SESSION_HELPER
     chmod +x /home/coder/.local/bin/olympus-session
 
@@ -604,11 +606,284 @@ resource "coder_agent" "main" {
     fi
     archive="$1"
     part_size="$${2:-3900M}"
-    if [ ! -f "$a…3265 tokens truncated…    if [ ! -x /home/coder/.local/bin/agentapi ]; then
-      curl --retry 5 --retry-delay 5 --fail --retry-all-errors -L \
-        -o /home/coder/.local/bin/agentapi \
-        https://github.com/coder/agentapi/releases/download/v0.11.2/agentapi-linux-amd64
-      chmod +x /home/coder/.local/bin/agentapi
+    if [ ! -f "$archive" ]; then
+      echo "Archive does not exist: $archive" >&2
+      exit 1
+    fi
+    archive="$(cd "$(dirname "$archive")" && pwd -P)/$(basename "$archive")"
+    case "$archive" in
+      /home/coder/exports/*) ;;
+      *) echo "Archive must be under /home/coder/exports." >&2; exit 2 ;;
+    esac
+    output_dir="$archive.parts"
+    if [ -e "$output_dir" ]; then
+      echo "Parts directory already exists: $output_dir" >&2
+      exit 1
+    fi
+    mkdir -p "$output_dir"
+    archive_name="$(basename "$archive")"
+    split -b "$part_size" -d -a 3 "$archive" "$output_dir/$archive_name.part-"
+    (
+      cd "$output_dir"
+      sha256sum "$archive_name".part-* > SHA256SUMS
+    )
+    cat > "$output_dir/REASSEMBLE-IN-SCIF.txt" <<EOF
+    Container Forge split archive
+    =============================
+
+    Copy all parts into one directory, then run:
+
+      sha256sum -c SHA256SUMS
+      cat $archive_name.part-* > $archive_name
+      docker load --input $archive_name
+    EOF
+    printf 'Split archive ready: %s\n' "$output_dir"
+    SPLIT_HELPER
+    chmod +x /home/coder/.local/bin/container-split
+
+    cat > /home/coder/.local/bin/container-registry-login <<'PY'
+    #!/usr/bin/env python3
+    """Store a Docker-compatible registry credential for Kaniko base-image pulls."""
+
+    import base64
+    import getpass
+    import json
+    from pathlib import Path
+    import sys
+
+    if len(sys.argv) not in (2, 3):
+        print("Usage: container-registry-login REGISTRY [USERNAME]", file=sys.stderr)
+        raise SystemExit(2)
+
+    registry = sys.argv[1].strip()
+    username = sys.argv[2].strip() if len(sys.argv) == 3 else input("Username: ").strip()
+    if not registry or not username:
+        print("Registry and username cannot be empty.", file=sys.stderr)
+        raise SystemExit(2)
+
+    password = getpass.getpass("Password or token: ")
+    if not password:
+        print("Password or token cannot be empty.", file=sys.stderr)
+        raise SystemExit(2)
+
+    config_path = Path("/home/coder/.docker/config.json")
+    config_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        config = {}
+    except json.JSONDecodeError as error:
+        print(f"Refusing to overwrite invalid {config_path}: {error}", file=sys.stderr)
+        raise SystemExit(1)
+
+    auths = config.setdefault("auths", {})
+    auths[registry] = {
+        "auth": base64.b64encode(f"{username}:{password}".encode()).decode()
+    }
+    temporary = config_path.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.chmod(0o600)
+    temporary.replace(config_path)
+    config_path.chmod(0o600)
+    print(f"Credential stored for {registry}.")
+    PY
+    chmod +x /home/coder/.local/bin/container-registry-login
+
+    cat > /home/coder/.local/bin/olympus-export <<'EXPORT_HELPER'
+    #!/bin/sh
+    set -eu
+    if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+      echo "Usage: olympus-export SOURCE [DOWNLOAD_NAME]" >&2
+      exit 2
+    fi
+    source_path="$1"
+    download_name="$${2:-$(basename "$source_path")}"
+    case "$download_name" in
+      ""|.|..|*/*) echo "DOWNLOAD_NAME must be a single file or directory name." >&2; exit 2 ;;
+    esac
+    if [ ! -e "$source_path" ]; then
+      echo "Source does not exist: $source_path" >&2
+      exit 1
+    fi
+    destination="/home/coder/exports/$download_name"
+    if [ -e "$destination" ]; then
+      echo "Destination already exists: $destination" >&2
+      exit 1
+    fi
+    cp -a -- "$source_path" "$destination"
+    printf 'Export ready: %s\n' "$destination"
+    EXPORT_HELPER
+    chmod +x /home/coder/.local/bin/olympus-export
+
+    if [ ! -e /home/coder/project/CONTAINER-FORGE.md ]; then
+      cat > /home/coder/project/CONTAINER-FORGE.md <<'FORGE_GUIDE'
+    # Container Forge
+
+    This workspace builds Docker-compatible Linux/amd64 image archives without
+    Docker-in-Docker and without mounting a host Docker socket.
+
+    ## Normal workflow
+
+    1. Create a Dockerfile and its build context under `/home/coder`.
+    2. Build and export it:
+
+       ```bash
+       cd /home/coder/project
+       container-build my-image:1.0 . -f Dockerfile
+       ```
+
+    3. Open **Exports** in Coder and download the completed bundle directory.
+    4. In the offline environment, verify `SHA256SUMS`, then use the exact
+       `docker load` command written to `LOAD-IN-SCIF.txt`.
+
+    Common options:
+
+    ```bash
+    container-build pytorch-scif:1.0 . \
+      --build-arg CUDA_VERSION=13.0 \
+      --target runtime
+
+    container-build opencode-scif:1.0 . --reproducible
+    ```
+
+    For an archive too large for one approved disc, run:
+
+    ```bash
+    container-split /home/coder/exports/<bundle>/<image>.docker.tar 3900M
+    ```
+
+    Registry credentials for private base images can be stored with:
+
+    ```bash
+    container-registry-login registry.example.mil USERNAME
+    ```
+
+    ## Important boundaries
+
+    - The target is Linux/amd64, matching the intended offline Docker hosts.
+    - This workspace builds images but does not run them. Put validation in a
+      Dockerfile test stage and build that stage with `--target`.
+    - Build contexts and Dockerfiles must remain under `/home/coder` because
+      that is the only volume mounted into the disposable builder.
+    - The builder is recycled after every build so one Dockerfile cannot leave
+      filesystem state behind for the next one.
+    FORGE_GUIDE
+    fi
+
+    filebrowser_version="v2.63.5"
+    filebrowser_checksum="b36ad6296db0a749a5adbc792ab5321d11b307106123d44e171b7c158fcca2d9"
+    filebrowser_marker="/home/coder/.local/share/filebrowser/version"
+    installed_filebrowser_version="$(cat "$filebrowser_marker" 2>/dev/null || true)"
+    if [ ! -x /home/coder/.local/bin/filebrowser ] || [ "$installed_filebrowser_version" != "$filebrowser_version" ]; then
+      filebrowser_archive="/tmp/container-forge-filebrowser-$filebrowser_version.tar.gz"
+      filebrowser_extract_dir="$(mktemp -d /tmp/container-forge-filebrowser.XXXXXX)"
+      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
+        -o "$filebrowser_archive" \
+        "https://github.com/filebrowser/filebrowser/releases/download/$filebrowser_version/linux-amd64-filebrowser.tar.gz"
+      printf '%s  %s\n' "$filebrowser_checksum" "$filebrowser_archive" | sha256sum -c -
+      tar -xzf "$filebrowser_archive" -C "$filebrowser_extract_dir" filebrowser
+      install -m 0755 "$filebrowser_extract_dir/filebrowser" /home/coder/.local/bin/filebrowser
+      printf '%s\n' "$filebrowser_version" > "$filebrowser_marker"
+      rm -f "$filebrowser_extract_dir/filebrowser" "$filebrowser_archive"
+      rmdir "$filebrowser_extract_dir"
+    fi
+
+    if ! command -v npm >/dev/null 2>&1; then
+      node_version="v24.18.1"
+      node_dir="/home/coder/.local/lib/node-$node_version-linux-x64"
+      if [ ! -x "$node_dir/bin/node" ]; then
+        mkdir -p "$node_dir"
+        curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
+          "https://nodejs.org/dist/$node_version/node-$node_version-linux-x64.tar.xz" \
+          -o /tmp/container-forge-node.tar.xz
+        tar -xJf /tmp/container-forge-node.tar.xz -C "$node_dir" --strip-components=1
+        rm -f /tmp/container-forge-node.tar.xz
+      fi
+      ln -sfn "$node_dir/bin/node" /home/coder/.local/bin/node
+      ln -sfn "$node_dir/bin/npm" /home/coder/.local/bin/npm
+      ln -sfn "$node_dir/bin/npx" /home/coder/.local/bin/npx
+    fi
+
+    if ! /home/coder/.local/bin/reasonix --version >/dev/null 2>&1; then
+      npm install --global --prefix /home/coder/.local reasonix@1.19.1
+    fi
+
+    python3 - <<'PY'
+    import os
+    import re
+    from pathlib import Path
+
+    reasonix_home = Path("/home/coder/.reasonix")
+    reasonix_home.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(reasonix_home, 0o700)
+
+    # Talos disables unprivileged user namespaces, so Reasonix cannot nest
+    # Bubblewrap. The outer Coder pod remains non-root, capability-free, and
+    # protected by RuntimeDefault seccomp.
+    config = reasonix_home / "config.toml"
+    if config.exists():
+        content = config.read_text(encoding="utf-8")
+        section = re.search(r"(?ms)^\[sandbox\]\s*\n(?P<body>.*?)(?=^\[|\Z)", content)
+        if section:
+            body = section.group("body")
+            if re.search(r"(?m)^\s*bash\s*=", body):
+                updated_body = re.sub(r'(?m)^\s*bash\s*=.*$', 'bash = "off"', body, count=1)
+            else:
+                updated_body = body + 'bash = "off"\n'
+            content = content[:section.start("body")] + updated_body + content[section.end("body"):]
+        else:
+            content = content.rstrip() + '\n\n[sandbox]\nbash = "off"\nnetwork = true\n'
+    else:
+        content = '[sandbox]\nbash = "off"\nnetwork = true\n'
+
+    temporary = reasonix_home / "config.toml.coder.tmp"
+    temporary.write_text(content, encoding="utf-8")
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, config)
+
+    key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if key:
+        credentials = reasonix_home / ".env"
+        retained = []
+        if credentials.exists():
+            for line in credentials.read_text(encoding="utf-8").splitlines():
+                normalized = line.strip()
+                if normalized.startswith("DEEPSEEK_API_KEY="):
+                    continue
+                if normalized.startswith("export DEEPSEEK_API_KEY="):
+                    continue
+                retained.append(line)
+        retained.append(f"DEEPSEEK_API_KEY={key}")
+        credentials_tmp = reasonix_home / ".env.coder.tmp"
+        credentials_tmp.write_text("\n".join(retained) + "\n", encoding="utf-8")
+        os.chmod(credentials_tmp, 0o600)
+        os.replace(credentials_tmp, credentials)
+    PY
+
+    if [ -x /usr/bin/gh ]; then
+      cat > /home/coder/.local/bin/gh <<'GH_WRAPPER'
+    #!/bin/sh
+    set -eu
+    coder_cli="$(find /tmp -maxdepth 2 -type f -path '/tmp/coder.*/coder' -print -quit)"
+    if [ -n "$coder_cli" ]; then
+      GH_TOKEN="$($coder_cli external-auth access-token github)"
+      export GH_TOKEN
+      export GITHUB_TOKEN="$GH_TOKEN"
+    fi
+    exec /usr/bin/gh "$@"
+    GH_WRAPPER
+      chmod +x /home/coder/.local/bin/gh
+    fi
+
+    if ! curl -fsS "http://127.0.0.1:13339${local.exports_base_path}/" >/dev/null 2>&1; then
+      nohup /home/coder/.local/bin/filebrowser \
+        --address 127.0.0.1 \
+        --port 13339 \
+        --root /home/coder/exports \
+        --database /home/coder/.local/share/filebrowser/filebrowser.db \
+        --baseURL '${local.exports_base_path}' \
+        --noauth \
+        > /home/coder/.local/share/filebrowser/server.log 2>&1 &
     fi
   EOT
 }
