@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-automation-data2
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
+spec:
+  capacity:
+    storage: 4Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  volumeMode: Filesystem
+  mountOptions:
+    - nfsvers=4.2
+    - proto=tcp
+    - hard
+    - timeo=600
+    - retrans=2
+  nfs:
+    server: 10.0.0.5
+    path: /
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data2-media
+  namespace: media-automation
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: media-automation-data2
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Ti
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seerr-config
+  namespace: media-automation
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-resilient
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: radarr-config
+  namespace: media-automation
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-resilient
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarr-config
+  namespace: media-automation
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-resilient
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prowlarr-config
+  namespace: media-automation
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-resilient
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qbittorrent-config
+  namespace: media-automation
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-resilient
+  resources:
+    requests:
+      storage: 2Gi

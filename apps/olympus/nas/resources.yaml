@@ -28,7 +28,7 @@ data:
     VFS {
       Link_Support = true;
       Symlink_Support = true;
-      CanSetTime = false;
+      CanSetTime = true;
       umask = 0022;
     }
     EXPORT {
@@ -37,7 +37,7 @@ data:
       Pseudo = /;
       SecType = sys;
       Protocols = NFSv4;
-      Access_Type = RO;
+      Access_Type = NONE;
       Squash = Root_Squash;
       FSAL {
         Name = VFS;
@@ -45,6 +45,12 @@ data:
       CLIENT {
         Clients = 10.0.0.171;
         Access_Type = RO;
+        Squash = Root_Squash;
+        Protocols = NFSv4;
+      }
+      CLIENT {
+        Clients = 10.0.0.5;
+        Access_Type = RW;
         Squash = Root_Squash;
         Protocols = NFSv4;
       }
@@ -106,7 +112,6 @@ spec:
           volumeMounts:
             - name: media
               mountPath: /export
-              readOnly: true
             - name: mtab
               mountPath: /mtab
       containers:
@@ -152,7 +157,6 @@ spec:
           volumeMounts:
             - name: media
               mountPath: /export
-              readOnly: true
             - name: config
               mountPath: /etc/ganesha/ganesha.conf
               subPath: ganesha.conf
