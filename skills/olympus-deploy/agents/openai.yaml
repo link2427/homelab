@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deploy to Olympus"
+  short_description: "Deploy projects safely through Olympus GitOps"
+  default_prompt: "Use $olympus-deploy to package and deploy this project to the Olympus cluster."
