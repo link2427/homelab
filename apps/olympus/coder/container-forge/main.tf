@@ -329,9 +329,10 @@ data "coder_parameter" "git_repo" {
 }
 
 data "coder_parameter" "new_repo_name" {
+  count        = data.coder_parameter.git_repo.value == "__create_repository__" ? 1 : 0
   name         = "new_repo_name"
   display_name = "New repository name"
-  description  = "Used only with Create new GitHub repository. Keep the same name on the GitHub confirmation page."
+  description  = "Keep the same name on the GitHub confirmation page."
   type         = "string"
   form_type    = "input"
   default      = "new-project"
@@ -346,9 +347,10 @@ data "coder_parameter" "new_repo_name" {
 }
 
 data "coder_parameter" "fork_repo_url" {
+  count        = data.coder_parameter.git_repo.value == "__fork_repository__" ? 1 : 0
   name         = "fork_repo_url"
   display_name = "Public repository to fork"
-  description  = "Used only with Fork public OSS repository. Enter https://github.com/OWNER/REPOSITORY."
+  description  = "Enter https://github.com/OWNER/REPOSITORY."
   type         = "string"
   form_type    = "input"
   default      = ""
@@ -389,10 +391,10 @@ locals {
   }, data.coder_parameter.git_repo.value, "existing")
   existing_git_repo_url = local.repository_mode == "existing" ? trimsuffix(trimspace(data.coder_parameter.git_repo.value), "/") : ""
   fork_source_web_url = local.repository_mode == "fork" ? trimsuffix(
-    trimsuffix(trimspace(data.coder_parameter.fork_repo_url.value), "/"),
+    trimsuffix(trimspace(try(data.coder_parameter.fork_repo_url[0].value, "")), "/"),
     ".git",
   ) : ""
-  requested_repo_name    = trimspace(data.coder_parameter.new_repo_name.value)
+  requested_repo_name    = local.repository_mode == "create" ? trimspace(try(data.coder_parameter.new_repo_name[0].value, "")) : ""
   fork_repo_name         = local.fork_source_web_url != "" ? basename(local.fork_source_web_url) : ""
   browser_assisted_repo  = contains(["create", "fork"], local.repository_mode)
   github_auth_required   = local.repository_mode != "empty"
@@ -445,6 +447,11 @@ resource "terraform_data" "repository_request" {
   }
 
   lifecycle {
+    precondition {
+      condition     = local.repository_mode != "create" || local.requested_repo_name != ""
+      error_message = "New repository name is required when Create new GitHub repository is selected."
+    }
+
     precondition {
       condition     = local.repository_mode != "fork" || local.fork_source_web_url != ""
       error_message = "Public repository to fork is required when Fork public OSS repository is selected."

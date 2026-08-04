@@ -107,7 +107,7 @@ try {
 
     ConvertTo-Json -InputObject $variables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
     Write-Host "Publishing $($template.Name) with $($catalog.Count) GitHub repositories..."
-    & $CoderBinary templates push $template.Name -d $templateDirectory --variables-file $variablesFile -y -m "Add safe repository creation and OSS forking"
+    & $CoderBinary templates push $template.Name -d $templateDirectory --variables-file $variablesFile -y -m "Conditionally show repository action inputs"
     if ($LASTEXITCODE -ne 0) {
       throw "Publishing $($template.Name) failed with exit code $LASTEXITCODE."
     }
@@ -130,7 +130,7 @@ try {
   }
   ConvertTo-Json -InputObject $forgeVariables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
   Write-Host "Publishing container-forge with $($catalog.Count) GitHub repositories..."
-  & $CoderBinary templates push container-forge -d $forgeDirectory --variables-file $variablesFile -y -m "Add safe repository creation and OSS forking"
+  & $CoderBinary templates push container-forge -d $forgeDirectory --variables-file $variablesFile -y -m "Conditionally show repository action inputs"
   if ($LASTEXITCODE -ne 0) {
     throw "Publishing container-forge failed with exit code $LASTEXITCODE."
   }

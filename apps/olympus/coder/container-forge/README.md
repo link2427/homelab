@@ -43,7 +43,9 @@ repository, or fork a public OSS repository. Create and Fork use a safe
 browser-assisted flow: confirm the operation through the GitHub action tile,
 then the workspace detects and clones the resulting repository automatically.
 Keep the requested/default repository name on GitHub so the workspace can find
-it; restart the workspace to retry if the 15-minute watcher expires.
+it; restart the workspace to retry if the 15-minute watcher expires. The form
+only shows the repository-name field for Create and the upstream-URL field for
+Fork.
 The GitHub App is intentionally not granted Administration-write because that
 permission would also allow repository deletion.
 

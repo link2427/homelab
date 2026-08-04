@@ -49,7 +49,8 @@ the workspace, then use the GitHub action tile to approve the operation in the
 signed-in browser. A non-blocking startup task waits for the repository and
 clones it automatically into the normal project directory. Keep the prefilled
 repository name when confirming the action; restart the workspace to retry if
-the 15-minute watcher expires.
+the 15-minute watcher expires. The form only shows the repository-name field
+for Create and the upstream-URL field for Fork.
 
 The browser confirmation is deliberate. GitHub requires Administration-write
 for a GitHub App to create repositories or forks, and that same permission can
