@@ -83,9 +83,20 @@ try {
       throw "Publishing $($template.Name) failed with exit code $LASTEXITCODE."
     }
   }
+
+  $forgeDirectory = Join-Path $PSScriptRoot "..\container-forge"
+  $forgeVariables = [ordered]@{
+    github_repositories_json = $catalogJson
+  }
+  ConvertTo-Json -InputObject $forgeVariables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
+  Write-Host "Publishing container-forge with $($catalog.Count) GitHub repositories..."
+  & $CoderBinary templates push container-forge -d $forgeDirectory --variables-file $variablesFile -y -m "Repair isolated builder and persistent agent terminals"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Publishing container-forge failed with exit code $LASTEXITCODE."
+  }
 }
 finally {
   Remove-Item -LiteralPath $variablesFile -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host "Published $($templates.Count) templates. No repository catalog was written into the Git checkout."
+Write-Host "Published $($templates.Count + 1) templates. No repository catalog was written into the Git checkout."

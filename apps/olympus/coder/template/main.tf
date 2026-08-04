@@ -315,6 +315,31 @@ resource "coder_agent" "main" {
       /home/coder/.local/lib \
       /home/coder/.local/share/filebrowser \
       /home/coder/exports
+    if ! command -v tmux >/dev/null 2>&1; then
+      sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+      sudo -n env DEBIAN_FRONTEND=noninteractive \
+        apt-get install -y --no-install-recommends tmux
+    fi
+    cat > /home/coder/.local/bin/olympus-session <<'SESSION_HELPER'
+    #!/bin/bash
+    set -euo pipefail
+    if [ "$#" -lt 2 ]; then
+      echo "Usage: olympus-session SESSION WORKDIR [COMMAND ...]" >&2
+      exit 2
+    fi
+    session="$1"
+    workdir="$2"
+    shift 2
+    if tmux has-session -t "$session" 2>/dev/null; then
+      exec tmux attach-session -t "$session"
+    fi
+    if [ "$#" -eq 0 ]; then
+      exec tmux new-session -s "$session" -c "$workdir"
+    fi
+    printf -v tmux_command '%q ' "$@"
+    exec tmux new-session -s "$session" -c "$workdir" "$tmux_command"
+    SESSION_HELPER
+    chmod +x /home/coder/.local/bin/olympus-session
     filebrowser_version="v2.63.5"
     filebrowser_checksum="b36ad6296db0a749a5adbc792ab5321d11b307106123d44e171b7c158fcca2d9"
     filebrowser_marker="/home/coder/.local/share/filebrowser/version"
@@ -606,8 +631,7 @@ resource "coder_app" "codex" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
-    cd ${local.workspace_dir}
-    exec codex
+    exec olympus-session codex '${local.workspace_dir}' codex
   EOT
 }
 
@@ -624,8 +648,7 @@ resource "coder_app" "claude_code" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
-    cd ${local.workspace_dir}
-    exec claude
+    exec olympus-session claude-code '${local.workspace_dir}' claude
   EOT
 }
 
@@ -642,8 +665,7 @@ resource "coder_app" "opencode_cli" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.opencode/bin:/home/coder/.local/bin:$PATH"
-    cd ${local.workspace_dir}
-    exec opencode
+    exec olympus-session opencode '${local.workspace_dir}' opencode
   EOT
 }
 
@@ -660,8 +682,7 @@ resource "coder_app" "reasonix" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
-    cd ${local.workspace_dir}
-    exec reasonix
+    exec olympus-session reasonix '${local.workspace_dir}' reasonix
   EOT
 }
 

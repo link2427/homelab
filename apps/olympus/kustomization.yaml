@@ -10,6 +10,7 @@ resources:
 - n8n
 - uptime-kuma
 - coder
+- coder-forge
 - authentik
 - headlamp
 - netbox
