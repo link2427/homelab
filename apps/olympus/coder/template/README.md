@@ -13,9 +13,16 @@ a disposable image-builder pod in the isolated `coder-forge` namespace.
 | `olympus-gpu` | `gpu` | CUDA 12.6 PyTorch development with JupyterLab and persistent model/kernel caches | Fast SSD, 2 replicas |
 | `olympus-build` | `build` | Large builds and caches pinned to the 7810 | Bulk HDD, 1 replica + backup |
 
-Persistent home volumes receive scheduled Longhorn backups to Cloudflare R2. CPU,
-memory, home size, and storage tier are selectable. GPU-capable profiles can
-select the exact physical card:
+Persistent home volumes receive scheduled Longhorn backups to Cloudflare R2.
+The creation form is ordered as repository, compute, storage, placement, and
+GPU. CPU, memory, and disk capacity use sliders; storage, node placement, and
+GPU use visual choices with descriptions and icons. Each template also offers
+three one-click presets ranging from its normal default to an Atlas-backed heavy
+configuration. Presets leave the GitHub repository selector editable.
+
+CPU-only workspaces can use automatic Kubernetes scheduling or pin themselves
+to Atlas, the 5810, or the 7810. GPU selection overrides CPU placement and pins
+the workspace to the exact physical card:
 
 - Quadro M4000, 8 GiB, on `precision-5810-01`
 - Quadro P2000, 5 GiB, on `precision-7810-01`
@@ -24,6 +31,11 @@ select the exact physical card:
 
 GPU selection adds both the `nvidia.com/gpu: 1` limit and a hostname node
 selector, so Kubernetes cannot silently assign the other card.
+
+The catalog uses a distinct built-in Coder icon for each template: Ubuntu for
+Linux, OpenAI for Agent, PyTorch for GPU, Code for Build, and Container for
+Forge. The publishing helper reapplies display names, descriptions, and icons
+after every push so presentation does not drift from GitOps.
 
 Every template can start from a GitHub repository. The creation form provides a
 searchable dropdown of repositories available through the Olympus GitHub App;

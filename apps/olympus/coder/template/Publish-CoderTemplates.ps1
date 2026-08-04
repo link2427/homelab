@@ -60,10 +60,38 @@ if ($catalog.Count -gt 63) {
 $catalogJson = ConvertTo-Json -InputObject $catalog -Depth 4 -Compress
 $templateDirectory = $PSScriptRoot
 $templates = @(
-  @{ Name = "olympus-linux"; Profile = "linux"; Image = "codercom/example-base:ubuntu" },
-  @{ Name = "olympus-agent"; Profile = "agent"; Image = "codercom/example-universal:ubuntu" },
-  @{ Name = "olympus-gpu"; Profile = "gpu"; Image = "pytorch/pytorch:2.13.0-cuda12.6-cudnn9-runtime" },
-  @{ Name = "olympus-build"; Profile = "build"; Image = "codercom/example-universal:ubuntu" }
+  @{
+    Name        = "olympus-linux"
+    DisplayName = "Olympus Linux"
+    Description = "Flexible Ubuntu development with persistent storage and explicit cluster placement."
+    Icon        = "/icon/ubuntu.svg"
+    Profile     = "linux"
+    Image       = "codercom/example-base:ubuntu"
+  },
+  @{
+    Name        = "olympus-agent"
+    DisplayName = "Olympus Agent"
+    Description = "Persistent autonomous-agent workspace with Codex, Claude Code, OpenCode, and Reasonix."
+    Icon        = "/icon/openai.svg"
+    Profile     = "agent"
+    Image       = "codercom/example-universal:ubuntu"
+  },
+  @{
+    Name        = "olympus-gpu"
+    DisplayName = "Olympus GPU"
+    Description = "PyTorch and Jupyter workspace with an explicit M4000, P2000, or P40 reservation."
+    Icon        = "/icon/pytorch.svg"
+    Profile     = "gpu"
+    Image       = "pytorch/pytorch:2.13.0-cuda12.6-cudnn9-runtime"
+  },
+  @{
+    Name        = "olympus-build"
+    DisplayName = "Olympus Build"
+    Description = "High-capacity compilation workspace with SSD or economical bulk storage."
+    Icon        = "/icon/code.svg"
+    Profile     = "build"
+    Image       = "codercom/example-universal:ubuntu"
+  }
 )
 
 $variablesFile = Join-Path ([System.IO.Path]::GetTempPath()) "olympus-coder-$([guid]::NewGuid().ToString('N')).tfvars.json"
@@ -78,9 +106,14 @@ try {
 
     ConvertTo-Json -InputObject $variables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
     Write-Host "Publishing $($template.Name) with $($catalog.Count) GitHub repositories..."
-    & $CoderBinary templates push $template.Name -d $templateDirectory --variables-file $variablesFile -y -m "Refresh searchable GitHub repository selector"
+    & $CoderBinary templates push $template.Name -d $templateDirectory --variables-file $variablesFile -y -m "Add visual controls, placement choices, and presets"
     if ($LASTEXITCODE -ne 0) {
       throw "Publishing $($template.Name) failed with exit code $LASTEXITCODE."
+    }
+
+    & $CoderBinary templates edit $template.Name --display-name $template.DisplayName --description $template.Description --icon $template.Icon -y
+    if ($LASTEXITCODE -ne 0) {
+      throw "Updating metadata for $($template.Name) failed with exit code $LASTEXITCODE."
     }
   }
 
@@ -95,9 +128,17 @@ try {
   }
   ConvertTo-Json -InputObject $forgeVariables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
   Write-Host "Publishing container-forge with $($catalog.Count) GitHub repositories..."
-  & $CoderBinary templates push container-forge -d $forgeDirectory --variables-file $variablesFile -y -m "Repair isolated builder and persistent agent terminals"
+  & $CoderBinary templates push container-forge -d $forgeDirectory --variables-file $variablesFile -y -m "Add visual controls, build-host choices, and presets"
   if ($LASTEXITCODE -ne 0) {
     throw "Publishing container-forge failed with exit code $LASTEXITCODE."
+  }
+  & $CoderBinary templates edit container-forge `
+    --display-name "Olympus Container Forge" `
+    --description "Build and export Docker-compatible Linux/amd64 images for offline transfer." `
+    --icon "/icon/container.svg" `
+    -y
+  if ($LASTEXITCODE -ne 0) {
+    throw "Updating metadata for container-forge failed with exit code $LASTEXITCODE."
   }
 }
 finally {

@@ -67,7 +67,7 @@ locals {
       disk         = "30"
       storage_tier = "fast"
       gpu          = "none"
-      node         = ""
+      node         = "auto"
     }
     agent = {
       cpu          = "6"
@@ -75,7 +75,7 @@ locals {
       disk         = "60"
       storage_tier = "fast"
       gpu          = "none"
-      node         = ""
+      node         = "auto"
     }
     gpu = {
       cpu          = "4"
@@ -83,7 +83,7 @@ locals {
       disk         = "80"
       storage_tier = "fast"
       gpu          = "quadro-m4000"
-      node         = ""
+      node         = "auto"
     }
     build = {
       cpu          = "8"
@@ -92,6 +92,160 @@ locals {
       storage_tier = "bulk"
       gpu          = "none"
       node         = "precision-7810-01"
+    }
+  }
+  workspace_presets = {
+    linux = {
+      compact = {
+        name         = "Compact Sandbox"
+        description  = "A small shell, utility, or quick-fix workspace."
+        icon         = "/icon/ubuntu.svg"
+        default      = false
+        cpu          = "2"
+        memory       = "4"
+        disk         = "20"
+        storage_tier = "fast"
+        node         = "auto"
+        gpu          = "none"
+      }
+      balanced = {
+        name         = "Balanced Linux"
+        description  = "The everyday Olympus Linux configuration."
+        icon         = "/icon/ubuntu.svg"
+        default      = false
+        cpu          = "4"
+        memory       = "4"
+        disk         = "30"
+        storage_tier = "fast"
+        node         = "auto"
+        gpu          = "none"
+      }
+      atlas = {
+        name         = "Atlas Heavy"
+        description  = "A roomy CPU workspace pinned to the DL380."
+        icon         = "/icon/node.svg"
+        default      = false
+        cpu          = "16"
+        memory       = "32"
+        disk         = "120"
+        storage_tier = "fast"
+        node         = "atlas"
+        gpu          = "none"
+      }
+    }
+    agent = {
+      focused = {
+        name         = "Focused Agent"
+        description  = "One or two coding agents with comfortable context and cache space."
+        icon         = "/icon/openai.svg"
+        default      = false
+        cpu          = "6"
+        memory       = "12"
+        disk         = "60"
+        storage_tier = "fast"
+        node         = "auto"
+        gpu          = "none"
+      }
+      pair = {
+        name         = "Agent Pair"
+        description  = "More room for two autonomous agents, tests, and local services."
+        icon         = "/icon/openai.svg"
+        default      = false
+        cpu          = "10"
+        memory       = "24"
+        disk         = "100"
+        storage_tier = "fast"
+        node         = "atlas"
+        gpu          = "none"
+      }
+      swarm = {
+        name         = "Agent Swarm"
+        description  = "Atlas-backed capacity for several concurrent agents and builds."
+        icon         = "/icon/openai.svg"
+        default      = false
+        cpu          = "24"
+        memory       = "40"
+        disk         = "160"
+        storage_tier = "fast"
+        node         = "atlas"
+        gpu          = "none"
+      }
+    }
+    gpu = {
+      m4000 = {
+        name         = "M4000 Compatibility"
+        description  = "A compact CUDA workspace on the Maxwell Quadro."
+        icon         = "/icon/pytorch.svg"
+        default      = false
+        cpu          = "4"
+        memory       = "8"
+        disk         = "80"
+        storage_tier = "fast"
+        node         = "auto"
+        gpu          = "quadro-m4000"
+      }
+      p2000 = {
+        name         = "P2000 CUDA"
+        description  = "Pascal CUDA development on the 7810; use when Plex does not need the card."
+        icon         = "/icon/pytorch.svg"
+        default      = false
+        cpu          = "6"
+        memory       = "12"
+        disk         = "100"
+        storage_tier = "fast"
+        node         = "auto"
+        gpu          = "quadro-p2000"
+      }
+      p40 = {
+        name         = "P40 PyTorch"
+        description  = "The primary ML preset: 24 GiB Tesla P40 plus Atlas CPU and RAM."
+        icon         = "/icon/pytorch.svg"
+        default      = false
+        cpu          = "16"
+        memory       = "32"
+        disk         = "160"
+        storage_tier = "fast"
+        node         = "auto"
+        gpu          = "tesla-p40"
+      }
+    }
+    build = {
+      standard = {
+        name         = "Standard Build"
+        description  = "Bulk-backed compilation and dependency caches on the 7810."
+        icon         = "/icon/code.svg"
+        default      = false
+        cpu          = "8"
+        memory       = "16"
+        disk         = "120"
+        storage_tier = "bulk"
+        node         = "precision-7810-01"
+        gpu          = "none"
+      }
+      atlas = {
+        name         = "Atlas Turbo Build"
+        description  = "Large parallel compiles on Atlas with fast replicated storage."
+        icon         = "/icon/code.svg"
+        default      = false
+        cpu          = "32"
+        memory       = "48"
+        disk         = "200"
+        storage_tier = "fast"
+        node         = "atlas"
+        gpu          = "none"
+      }
+      archive = {
+        name         = "Archive Builder"
+        description  = "Maximum bulk workspace capacity for large build trees and caches."
+        icon         = "/icon/database.svg"
+        default      = false
+        cpu          = "8"
+        memory       = "24"
+        disk         = "250"
+        storage_tier = "bulk"
+        node         = "precision-7810-01"
+        gpu          = "none"
+      }
     }
   }
 
@@ -111,65 +265,48 @@ locals {
 data "coder_parameter" "cpu" {
   name         = "cpu"
   display_name = "CPU"
-  description  = "Maximum CPU cores available to the workspace."
+  description  = "Maximum CPU cores available to the workspace. Atlas is the best home for values above 12."
+  type         = "number"
+  form_type    = "slider"
   default      = local.selected_profile.cpu
   mutable      = true
+  order        = 20
+  icon         = "/icon/k8s.svg"
 
-  option {
-    name  = "2 cores"
-    value = "2"
-  }
-  option {
-    name  = "4 cores"
-    value = "4"
-  }
-  option {
-    name  = "6 cores"
-    value = "6"
-  }
-  option {
-    name  = "8 cores"
-    value = "8"
+  validation {
+    min = 1
+    max = 48
   }
 }
 
 data "coder_parameter" "memory" {
   name         = "memory"
   display_name = "Memory"
-  description  = "Maximum memory available to the workspace."
+  description  = "Maximum memory in GiB. Atlas is the only node intended for workspaces above 24 GiB."
+  type         = "number"
+  form_type    = "slider"
   default      = local.selected_profile.memory
   mutable      = true
+  order        = 30
+  icon         = "/icon/memory.svg"
 
-  option {
-    name  = "4 GiB"
-    value = "4"
-  }
-  option {
-    name  = "8 GiB"
-    value = "8"
-  }
-  option {
-    name  = "12 GiB"
-    value = "12"
-  }
-  option {
-    name  = "16 GiB"
-    value = "16"
-  }
-
-  option {
-    name  = "24 GiB"
-    value = "24"
+  validation {
+    min = 2
+    max = 48
   }
 }
 
 data "coder_parameter" "home_disk_size" {
   name         = "home_disk_size"
   display_name = "Home disk"
-  description  = "Persistent fast-tier home disk size in GiB."
+  description  = "Persistent Longhorn home disk size in GiB. Storage tier is selected below."
   type         = "number"
+  form_type    = "slider"
   default      = local.selected_profile.disk
   mutable      = false
+  order        = 40
+  icon         = "/icon/database.svg"
+
   validation {
     min = 10
     max = 250
@@ -180,49 +317,108 @@ data "coder_parameter" "storage_tier" {
   name         = "storage_tier"
   display_name = "Storage tier"
   description  = "Fast uses two SSD replicas; resilient uses three replicas; bulk uses the single HDD and daily backup."
+  form_type    = "radio"
   default      = local.selected_profile.storage_tier
   mutable      = false
+  order        = 50
+  icon         = "/icon/database.svg"
 
   option {
-    name  = "Fast SSD · 2 replicas"
-    value = "fast"
+    name        = "Fast SSD · 2 replicas"
+    value       = "fast"
+    description = "Best default for development, package caches, and interactive work."
+    icon        = "/icon/database.svg"
   }
 
   option {
-    name  = "Resilient · 3 replicas"
-    value = "resilient"
+    name        = "Resilient · 3 replicas"
+    value       = "resilient"
+    description = "Maximum redundancy for small, important workspace homes."
+    icon        = "/icon/database.svg"
   }
 
   option {
-    name  = "Bulk HDD · 1 replica + backup"
-    value = "bulk"
+    name        = "Bulk HDD · 1 replica + backup"
+    value       = "bulk"
+    description = "Large and economical; slower, with recovery from the daily R2 backup."
+    icon        = "/icon/database.svg"
+  }
+}
+
+data "coder_parameter" "node_placement" {
+  name         = "node_placement"
+  display_name = "CPU placement"
+  description  = "Choose a host for CPU-only work. Selecting a GPU below always overrides this choice with that GPU's physical host."
+  form_type    = "radio"
+  default      = local.selected_profile.node
+  mutable      = true
+  order        = 60
+  icon         = "/icon/node.svg"
+
+  option {
+    name        = "Automatic"
+    value       = "auto"
+    description = "Let Kubernetes place the workspace according to available capacity."
+    icon        = "/icon/k8s.svg"
+  }
+
+  option {
+    name        = "Atlas · 72 CPU / 62 GiB"
+    value       = "atlas"
+    description = "Best for agent swarms, large compiles, and memory-heavy work."
+    icon        = "/icon/node.svg"
+  }
+
+  option {
+    name        = "Precision 5810 · 12 CPU / 15 GiB"
+    value       = "precision-5810-01"
+    description = "General-purpose Precision host with the Quadro M4000."
+    icon        = "/icon/node.svg"
+  }
+
+  option {
+    name        = "Precision 7810 · 8 CPU / 31 GiB"
+    value       = "precision-7810-01"
+    description = "Build and bulk-storage host with the Quadro P2000."
+    icon        = "/icon/node.svg"
   }
 }
 
 data "coder_parameter" "gpu" {
   name         = "gpu"
   display_name = "GPU"
-  description  = "Reserve a specific physical GPU and pin the workspace to its Precision host."
+  description  = "Reserve one physical GPU and automatically pin the workspace to its host."
+  form_type    = "radio"
   default      = local.selected_profile.gpu
   mutable      = true
+  order        = 70
+  icon         = "/icon/pytorch.svg"
 
   option {
-    name  = "No GPU"
-    value = "none"
+    name        = "No GPU"
+    value       = "none"
+    description = "CPU-only workspace using the placement selected above."
+    icon        = "/icon/k8s.svg"
   }
   option {
-    name  = "Quadro M4000 · 8 GiB · precision-5810-01"
-    value = "quadro-m4000"
+    name        = "Quadro M4000 · 8 GiB"
+    value       = "quadro-m4000"
+    description = "Maxwell compatibility card on precision-5810-01."
+    icon        = "/icon/pytorch.svg"
   }
 
   option {
-    name  = "Quadro P2000 · 5 GiB · precision-7810-01"
-    value = "quadro-p2000"
+    name        = "Quadro P2000 · 5 GiB"
+    value       = "quadro-p2000"
+    description = "Pascal card on precision-7810-01; normally reserved for Plex transcoding."
+    icon        = "/icon/pytorch.svg"
   }
 
   option {
-    name  = "Tesla P40 · 24 GiB · atlas"
-    value = "tesla-p40"
+    name        = "Tesla P40 · 24 GiB"
+    value       = "tesla-p40"
+    description = "Primary PyTorch/ML card on Atlas."
+    icon        = "/icon/pytorch.svg"
   }
 }
 
@@ -234,6 +430,7 @@ data "coder_parameter" "git_repo" {
   form_type    = "dropdown"
   default      = "__empty_project__"
   mutable      = true
+  order        = 10
   icon         = "/icon/github.svg"
 
   option {
@@ -260,6 +457,22 @@ data "coder_parameter" "git_repo" {
   }
 }
 
+data "coder_workspace_preset" "olympus" {
+  for_each    = local.workspace_presets[var.profile]
+  name        = each.value.name
+  description = each.value.description
+  icon        = each.value.icon
+  default     = each.value.default
+  parameters = {
+    (data.coder_parameter.cpu.name)            = each.value.cpu
+    (data.coder_parameter.memory.name)         = each.value.memory
+    (data.coder_parameter.home_disk_size.name) = each.value.disk
+    (data.coder_parameter.storage_tier.name)   = each.value.storage_tier
+    (data.coder_parameter.node_placement.name) = each.value.node
+    (data.coder_parameter.gpu.name)            = each.value.gpu
+  }
+}
+
 data "coder_external_auth" "github" {
   count = local.git_repo_set ? 1 : 0
   id    = "github"
@@ -276,7 +489,9 @@ locals {
     data.coder_workspace_owner.me.name,
     data.coder_workspace.me.name,
   )
-  selected_node  = data.coder_parameter.gpu.value != "none" ? local.gpu_nodes[data.coder_parameter.gpu.value] : local.selected_profile.node
+  selected_node = data.coder_parameter.gpu.value != "none" ? local.gpu_nodes[data.coder_parameter.gpu.value] : (
+    data.coder_parameter.node_placement.value == "auto" ? "" : data.coder_parameter.node_placement.value
+  )
   node_selector = local.selected_node != "" ? {
     "kubernetes.io/hostname" = local.selected_node
   } : {}

@@ -276,7 +276,22 @@ builder:
 | `olympus-agent` | autonomous coding agents | 6 CPU, 12 GiB RAM, 60 GiB fast disk |
 | `olympus-gpu` | PyTorch, CUDA, JupyterLab | 4 CPU, 8 GiB RAM, 80 GiB fast disk, M4000 |
 | `olympus-build` | large builds and caches | 8 CPU, 16 GiB RAM, 120 GiB bulk disk, 7810 |
-| `container-forge` | build offline Docker image bundles for SCIF | 80 GiB home, 40 GiB disposable build cache, 7810 |
+| `container-forge` | build offline Docker image bundles for SCIF | 8 CPU, 24 GiB RAM, 200 GiB home, 120 GiB disposable cache, 7810 |
+
+Template creation uses Coder's dynamic forms. CPU, memory, home capacity, and
+Forge cache capacity are sliders. Storage tier, CPU host placement, and exact
+GPU assignment are descriptive radio choices with icons. Each normal template
+has three presets and Container Forge has four, so common sizes can be selected
+in one click while the GitHub repository remains independently searchable.
+Template-level metadata is also managed by the publishing helper: Linux uses
+the Ubuntu icon, Agent uses OpenAI, GPU uses PyTorch, Build uses Code, and Forge
+uses Container.
+
+CPU-only workspaces can be placed automatically or pinned to Atlas,
+`precision-5810-01`, or `precision-7810-01`. Selecting a GPU overrides that
+placement and sends the pod to the card's physical node. Container Forge never
+uses automatic placement: the workspace and builder are pinned together to the
+selected build host because they share ReadWriteOnce volumes.
 
 The agent image installs Codex, Claude Code, OpenCode, Reasonix, AgentAPI, and
 Node.js 24 into persistent user storage. Editor and agent launchers open in the

@@ -86,30 +86,72 @@ locals {
     resilient = "longhorn-resilient"
     bulk      = "longhorn-bulk"
   }
+  forge_presets = {
+    quick = {
+      name         = "Quick Image"
+      description  = "Small Dockerfiles, utility images, and rapid experiments."
+      icon         = "/icon/docker.svg"
+      default      = false
+      cpu          = "4"
+      memory       = "8"
+      home_disk    = "80"
+      cache_disk   = "40"
+      storage_tier = "bulk"
+      node         = "precision-7810-01"
+    }
+    standard = {
+      name         = "Standard Forge"
+      description  = "Balanced capacity for normal offline image bundles."
+      icon         = "/icon/container.svg"
+      default      = false
+      cpu          = "8"
+      memory       = "24"
+      home_disk    = "200"
+      cache_disk   = "120"
+      storage_tier = "bulk"
+      node         = "precision-7810-01"
+    }
+    fast = {
+      name         = "Fast Iteration"
+      description  = "SSD-backed caching on Atlas for repeated image rebuilds."
+      icon         = "/icon/code.svg"
+      default      = false
+      cpu          = "12"
+      memory       = "24"
+      home_disk    = "80"
+      cache_disk   = "40"
+      storage_tier = "fast"
+      node         = "atlas"
+    }
+    cuda = {
+      name         = "Large CUDA Image"
+      description  = "Atlas compute and roomy bulk storage for multi-stage CUDA/PyTorch images."
+      icon         = "/icon/pytorch.svg"
+      default      = false
+      cpu          = "24"
+      memory       = "40"
+      home_disk    = "350"
+      cache_disk   = "250"
+      storage_tier = "bulk"
+      node         = "atlas"
+    }
+  }
 }
 
 data "coder_parameter" "builder_cpu" {
   name         = "builder_cpu"
   display_name = "Builder CPU"
   description  = "Maximum CPU cores used while a container image is building."
+  type         = "number"
+  form_type    = "slider"
   default      = "8"
   mutable      = true
+  order        = 20
+  icon         = "/icon/k8s.svg"
 
-  option {
-    name  = "4 cores"
-    value = "4"
-  }
-  option {
-    name  = "8 cores"
-    value = "8"
-  }
-  option {
-    name  = "12 cores"
-    value = "12"
-  }
-  option {
-    name  = "16 cores"
-    value = "16"
+  validation {
+    min = 2
+    max = 48
   }
 }
 
@@ -117,24 +159,16 @@ data "coder_parameter" "builder_memory" {
   name         = "builder_memory"
   display_name = "Builder memory"
   description  = "Maximum RAM used by the disposable image-builder pod."
+  type         = "number"
+  form_type    = "slider"
   default      = "24"
   mutable      = true
+  order        = 30
+  icon         = "/icon/memory.svg"
 
-  option {
-    name  = "8 GiB"
-    value = "8"
-  }
-  option {
-    name  = "16 GiB"
-    value = "16"
-  }
-  option {
-    name  = "24 GiB"
-    value = "24"
-  }
-  option {
-    name  = "32 GiB"
-    value = "32"
+  validation {
+    min = 4
+    max = 48
   }
 }
 
@@ -143,8 +177,11 @@ data "coder_parameter" "home_disk_size" {
   display_name = "Projects and exports"
   description  = "Persistent capacity in GiB for build contexts, Docker archives, logs, and AI-agent state. Large PyTorch/CUDA archives can consume tens of GiB each."
   type         = "number"
+  form_type    = "slider"
   default      = "200"
   mutable      = false
+  order        = 40
+  icon         = "/icon/database.svg"
 
   validation {
     min = 80
@@ -157,8 +194,11 @@ data "coder_parameter" "cache_disk_size" {
   display_name = "Builder cache"
   description  = "Disposable Kaniko base-image cache in GiB. This volume is not backed up."
   type         = "number"
+  form_type    = "slider"
   default      = "120"
   mutable      = false
+  order        = 50
+  icon         = "/icon/database.svg"
 
   validation {
     min = 40
@@ -170,20 +210,61 @@ data "coder_parameter" "storage_tier" {
   name         = "storage_tier"
   display_name = "Storage tier"
   description  = "Bulk is appropriate for large export archives; fast is better for repeated builds."
+  form_type    = "radio"
   default      = "bulk"
   mutable      = false
+  order        = 60
+  icon         = "/icon/database.svg"
 
   option {
-    name  = "Bulk HDD · 1 replica + backup"
-    value = "bulk"
+    name        = "Bulk HDD · 1 replica + backup"
+    value       = "bulk"
+    description = "Recommended for large archives and caches where capacity matters most."
+    icon        = "/icon/database.svg"
   }
   option {
-    name  = "Fast SSD · 2 replicas"
-    value = "fast"
+    name        = "Fast SSD · 2 replicas"
+    value       = "fast"
+    description = "Faster rebuild loops, but each GiB consumes two GiB of SSD capacity."
+    icon        = "/icon/database.svg"
   }
   option {
-    name  = "Resilient · 3 replicas"
-    value = "resilient"
+    name        = "Resilient · 3 replicas"
+    value       = "resilient"
+    description = "Maximum redundancy; use only for small, important projects."
+    icon        = "/icon/database.svg"
+  }
+}
+
+data "coder_parameter" "forge_node" {
+  name         = "forge_node"
+  display_name = "Build host"
+  description  = "Pins the interactive workspace and its builder to one node so they can safely share ReadWriteOnce volumes."
+  form_type    = "radio"
+  default      = var.build_node
+  mutable      = true
+  order        = 70
+  icon         = "/icon/node.svg"
+
+  option {
+    name        = "Precision 7810 · 8 CPU / 31 GiB"
+    value       = "precision-7810-01"
+    description = "Default bulk-storage build host."
+    icon        = "/icon/node.svg"
+  }
+
+  option {
+    name        = "Atlas · 72 CPU / 62 GiB"
+    value       = "atlas"
+    description = "Best for large parallel builds and high-memory image assembly."
+    icon        = "/icon/node.svg"
+  }
+
+  option {
+    name        = "Precision 5810 · 12 CPU / 15 GiB"
+    value       = "precision-5810-01"
+    description = "Suitable for smaller builds when the other hosts are busy."
+    icon        = "/icon/node.svg"
   }
 }
 
@@ -195,6 +276,7 @@ data "coder_parameter" "git_repo" {
   form_type    = "dropdown"
   default      = "__empty_project__"
   mutable      = true
+  order        = 10
   icon         = "/icon/github.svg"
 
   option {
@@ -221,6 +303,22 @@ data "coder_parameter" "git_repo" {
   }
 }
 
+data "coder_workspace_preset" "forge" {
+  for_each    = local.forge_presets
+  name        = each.value.name
+  description = each.value.description
+  icon        = each.value.icon
+  default     = each.value.default
+  parameters = {
+    (data.coder_parameter.builder_cpu.name)     = each.value.cpu
+    (data.coder_parameter.builder_memory.name)  = each.value.memory
+    (data.coder_parameter.home_disk_size.name)  = each.value.home_disk
+    (data.coder_parameter.cache_disk_size.name) = each.value.cache_disk
+    (data.coder_parameter.storage_tier.name)    = each.value.storage_tier
+    (data.coder_parameter.forge_node.name)      = each.value.node
+  }
+}
+
 locals {
   workspace_name = "coder-${data.coder_workspace.me.id}"
   builder_name   = "${local.workspace_name}-builder"
@@ -230,7 +328,7 @@ locals {
   git_repo_name  = local.git_repo_set ? trimsuffix(basename(local.git_repo_url), ".git") : ""
   workspace_dir  = local.git_repo_set ? "/home/coder/project/${local.git_repo_name}" : "/home/coder/project"
   node_selector = {
-    "kubernetes.io/hostname" = var.build_node
+    "kubernetes.io/hostname" = data.coder_parameter.forge_node.value
   }
   exports_base_path = format(
     "/@%s/%s.main/apps/exports",
@@ -1528,7 +1626,7 @@ resource "coder_metadata" "workspace" {
 
   item {
     key   = "Placement"
-    value = var.build_node
+    value = data.coder_parameter.forge_node.value
   }
 
   item {
