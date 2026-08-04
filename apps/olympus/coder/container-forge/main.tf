@@ -35,7 +35,7 @@ variable "workspace_image" {
 variable "kaniko_image" {
   type        = string
   description = "Pinned Kaniko image used by the disposable builder pod. Keep the Alpine variant because the idle wrapper requires /bin/sh."
-  default     = "ghcr.io/osscontainertools/kaniko:v1.28.2-alpine"
+  default     = "ghcr.io/osscontainertools/kaniko:v1.28.2-alpine@sha256:44f90ae1ba366aeedbd0f2d56dbe246354553e47904338dd9321a41a44bea9ff"
 }
 
 variable "kubectl_version" {
@@ -268,30 +268,39 @@ resource "coder_agent" "main" {
       /home/coder/.local/share/filebrowser \
       /home/coder/.docker
 
-    if ! command -v tmux >/dev/null 2>&1; then
-      sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update -qq
-      sudo -n env DEBIAN_FRONTEND=noninteractive \
-        apt-get install -y --no-install-recommends tmux
+    zellij_version="0.44.3"
+    zellij_checksum="a675b0106263113b9cb8f028649bad05c5d2283331fa62b2b36dd275aeaaa4d3"
+    if ! /home/coder/.local/bin/zellij --version 2>/dev/null | grep -Fqx "zellij $zellij_version"; then
+      zellij_dir="$(mktemp -d /tmp/olympus-zellij.XXXXXX)"
+      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
+        -o "$zellij_dir/zellij.tar.gz" \
+        "https://github.com/zellij-org/zellij/releases/download/v$zellij_version/zellij-no-web-x86_64-unknown-linux-musl.tar.gz"
+      tar -xzf "$zellij_dir/zellij.tar.gz" -C "$zellij_dir" zellij
+      printf '%s  %s\n' "$zellij_checksum" "$zellij_dir/zellij" | sha256sum -c -
+      install -m 0755 "$zellij_dir/zellij" /home/coder/.local/bin/zellij
+      rm -rf "$zellij_dir"
     fi
 
     cat > /home/coder/.local/bin/olympus-session <<'SESSION_HELPER'
     #!/bin/bash
     set -euo pipefail
-    if [ "$#" -lt 2 ]; then
-      echo "Usage: olympus-session SESSION WORKDIR [COMMAND ...]" >&2
+    if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+      echo "Usage: olympus-session SESSION WORKDIR [COMMAND]" >&2
       exit 2
     fi
     session="$1"
     workdir="$2"
     shift 2
-    if tmux has-session -t "$session" 2>/dev/null; then
-      exec tmux attach-session -t "$session"
+    if zellij list-sessions --no-formatting --short 2>/dev/null | grep -Fqx "$session"; then
+      exec zellij attach "$session"
     fi
     if [ "$#" -eq 0 ]; then
-      exec tmux new-session -s "$session" -c "$workdir"
+      layout="layout { pane cwd=\"$workdir\"; }"
+    else
+      command="$1"
+      layout="layout { pane command=\"$command\" { cwd \"$workdir\"; close_on_exit true; } }"
     fi
-    printf -v tmux_command '%q ' "$@"
-    exec tmux new-session -s "$session" -c "$workdir" "$tmux_command"
+    exec zellij --session "$session" --layout-string "$layout"
     SESSION_HELPER
     chmod +x /home/coder/.local/bin/olympus-session
 

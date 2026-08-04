@@ -27,6 +27,6 @@ SHA-256 checksum, JSON manifest, build log, and `docker load` instructions. Open
 the **Container Exports** app to download it. Use `container-split` when an
 archive must be divided across multiple discs.
 
-Agent buttons use named tmux sessions, so closing and reopening the browser app
+Agent buttons use named Zellij sessions, so closing and reopening the browser app
 reattaches to the running CLI while the workspace remains started. Stopping a
 workspace terminates its processes; persistent files remain on Longhorn.
