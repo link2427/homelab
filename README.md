@@ -23,6 +23,9 @@ apps/olympus/              User-facing workloads and their configuration
 - [Application import workflow](apps/olympus/README.md)
 - [Coder workspace templates](apps/olympus/coder/template/README.md)
 - [Headlamp access](apps/olympus/headlamp/README.md)
+- [Olympus deployment skill](skills/olympus-deploy/SKILL.md) — reusable,
+  public-safe instructions for packaging projects and deploying them through
+  this repository's GitOps conventions
 
 Reconciliation is ordered deliberately:
 
