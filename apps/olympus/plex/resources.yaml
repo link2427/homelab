@@ -13,6 +13,7 @@ metadata:
   name: plex-media-data2
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
 spec:
   capacity:
     storage: 4Ti
@@ -37,6 +38,7 @@ metadata:
   namespace: plex
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
 spec:
   accessModes:
     - ReadOnlyMany
@@ -54,10 +56,9 @@ metadata:
   namespace: plex
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
+    olympus.dev/backup-policy: never-r2
   labels:
     app.kubernetes.io/name: plex
-    recurring-job.longhorn.io/source: enabled
-    recurring-job.longhorn.io/olympus-app-backup: enabled
 spec:
   accessModes:
     - ReadWriteOnce
