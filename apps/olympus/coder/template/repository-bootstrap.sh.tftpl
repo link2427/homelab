@@ -1,0 +1,59 @@
+#!/bin/bash
+set -euo pipefail
+
+repository_name="$(printf '%s' '${repository_name_b64}' | base64 --decode)"
+repository_url="$(printf '%s' '${repository_url_b64}' | base64 --decode)"
+repository_mode='${repository_mode}'
+target_dir="/home/coder/project/$repository_name"
+
+if [ -d "$target_dir/.git" ]; then
+  echo "Repository already cloned at $target_dir"
+  exit 0
+fi
+
+if [ -e "$target_dir" ] && [ -n "$(find "$target_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+  echo "Refusing to overwrite non-empty repository target: $target_dir" >&2
+  exit 1
+fi
+
+coder_cli="$(find /tmp -maxdepth 2 -type f -path '/tmp/coder.*/coder' -print -quit)"
+if [ -z "$coder_cli" ]; then
+  echo "Coder CLI helper was not found; cannot obtain the short-lived GitHub token." >&2
+  exit 1
+fi
+
+OLYMPUS_GH_TOKEN="$("$coder_cli" external-auth access-token github)"
+export OLYMPUS_GH_TOKEN
+askpass="$(mktemp /tmp/olympus-git-askpass.XXXXXX)"
+clone_log="$(mktemp /tmp/olympus-git-clone.XXXXXX)"
+trap 'rm -f "$askpass" "$clone_log"; unset OLYMPUS_GH_TOKEN' EXIT
+
+cat > "$askpass" <<'ASKPASS'
+#!/bin/sh
+case "$1" in
+  *Username*) printf '%s\n' 'x-access-token' ;;
+  *) printf '%s\n' "$OLYMPUS_GH_TOKEN" ;;
+esac
+ASKPASS
+chmod 0700 "$askpass"
+
+echo "Waiting for browser-assisted GitHub $repository_mode: $repository_url"
+echo "Open the GitHub action tile in Coder and complete the confirmation page."
+
+for attempt in $(seq 1 90); do
+  rmdir "$target_dir" 2>/dev/null || true
+  if GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0 git clone "$repository_url" "$target_dir" >"$clone_log" 2>&1; then
+    cat "$clone_log"
+    echo "Repository ready at $target_dir"
+    exit 0
+  fi
+
+  if [ $((attempt % 6)) -eq 0 ]; then
+    echo "Still waiting for $repository_url ($((attempt * 10)) seconds)"
+  fi
+  sleep 10
+done
+
+cat "$clone_log" >&2
+echo "Timed out after 15 minutes. Complete the GitHub action, then restart the workspace to retry safely." >&2
+exit 1

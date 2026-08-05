@@ -368,7 +368,11 @@ Workspace creation includes a searchable repository selector. Coder cannot
 fetch external data while rendering dynamic parameters, so
 [`Publish-CoderTemplates.ps1`](../apps/olympus/coder/template/Publish-CoderTemplates.ps1)
 queries the authenticated GitHub CLI at publish time and injects the catalog as
-a template variable. Private repository names never enter this public Git
+a template variable. The dropdown also includes Empty project, Create new
+GitHub repository, and Fork public OSS repository. Create and Fork reveal only
+their relevant input and use a browser-confirmed GitHub action followed by an
+automatic authenticated clone; the GitHub App keeps repository Administration
+permission disabled. Private repository names never enter this public Git
 history.
 
 Refresh the catalog after repository access changes:
