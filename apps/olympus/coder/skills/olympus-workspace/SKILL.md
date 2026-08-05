@@ -53,6 +53,19 @@ Preview** card points at its selected primary preview port. Preview routes stop
 when the workspace stops and are owner-only; do not weaken sharing or add an
 unauthenticated tunnel unless Jacob explicitly requests it.
 
+## Use Reasonix Desktop or CLI
+
+In agent-capable templates, **Reasonix Desktop** is the preferred browser UI and
+**Reasonix CLI** remains available as a persistent Zellij terminal. The desktop
+server starts automatically in the selected repository on
+`127.0.0.1:8787`; do not start a second server or expose that port through a
+separate tunnel. Open it through the owner-only Coder app card.
+
+Both interfaces use the same persistent `~/.reasonix` configuration, provider
+keys, sessions, memory, and checkpoints. Stopping the workspace terminates the
+server and CLI process, but their saved state survives on the Longhorn home
+volume and resumes after the workspace starts again.
+
 ## Export downloadable artifacts
 
 Copy a completed file or directory into the persistent export area:

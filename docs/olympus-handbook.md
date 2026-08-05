@@ -297,6 +297,12 @@ The agent image installs Codex, Claude Code, OpenCode, Reasonix, AgentAPI, and
 Node.js 24 into persistent user storage. Editor and agent launchers open in the
 selected repository directory.
 
+Reasonix is available through both **Reasonix Desktop** and **Reasonix CLI**.
+The desktop card proxies the loopback-only `reasonix serve` process on port 8787
+through Coder's owner-only application gateway. Both interfaces share the
+persistent `~/.reasonix` sessions, configuration, memory, and checkpoints, so a
+workspace restart ends the process but not the Reasonix history.
+
 The agent launchers use checksum-verified Zellij `v0.44.3` named sessions. If a
 browser tab or launcher window closes, reopening the same agent button attaches
 to the existing session and its running process instead of opening a second

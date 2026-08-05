@@ -37,6 +37,9 @@ Agent buttons use named Zellij sessions, so closing and reopening the browser ap
 reattaches to the running CLI while the workspace remains started. Stopping a
 workspace, updating it, or rescheduling its pod terminates live processes;
 persistent files and agent history remain on Longhorn for normal resume.
+Reasonix Desktop is also started automatically on loopback port 8787 and exposed
+through an owner-only Coder app. It shares the same persistent Reasonix sessions,
+configuration, memory, and checkpoints as the still-available Reasonix CLI.
 
 The repository selector can clone an existing catalog entry, create a new
 repository, or fork a public OSS repository. Create and Fork use a safe
