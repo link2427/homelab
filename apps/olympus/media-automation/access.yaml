@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: radarr-tailscale
+  namespace: media-automation
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: olympus-radarr
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: radarr
+  ports:
+    - name: http
+      port: 80
+      targetPort: 7878
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr-tailscale
+  namespace: media-automation
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: olympus-sonarr
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: sonarr
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8989
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prowlarr-tailscale
+  namespace: media-automation
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: olympus-prowlarr
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: prowlarr
+  ports:
+    - name: http
+      port: 80
+      targetPort: 9696
+      protocol: TCP

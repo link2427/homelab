@@ -30,6 +30,9 @@ spec:
       - env:
         - name: HOMEPAGE_ALLOWED_HOSTS
           value: '*'
+        envFrom:
+        - secretRef:
+            name: homepage-media-widgets
         image: ghcr.io/gethomepage/homepage:latest
         imagePullPolicy: Always
         livenessProbe:
@@ -85,7 +88,7 @@ spec:
       - command:
         - sh
         - -c
-        - cp /config-source/* /config/ && mkdir -p /config/logs
+        - cp /config-source/* /config/ && printf '\n' >> /config/services.yaml && cat /media-config/media-services.yaml >> /config/services.yaml && mkdir -p /config/logs
         image: busybox:1.36
         imagePullPolicy: IfNotPresent
         name: copy-config
@@ -107,6 +110,8 @@ spec:
           name: homepage-config
         - mountPath: /config
           name: config-writable
+        - mountPath: /media-config
+          name: homepage-media-config
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:
@@ -121,6 +126,10 @@ spec:
           defaultMode: 420
           name: homepage
         name: homepage-config
+      - configMap:
+          defaultMode: 420
+          name: homepage-media-dashboard
+        name: homepage-media-config
 ---
 apiVersion: v1
 kind: Service
@@ -359,7 +368,7 @@ data:
     \ true\n  mobileButtonPosition: bottom-right\nlayout:\n  Command Deck:\n    tab:\
     \ Home\n    style: row\n    columns: 4\n    icon: mdi-view-dashboard-outline\n\
     \  Apps & Automation:\n    tab: Home\n    style: row\n    columns: 4\n    icon:\
-    \ mdi-rocket-launch-outline\n  Telchar:\n    tab: Home\n    style: row\n    columns:\
+    \ mdi-rocket-launch-outline\n  Media Control:\n    tab: Media\n    style: row\n    columns: 4\n    icon: mdi-movie-open-cog-outline\n  Telchar:\n    tab: Home\n    style: row\n    columns:\
     \ 4\n    icon: mdi-domain\n  Network & Storage:\n    tab: Infrastructure\n   \
     \ style: row\n    columns: 4\n    icon: mdi-lan\n  Compute Fleet:\n    tab: Infrastructure\n\
     \    style: row\n    columns: 3\n    icon: mdi-server-network\n  Storage Shortcuts:\n\

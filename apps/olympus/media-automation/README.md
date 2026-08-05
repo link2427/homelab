@@ -25,10 +25,13 @@ they are not remote backups.
 
 ## Network exposure
 
-Only Seerr is exposed to the tailnet as `http://olympus-seerr`. The Servarr and
-qBittorrent admin APIs remain ClusterIP-only. qBittorrent can reach only the
-Olympus service and pod CIDRs; all external torrent traffic uses the shared
-NordVPN proxy. If the proxy is down, torrent traffic stops.
+Seerr is exposed to the tailnet as `http://olympus-seerr`. Radarr, Sonarr, and
+Prowlarr have tailnet-only admin endpoints at `http://olympus-radarr`,
+`http://olympus-sonarr`, and `http://olympus-prowlarr`. qBittorrent's admin API
+remains ClusterIP-only and is surfaced only through the private Homepage widget.
+qBittorrent can reach only the Olympus service and pod CIDRs; all external
+torrent traffic uses the shared NordVPN proxy. If the proxy is down, torrent
+traffic stops.
 
 ## Shared VPN dependency
 
