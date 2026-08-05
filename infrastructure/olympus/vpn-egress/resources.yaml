@@ -128,7 +128,10 @@ spec:
                 - ALL
               add:
                 - CHOWN
+                - DAC_OVERRIDE
                 - NET_ADMIN
+                - SETGID
+                - SETUID
             seccompProfile:
               type: RuntimeDefault
           volumeMounts:

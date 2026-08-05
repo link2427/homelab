@@ -35,6 +35,11 @@ Olympus pod and service networks. Its torrent traffic is then explicitly sent
 through this proxy. If the proxy or VPN is unavailable, downloads stop instead
 of falling back to the household WAN address.
 
-The `vpn-egress` namespace is the only new Pod Security exception. Gluetun needs
-`NET_ADMIN`, `CHOWN`, and `/dev/net/tun`; it receives no service-account token,
-host network, host PID, persistent storage, Kubernetes RBAC, or public exposure.
+The `vpn-egress` namespace is the only new Pod Security exception. Gluetun keeps
+only `CHOWN`, `DAC_OVERRIDE`, `NET_ADMIN`, `SETGID`, and `SETUID` plus access to
+`/dev/net/tun`; it receives no service-account token, host network, host PID,
+persistent storage, Kubernetes RBAC, or public exposure.
+
+This component has its own Flux Kustomization. A provider login or tunnel
+failure therefore reports unhealthy here without blocking reconciliation of
+unrelated Olympus infrastructure or applications.
