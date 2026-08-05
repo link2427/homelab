@@ -17,6 +17,7 @@ data:
               type: seerr
               url: http://seerr.media-automation.svc.cluster.local:5055
               key: "{{HOMEPAGE_VAR_SEERR_KEY}}"
+              hideErrors: true
               fields: [pending, approved, processing, available]
         - Plex:
             icon: plex.png

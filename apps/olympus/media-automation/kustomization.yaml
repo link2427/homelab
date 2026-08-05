@@ -7,3 +7,4 @@ resources:
   - servarr.yaml
   - qbittorrent.yaml
   - access.yaml
+  - servarr-auth.secret.yaml
