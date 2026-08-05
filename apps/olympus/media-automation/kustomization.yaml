@@ -8,3 +8,4 @@ resources:
   - qbittorrent.yaml
   - access.yaml
   - servarr-auth.secret.yaml
+  - vpn-egress-client.secret.yaml

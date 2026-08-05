@@ -232,10 +232,81 @@ spec:
       serviceAccountName: media-automation
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
+      initContainers:
+        - name: lock-egress
+          image: qmcgaw/gluetun:v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              iptables -F OUTPUT
+              iptables -A OUTPUT -o lo -j ACCEPT
+              iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+              iptables -A OUTPUT -d 10.96.0.0/12 -j ACCEPT
+              iptables -A OUTPUT -d 10.244.0.0/16 -j ACCEPT
+              iptables -P OUTPUT DROP
+
+              ip6tables -F OUTPUT
+              ip6tables -A OUTPUT -o lo -j ACCEPT
+              ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+              ip6tables -P OUTPUT DROP
+          resources:
+            requests:
+              cpu: 1m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 0
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+            seccompProfile:
+              type: RuntimeDefault
       containers:
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:2.5.2.5491-ls155@sha256:2f3d31307beba3ba2dd226d191f5f5c14ee3b4d8b49277c64683f5ed97083179
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - -ec
+                  - |
+                    for attempt in $(seq 1 60); do
+                      api_key=$(sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' /config/config.xml)
+                      if [ -n "$api_key" ] && current=$(curl -fsS -H "X-Api-Key: $api_key" http://127.0.0.1:9696/api/v1/config/host); then
+                        host_id=$(printf '%s' "$current" | jq -r '.id')
+                        configured=$(printf '%s' "$current" | jq \
+                          --arg host "nordvpn-egress.vpn-egress.svc.cluster.local" \
+                          --arg user "$VPN_PROXY_USERNAME" \
+                          --arg password "$VPN_PROXY_PASSWORD" \
+                          '.proxyEnabled = true
+                          | .proxyType = "http"
+                          | .proxyHostname = $host
+                          | .proxyPort = 8888
+                          | .proxyUsername = $user
+                          | .proxyPassword = $password
+                          | .proxyBypassLocalAddresses = true
+                          | .proxyBypassFilter = "radarr.media-automation.svc.cluster.local,sonarr.media-automation.svc.cluster.local"
+                          | .passwordConfirmation = .password')
+                        printf '%s' "$configured" | curl -fsS -X PUT \
+                          -H "X-Api-Key: $api_key" \
+                          -H "Content-Type: application/json" \
+                          --data-binary @- \
+                          "http://127.0.0.1:9696/api/v1/config/host/$host_id" >/dev/null
+                        exit 0
+                      fi
+                      sleep 2
+                    done
+                    exit 1
           env:
             - name: PUID
               value: "1000"
@@ -245,6 +316,16 @@ spec:
               value: "002"
             - name: TZ
               value: America/Chicago
+            - name: VPN_PROXY_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vpn-egress-client
+                  key: HTTPPROXY_USER
+            - name: VPN_PROXY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vpn-egress-client
+                  key: HTTPPROXY_PASSWORD
           ports:
             - name: http
               containerPort: 9696
