@@ -6,3 +6,4 @@ resources:
   - seerr.yaml
   - servarr.yaml
   - qbittorrent.yaml
+  - access.yaml

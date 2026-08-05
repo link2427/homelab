@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-media-dashboard
+  namespace: homepage
+data:
+  media-services.yaml: |
+    - Media Control:
+        - Seerr:
+            icon: seerr.png
+            href: http://olympus-seerr
+            description: Request movies and TV · HD 720p/1080p
+            server: kubernetes
+            namespace: media-automation
+            podSelector: app.kubernetes.io/name=seerr
+            widget:
+              type: seerr
+              url: http://seerr.media-automation.svc.cluster.local:5055
+              key: "{{HOMEPAGE_VAR_SEERR_KEY}}"
+              fields: [pending, approved, processing, available]
+        - Plex:
+            icon: plex.png
+            href: http://10.0.0.171:32400/web
+            description: P2000 transcoding · DATA-2 library
+            server: kubernetes
+            namespace: plex
+            podSelector: app.kubernetes.io/name=plex
+            widget:
+              type: plex
+              url: http://plex.plex.svc.cluster.local:32400
+              key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}"
+              fields: [streams, movies, tv]
+        - Radarr:
+            icon: radarr.png
+            href: http://olympus-radarr
+            description: Movie library · tailnet admin
+            server: kubernetes
+            namespace: media-automation
+            podSelector: app.kubernetes.io/name=radarr
+            widget:
+              type: radarr
+              url: http://radarr.media-automation.svc.cluster.local:7878
+              key: "{{HOMEPAGE_VAR_RADARR_KEY}}"
+              enableQueue: true
+              fields: [wanted, queued, movies]
+        - Sonarr:
+            icon: sonarr.png
+            href: http://olympus-sonarr
+            description: TV library · tailnet admin
+            server: kubernetes
+            namespace: media-automation
+            podSelector: app.kubernetes.io/name=sonarr
+            widget:
+              type: sonarr
+              url: http://sonarr.media-automation.svc.cluster.local:8989
+              key: "{{HOMEPAGE_VAR_SONARR_KEY}}"
+              enableQueue: true
+              fields: [wanted, queued, series]
+        - Prowlarr:
+            icon: prowlarr.png
+            href: http://olympus-prowlarr
+            description: Lawful source/indexer management · tailnet admin
+            server: kubernetes
+            namespace: media-automation
+            podSelector: app.kubernetes.io/name=prowlarr
+            widget:
+              type: prowlarr
+              url: http://prowlarr.media-automation.svc.cluster.local:9696
+              key: "{{HOMEPAGE_VAR_PROWLARR_KEY}}"
+        - qBittorrent:
+            icon: qbittorrent.png
+            description: Fail-closed downloads through NordVPN
+            server: kubernetes
+            namespace: media-automation
+            podSelector: app.kubernetes.io/name=qbittorrent
+            widget:
+              type: qbittorrent
+              url: http://qbittorrent.media-automation.svc.cluster.local:8080
+              username: "{{HOMEPAGE_VAR_QBITTORRENT_USERNAME}}"
+              password: "{{HOMEPAGE_VAR_QBITTORRENT_PASSWORD}}"
+              enableLeechProgress: true
+              enableLeechSize: true
+              fields: [leech, download, seed, upload]
+        - NordVPN Egress:
+            icon: nordvpn.png
+            description: Shared authenticated VPN gateway
+            server: kubernetes
+            namespace: vpn-egress
+            podSelector: app.kubernetes.io/name=nordvpn-egress
+            widget:
+              type: gluetun
+              url: http://nordvpn-egress.vpn-egress.svc.cluster.local:8000
+              version: 2
+              fields: [public_ip, region, country]

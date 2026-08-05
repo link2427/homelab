@@ -49,7 +49,7 @@ spec:
             - name: FIREWALL
               value: "on"
             - name: FIREWALL_INPUT_PORTS
-              value: "8388,8888"
+              value: "8000,8388,8888"
             - name: HTTPPROXY
               value: "on"
             - name: HTTPPROXY_LOG
@@ -80,6 +80,9 @@ spec:
             - name: TZ
               value: America/Chicago
           ports:
+            - name: control
+              containerPort: 8000
+              protocol: TCP
             - name: http-proxy
               containerPort: 8888
               protocol: TCP
@@ -139,6 +142,10 @@ spec:
               mountPath: /dev/net/tun
             - name: state
               mountPath: /gluetun
+            - name: control-auth
+              mountPath: /gluetun/auth/config.toml
+              subPath: config.toml
+              readOnly: true
       volumes:
         - name: tun
           hostPath:
@@ -146,6 +153,21 @@ spec:
             type: CharDevice
         - name: state
           emptyDir: {}
+        - name: control-auth
+          configMap:
+            name: nordvpn-egress-control-auth
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nordvpn-egress-control-auth
+  namespace: vpn-egress
+data:
+  config.toml: |
+    [[roles]]
+    name = "homepage-public-ip"
+    routes = ["GET /v1/publicip/ip"]
+    auth = "none"
 ---
 apiVersion: v1
 kind: Service
@@ -160,6 +182,10 @@ spec:
   selector:
     app.kubernetes.io/name: nordvpn-egress
   ports:
+    - name: control
+      port: 8000
+      targetPort: control
+      protocol: TCP
     - name: http-proxy
       port: 8888
       targetPort: http-proxy
