@@ -36,5 +36,5 @@ through this proxy. If the proxy or VPN is unavailable, downloads stop instead
 of falling back to the household WAN address.
 
 The `vpn-egress` namespace is the only new Pod Security exception. Gluetun needs
-`NET_ADMIN` and `/dev/net/tun`; it receives no service-account token, host
-network, host PID, storage, Kubernetes RBAC, or public exposure.
+`NET_ADMIN`, `CHOWN`, and `/dev/net/tun`; it receives no service-account token,
+host network, host PID, persistent storage, Kubernetes RBAC, or public exposure.
