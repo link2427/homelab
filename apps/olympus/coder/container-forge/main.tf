@@ -71,8 +71,19 @@ variable "github_repositories_json" {
       trimspace(repo.name) != "" &&
       can(regex("^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\\.git$", repo.url)) &&
       contains(["private", "public"], repo.visibility)
-    ])) && can(length(jsondecode(var.github_repositories_json)) <= 63)
-    error_message = "github_repositories_json must contain at most 63 GitHub repositories with name, .git URL, and private/public visibility fields."
+    ])) && can(length(jsondecode(var.github_repositories_json)) <= 61)
+    error_message = "github_repositories_json must contain at most 61 GitHub repositories with name, .git URL, and private/public visibility fields."
+  }
+}
+
+variable "github_owner" {
+  type        = string
+  description = "GitHub account that owns repositories created or forked from the workspace form."
+  default     = "link2427"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$", var.github_owner))
+    error_message = "github_owner must be a valid GitHub account name."
   }
 }
 
@@ -308,7 +319,7 @@ data "coder_parameter" "preview_port" {
 data "coder_parameter" "git_repo" {
   name         = "git_repo"
   display_name = "Container project"
-  description  = "Clone a Dockerfile repository, or start with an empty project and let an AI agent scaffold it."
+  description  = "Search an existing repository, start empty, or request a new repository/fork. Create and Fork require one confirmation click on GitHub after startup."
   type         = "string"
   form_type    = "dropdown"
   default      = "__empty_project__"
@@ -321,6 +332,20 @@ data "coder_parameter" "git_repo" {
     value       = "__empty_project__"
     description = "Start without cloning a repository."
     icon        = "/icon/folder.svg"
+  }
+
+  option {
+    name        = "Create new GitHub repository"
+    value       = "__create_repository__"
+    description = "Start the workspace, confirm creation on GitHub, then clone it automatically."
+    icon        = "/icon/github.svg"
+  }
+
+  option {
+    name        = "Fork public OSS repository"
+    value       = "__fork_repository__"
+    description = "Start the workspace, confirm the fork on GitHub, then clone it automatically."
+    icon        = "/icon/github.svg"
   }
 
   dynamic "option" {
@@ -337,6 +362,42 @@ data "coder_parameter" "git_repo" {
       ]))
       icon = "/icon/github.svg"
     }
+  }
+}
+
+data "coder_parameter" "new_repo_name" {
+  count        = data.coder_parameter.git_repo.value == "__create_repository__" ? 1 : 0
+  name         = "new_repo_name"
+  display_name = "New repository name"
+  description  = "Keep the same name on the GitHub confirmation page."
+  type         = "string"
+  form_type    = "input"
+  default      = "new-project"
+  mutable      = true
+  order        = 11
+  icon         = "/icon/github.svg"
+
+  validation {
+    regex = "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$"
+    error = "Use 1–100 letters, numbers, periods, underscores, or hyphens."
+  }
+}
+
+data "coder_parameter" "fork_repo_url" {
+  count        = data.coder_parameter.git_repo.value == "__fork_repository__" ? 1 : 0
+  name         = "fork_repo_url"
+  display_name = "Public repository to fork"
+  description  = "Enter https://github.com/OWNER/REPOSITORY."
+  type         = "string"
+  form_type    = "input"
+  default      = ""
+  mutable      = true
+  order        = 12
+  icon         = "/icon/github.svg"
+
+  validation {
+    regex = "^(|https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(\\.git)?/?)$"
+    error = "Enter a public GitHub repository URL such as https://github.com/owner/project."
   }
 }
 
@@ -360,10 +421,36 @@ locals {
   workspace_name = "coder-${data.coder_workspace.me.id}"
   builder_name   = "${local.workspace_name}-builder"
   builder_pod    = "${local.builder_name}-0"
-  git_repo_url   = data.coder_parameter.git_repo.value == "__empty_project__" ? "" : trimsuffix(trimspace(data.coder_parameter.git_repo.value), "/")
-  git_repo_set   = local.git_repo_url != ""
-  git_repo_name  = local.git_repo_set ? trimsuffix(basename(local.git_repo_url), ".git") : ""
-  workspace_dir  = local.git_repo_set ? "/home/coder/project/${local.git_repo_name}" : "/home/coder/project"
+  repository_mode = lookup({
+    "__empty_project__"     = "empty"
+    "__create_repository__" = "create"
+    "__fork_repository__"   = "fork"
+  }, data.coder_parameter.git_repo.value, "existing")
+  existing_git_repo_url = local.repository_mode == "existing" ? trimsuffix(trimspace(data.coder_parameter.git_repo.value), "/") : ""
+  fork_source_web_url = local.repository_mode == "fork" ? trimsuffix(
+    trimsuffix(trimspace(try(data.coder_parameter.fork_repo_url[0].value, "")), "/"),
+    ".git",
+  ) : ""
+  requested_repo_name   = local.repository_mode == "create" ? trimspace(try(data.coder_parameter.new_repo_name[0].value, "")) : ""
+  fork_repo_name        = local.fork_source_web_url != "" ? basename(local.fork_source_web_url) : ""
+  browser_assisted_repo = contains(["create", "fork"], local.repository_mode)
+  github_auth_required  = local.repository_mode != "empty"
+  git_repo_name = local.repository_mode == "existing" ? trimsuffix(basename(local.existing_git_repo_url), ".git") : (
+    local.repository_mode == "create" ? local.requested_repo_name : local.fork_repo_name
+  )
+  git_repo_url = local.repository_mode == "empty" ? "" : (
+    local.repository_mode == "existing" ? local.existing_git_repo_url : "https://github.com/${var.github_owner}/${local.git_repo_name}.git"
+  )
+  git_repo_set = local.git_repo_url != "" && local.git_repo_name != ""
+  workspace_dir = local.git_repo_set ? "/home/coder/project/${local.git_repo_name}" : "/home/coder/project"
+  github_action_url = local.repository_mode == "create" ? "https://github.com/new?owner=${urlencode(var.github_owner)}&name=${urlencode(local.git_repo_name)}" : (
+    local.repository_mode == "fork" && local.fork_source_web_url != "" ? "${local.fork_source_web_url}/fork" : ""
+  )
+  repository_display = local.repository_mode == "empty" ? "Empty container project" : (
+    local.repository_mode == "create" ? "Create ${var.github_owner}/${local.git_repo_name}" : (
+      local.repository_mode == "fork" ? "Fork to ${var.github_owner}/${local.git_repo_name}" : local.git_repo_url
+    )
+  )
   node_selector = {
     "kubernetes.io/hostname" = data.coder_parameter.forge_node.value
   }
@@ -391,8 +478,28 @@ locals {
 }
 
 data "coder_external_auth" "github" {
-  count = local.git_repo_set ? 1 : 0
+  count = local.github_auth_required ? 1 : 0
   id    = "github"
+}
+
+resource "terraform_data" "repository_request" {
+  input = {
+    mode       = local.repository_mode
+    repository = local.git_repo_url
+    source     = local.fork_source_web_url
+  }
+
+  lifecycle {
+    precondition {
+      condition     = local.repository_mode != "create" || local.requested_repo_name != ""
+      error_message = "New repository name is required when Create new GitHub repository is selected."
+    }
+
+    precondition {
+      condition     = local.repository_mode != "fork" || local.fork_source_web_url != ""
+      error_message = "Public repository to fork is required when Fork public OSS repository is selected."
+    }
+  }
 }
 
 resource "coder_agent" "main" {
@@ -1042,6 +1149,33 @@ resource "coder_agent" "main" {
   EOT
 }
 
+module "git_clone" {
+  count      = data.coder_workspace.me.start_count > 0 && local.repository_mode == "existing" ? 1 : 0
+  source     = "registry.coder.com/coder/git-clone/coder"
+  version    = "2.0.2"
+  agent_id   = coder_agent.main.id
+  url        = local.existing_git_repo_url
+  base_dir   = "/home/coder/project"
+  depends_on = [data.coder_external_auth.github]
+}
+
+resource "coder_script" "browser_assisted_repository" {
+  count              = data.coder_workspace.me.start_count > 0 && local.browser_assisted_repo ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = local.repository_mode == "create" ? "Clone newly created repository" : "Clone new GitHub fork"
+  icon               = "/icon/github.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 1800
+  script = templatefile("${path.module}/repository-bootstrap.sh.tftpl", {
+    repository_mode     = local.repository_mode
+    repository_name_b64 = base64encode(local.git_repo_name)
+    repository_url_b64  = base64encode(local.git_repo_url)
+  })
+
+  depends_on = [data.coder_external_auth.github, terraform_data.repository_request]
+}
+
 resource "coder_app" "container_shell" {
   count        = data.coder_workspace.me.start_count
   agent_id     = coder_agent.main.id
@@ -1174,7 +1308,19 @@ resource "coder_app" "github_repository" {
   group        = "Container Development"
   order        = 5
   external     = true
-  url          = local.git_repo_url
+  url          = trimsuffix(local.git_repo_url, ".git")
+}
+
+resource "coder_app" "github_repository_action" {
+  count        = data.coder_workspace.me.start_count > 0 && local.browser_assisted_repo ? 1 : 0
+  agent_id     = coder_agent.main.id
+  slug         = "github-repository-action"
+  display_name = local.repository_mode == "create" ? "Create repository on GitHub" : "Create fork on GitHub"
+  icon         = "/icon/github.svg"
+  group        = "Container Development"
+  order        = 4
+  external     = true
+  url          = local.github_action_url
 }
 
 resource "kubernetes_persistent_volume_claim_v1" "home" {
@@ -1721,7 +1867,7 @@ resource "coder_metadata" "workspace" {
 
   item {
     key   = "Repository"
-    value = local.git_repo_set ? local.git_repo_url : "Empty container project"
+    value = local.repository_display
   }
 
   item {

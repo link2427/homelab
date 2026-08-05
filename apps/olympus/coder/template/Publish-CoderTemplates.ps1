@@ -53,8 +53,8 @@ $catalog = @(
     }
 )
 
-if ($catalog.Count -gt 63) {
-  throw "Coder supports at most 64 dropdown options. Found $($catalog.Count) repositories plus Empty project; narrow the catalog before publishing."
+if ($catalog.Count -gt 61) {
+  throw "Coder supports at most 64 dropdown options. Found $($catalog.Count) repositories plus Empty, Create, and Fork actions; narrow the catalog before publishing."
 }
 
 $catalogJson = ConvertTo-Json -InputObject $catalog -Depth 4 -Compress
@@ -101,6 +101,7 @@ try {
     $variables = [ordered]@{
       profile                  = $template.Profile
       image                    = $template.Image
+      github_owner             = $Owner
       github_repositories_json = $catalogJson
     }
 
@@ -120,6 +121,7 @@ try {
   $forgeDirectory = Join-Path $PSScriptRoot "..\container-forge"
   $forgeVariables = [ordered]@{
     github_repositories_json = $catalogJson
+    github_owner             = $Owner
     namespace                = "coder-forge"
     workspace_image          = "codercom/example-base:ubuntu"
     kaniko_image             = "ghcr.io/osscontainertools/kaniko:v1.28.2-alpine@sha256:44f90ae1ba366aeedbd0f2d56dbe246354553e47904338dd9321a41a44bea9ff"
