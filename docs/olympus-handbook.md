@@ -312,6 +312,21 @@ download it through Coder in a normal authenticated browser session. The file
 service binds only to workspace loopback and is not directly exposed to the
 cluster network.
 
+All Coder templates provide an owner-only **Web Preview** card and dynamic port
+forwarding. Select 3000, 5173, 8000, or 8080 as the primary card, or run
+`olympus-preview PORT` for any listening port. The returned route follows
+`https://<port>--main--<workspace>--<owner>.jacob-neel.dev`. Cloudflare sends
+that wildcard hostname through the existing `olympus-access` tunnel to Coder;
+Coder still enforces the workspace owner's Authentik session.
+
+The public-safe [`olympus-workspace`](../apps/olympus/coder/skills/olympus-workspace/SKILL.md)
+Agent Skill explains persistent paths, previews, exports, GitHub access, and the
+boundary between a temporary Coder preview and a long-lived Flux deployment.
+Each workspace refreshes it from this repository at startup, installs the
+canonical copy under `~/.agents/skills`, and links the native discovery paths
+for Codex, Claude Code, OpenCode, and Reasonix. Managed global instruction
+blocks tell every agent to load the skill for workspace operations.
+
 ### Container Forge
 
 `container-forge` authors Dockerfiles with the same GitHub repository selector
