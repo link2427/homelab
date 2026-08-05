@@ -422,6 +422,43 @@ data "coder_parameter" "gpu" {
   }
 }
 
+data "coder_parameter" "preview_port" {
+  name         = "preview_port"
+  display_name = "Primary web preview"
+  description  = "Port used by the Web Preview card. Any other listening port is also available through Coder Open Ports and olympus-preview."
+  type         = "number"
+  form_type    = "dropdown"
+  default      = "3000"
+  mutable      = true
+  order        = 80
+  icon         = "/icon/code.svg"
+
+  option {
+    name        = "3000 · React / Node"
+    value       = "3000"
+    description = "Common React, Next.js, Express, and Node development port."
+    icon        = "/icon/code.svg"
+  }
+  option {
+    name        = "5173 · Vite"
+    value       = "5173"
+    description = "Default Vite development server port."
+    icon        = "/icon/code.svg"
+  }
+  option {
+    name        = "8000 · Python"
+    value       = "8000"
+    description = "Common FastAPI, Django, and Python HTTP server port."
+    icon        = "/icon/python.svg"
+  }
+  option {
+    name        = "8080 · General web"
+    value       = "8080"
+    description = "Common alternate HTTP and application server port."
+    icon        = "/icon/code.svg"
+  }
+}
+
 data "coder_parameter" "git_repo" {
   name         = "git_repo"
   display_name = "GitHub repository"
@@ -499,6 +536,14 @@ locals {
     "nvidia.com/gpu" = "1"
   } : {}
   profile_environment = merge(
+    {
+      "OLYMPUS_CODER_ACCESS_URL"          = "https://coder.jacob-neel.dev"
+      "OLYMPUS_CODER_WILDCARD_DOMAIN"     = "jacob-neel.dev"
+      "OLYMPUS_CODER_OWNER"               = data.coder_workspace_owner.me.name
+      "OLYMPUS_CODER_WORKSPACE"           = data.coder_workspace.me.name
+      "OLYMPUS_CODER_AGENT"               = "main"
+      "OLYMPUS_WORKSPACE_SKILL_BASE_URL"  = "https://raw.githubusercontent.com/link2427/homelab/main/apps/olympus/coder/skills/olympus-workspace"
+    },
     var.profile == "agent" ? {
       "PATH" = "/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     } : {},
@@ -519,7 +564,19 @@ resource "coder_agent" "main" {
 
   startup_script = <<-EOT
     set -eu
-    mkdir -p /home/coder/project
+    mkdir -p /home/coder/project /home/coder/.local/bin
+    olympus_context_installer="$(mktemp /tmp/olympus-context.XXXXXX)"
+    if curl --retry 5 --retry-delay 2 --fail --retry-all-errors -fsSL \
+      "https://raw.githubusercontent.com/link2427/homelab/main/apps/olympus/coder/skills/olympus-workspace/scripts/install-olympus-workspace" \
+      -o "$${olympus_context_installer}"; then
+      chmod 0700 "$${olympus_context_installer}"
+      if ! "$${olympus_context_installer}"; then
+        echo "Olympus context installer failed; workspace startup will continue." >&2
+      fi
+    else
+      echo "Olympus context installer download failed; workspace startup will continue." >&2
+    fi
+    rm -f "$${olympus_context_installer}"
     if command -v git >/dev/null 2>&1; then
       git config --global credential.useHttpPath true
       git config --global push.autoSetupRemote true
@@ -823,6 +880,25 @@ module "opencode" {
       chmod +x /home/coder/.local/bin/agentapi
     fi
   EOT
+}
+
+resource "coder_app" "web_preview" {
+  count        = data.coder_workspace.me.start_count
+  agent_id     = coder_agent.main.id
+  slug         = "web-preview"
+  display_name = "Web Preview · :${data.coder_parameter.preview_port.value}"
+  icon         = "/icon/code.svg"
+  group        = "Development"
+  order        = 0
+  url          = "http://localhost:${data.coder_parameter.preview_port.value}"
+  subdomain    = true
+  share        = "owner"
+
+  healthcheck {
+    url       = "http://localhost:${data.coder_parameter.preview_port.value}/"
+    interval  = 5
+    threshold = 24
+  }
 }
 
 resource "coder_app" "exports" {

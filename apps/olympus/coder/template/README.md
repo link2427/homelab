@@ -84,6 +84,19 @@ can place a finished file or directory in the download area with
 download it from a normal browser after signing in to Coder. File Browser is
 pinned to v2.63.5 and its release checksum is verified before installation.
 
+Every template has an owner-only **Web Preview** card whose port is selected at
+workspace creation (3000, 5173, 8000, or 8080). Any other listening port is
+available through Coder's **Open Ports** view. The wildcard route is
+`https://<port>--main--<workspace>--<owner>.jacob-neel.dev`; it reaches Coder
+through the shared `olympus-access` Cloudflare Tunnel and still requires the
+normal Coder/Authentik login.
+
+At each workspace start, the public-safe `olympus-workspace` Agent Skill is
+refreshed from this repository into `~/.agents/skills`. Compatibility links and
+small global instruction blocks make it available to Codex, Claude Code,
+OpenCode, and Reasonix. The same installer provides `olympus-preview`, which
+prints the exact authenticated URL for any requested port.
+
 `olympus-gpu` uses the official PyTorch 2.13.0 CUDA 12.6 runtime image. CUDA
 12.6 is intentional: unlike CUDA 13, it retains binary support for both the
 Maxwell M4000 and Pascal P2000. Hugging Face, Torch, extension, Matplotlib, and

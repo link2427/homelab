@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  olympus-preview PORT
+  olympus-preview --app APP_SLUG
+  olympus-preview --exports
+  olympus-preview --workspace
+
+Print an authenticated Olympus Coder URL for this workspace.
+EOF
+}
+
+owner="${OLYMPUS_CODER_OWNER:-}"
+workspace="${OLYMPUS_CODER_WORKSPACE:-}"
+agent="${OLYMPUS_CODER_AGENT:-main}"
+domain="${OLYMPUS_CODER_WILDCARD_DOMAIN:-jacob-neel.dev}"
+access_url="${OLYMPUS_CODER_ACCESS_URL:-https://coder.jacob-neel.dev}"
+
+if [[ -z "$owner" || -z "$workspace" ]]; then
+  echo "olympus-preview: workspace identity is unavailable; restart from a current Olympus Coder template" >&2
+  exit 1
+fi
+
+case "${1:-}" in
+  --help|-h)
+    usage
+    ;;
+  --exports)
+    printf '%s/@%s/%s.%s/apps/exports/\n' "$access_url" "$owner" "$workspace" "$agent"
+    ;;
+  --workspace)
+    printf '%s/@%s/%s\n' "$access_url" "$owner" "$workspace"
+    ;;
+  --app)
+    if [[ $# -ne 2 || ! "$2" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
+      echo "olympus-preview: APP_SLUG must be a lowercase Coder app slug" >&2
+      exit 2
+    fi
+    printf 'https://%s--%s--%s--%s.%s\n' "$2" "$agent" "$workspace" "$owner" "$domain"
+    ;;
+  '')
+    usage >&2
+    exit 2
+    ;;
+  *)
+    if [[ $# -ne 1 || ! "$1" =~ ^[0-9]+$ ]] || (( 10#$1 < 1 || 10#$1 > 65535 )); then
+      echo "olympus-preview: PORT must be an integer from 1 through 65535" >&2
+      exit 2
+    fi
+    printf 'https://%s--%s--%s--%s.%s\n' "$1" "$agent" "$workspace" "$owner" "$domain"
+    ;;
+esac

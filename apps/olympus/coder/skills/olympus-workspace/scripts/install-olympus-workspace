@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+skill_base_url="${OLYMPUS_WORKSPACE_SKILL_BASE_URL:-https://raw.githubusercontent.com/link2427/homelab/main/apps/olympus/coder/skills/olympus-workspace}"
+workspace_home="${HOME:-/home/coder}"
+canonical_dir="$workspace_home/.agents/skills/olympus-workspace"
+
+mkdir -p "$canonical_dir/agents" "$canonical_dir/scripts" "$workspace_home/.local/bin"
+
+download() {
+  local source_url="$1"
+  local destination="$2"
+  local mode="$3"
+  local temporary
+  temporary="$(mktemp /tmp/olympus-workspace.XXXXXX)"
+  if ! curl --retry 5 --retry-delay 2 --fail --retry-all-errors -fsSL "$source_url" -o "$temporary"; then
+    rm -f "$temporary"
+    return 1
+  fi
+  install -m "$mode" "$temporary" "$destination"
+  rm -f "$temporary"
+}
+
+skill_tmp="$(mktemp /tmp/olympus-workspace-skill.XXXXXX)"
+if ! curl --retry 5 --retry-delay 2 --fail --retry-all-errors -fsSL "$skill_base_url/SKILL.md" -o "$skill_tmp"; then
+  rm -f "$skill_tmp"
+  echo "Olympus context: GitHub refresh failed; retaining the previously installed skill." >&2
+  exit 0
+fi
+if ! grep -Fqx 'name: olympus-workspace' "$skill_tmp"; then
+  rm -f "$skill_tmp"
+  echo "Olympus context: downloaded SKILL.md failed identity validation." >&2
+  exit 1
+fi
+install -m 0644 "$skill_tmp" "$canonical_dir/SKILL.md"
+rm -f "$skill_tmp"
+
+download "$skill_base_url/agents/openai.yaml" "$canonical_dir/agents/openai.yaml" 0644 || true
+download "$skill_base_url/scripts/olympus-preview" "$canonical_dir/scripts/olympus-preview" 0755 || {
+  echo "Olympus context: olympus-preview refresh failed; retaining the previous helper." >&2
+}
+if [[ -x "$canonical_dir/scripts/olympus-preview" ]]; then
+  install -m 0755 "$canonical_dir/scripts/olympus-preview" "$workspace_home/.local/bin/olympus-preview"
+fi
+
+link_skill() {
+  local destination="$1"
+  mkdir -p "$(dirname "$destination")"
+  if [[ -L "$destination" ]]; then
+    ln -sfn "$canonical_dir" "$destination"
+  elif [[ -d "$destination" ]]; then
+    install -m 0644 "$canonical_dir/SKILL.md" "$destination/SKILL.md"
+  elif [[ ! -e "$destination" ]]; then
+    ln -s "$canonical_dir" "$destination"
+  else
+    echo "Olympus context: refusing to replace non-directory skill path $destination" >&2
+  fi
+}
+
+# .agents is canonical. The links keep current and older agent-specific
+# discovery paths working without maintaining divergent copies.
+link_skill "$workspace_home/.codex/skills/olympus-workspace"
+link_skill "$workspace_home/.claude/skills/olympus-workspace"
+link_skill "$workspace_home/.config/opencode/skills/olympus-workspace"
+link_skill "$workspace_home/.reasonix/skills/olympus-workspace"
+
+python3 - "$workspace_home" <<'PY'
+from pathlib import Path
+import sys
+
+home = Path(sys.argv[1])
+start = "<!-- olympus-workspace:managed-start -->"
+end = "<!-- olympus-workspace:managed-end -->"
+block = f"""{start}
+## Olympus Coder workspace
+
+This session runs inside an Olympus Coder workspace. Before handling browser
+previews, artifact downloads, workspace persistence, GitHub access, or cluster
+deployment, load the `olympus-workspace` skill. Use `olympus-preview PORT` for
+owner-authenticated temporary websites and `olympus-export SOURCE [NAME]` for
+browser-downloadable artifacts. Never create an unauthenticated public tunnel
+or a long-lived deployment without Jacob explicitly requesting it.
+{end}"""
+
+paths = [
+    home / ".codex" / "AGENTS.md",
+    home / ".claude" / "CLAUDE.md",
+    home / ".config" / "opencode" / "AGENTS.md",
+    home / ".reasonix" / "REASONIX.md",
+]
+
+for path in paths:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = path.read_text(encoding="utf-8") if path.exists() else ""
+    if start in existing and end in existing:
+        before, remainder = existing.split(start, 1)
+        _, after = remainder.split(end, 1)
+        updated = before.rstrip() + "\n\n" + block + after
+    else:
+        updated = existing.rstrip() + ("\n\n" if existing.strip() else "") + block + "\n"
+    temporary = path.with_name(path.name + ".olympus.tmp")
+    temporary.write_text(updated, encoding="utf-8")
+    temporary.chmod(0o600)
+    temporary.replace(path)
+PY
+
+printf 'Olympus context ready: %s\n' "$canonical_dir/SKILL.md"

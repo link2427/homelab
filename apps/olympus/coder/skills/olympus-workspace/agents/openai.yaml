@@ -1,0 +1,4 @@
+interface:
+  display_name: "Olympus Workspace"
+  short_description: "Use Coder previews, exports, and deployment"
+  default_prompt: "Use $olympus-workspace to run and share this project from my Olympus Coder workspace."
