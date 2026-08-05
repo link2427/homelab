@@ -50,8 +50,6 @@ spec:
               value: "on"
             - name: FIREWALL_INPUT_PORTS
               value: "8388,8888"
-            - name: DOT
-              value: "on"
             - name: HTTPPROXY
               value: "on"
             - name: HTTPPROXY_LOG
@@ -129,6 +127,7 @@ spec:
               drop:
                 - ALL
               add:
+                - CHOWN
                 - NET_ADMIN
             seccompProfile:
               type: RuntimeDefault
