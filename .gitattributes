@@ -1,0 +1,5 @@
+# Coder sends Terraform heredocs directly to Linux workspace agents. Keep the
+# templates and embedded shell assets LF-only even from Windows checkouts.
+*.tf text eol=lf
+*.sh text eol=lf
+apps/olympus/coder/skills/*/scripts/* text eol=lf
