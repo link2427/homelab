@@ -1,0 +1,172 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nordvpn-egress
+  namespace: vpn-egress
+  labels:
+    app.kubernetes.io/name: nordvpn-egress
+    app.kubernetes.io/component: egress-proxy
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nordvpn-egress
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nordvpn-egress
+        app.kubernetes.io/component: egress-proxy
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: atlas
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: gluetun
+          image: qmcgaw/gluetun:v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: nordvpn
+            - name: VPN_TYPE
+              value: openvpn
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vpn-egress-credentials
+                  key: OPENVPN_USER
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vpn-egress-credentials
+                  key: OPENVPN_PASSWORD
+            - name: OPENVPN_PROTOCOL
+              value: udp
+            - name: SERVER_COUNTRIES
+              value: United States
+            - name: FIREWALL
+              value: "on"
+            - name: FIREWALL_INPUT_PORTS
+              value: "8388,8888"
+            - name: DOT
+              value: "on"
+            - name: HTTPPROXY
+              value: "on"
+            - name: HTTPPROXY_LOG
+              value: "off"
+            - name: HTTPPROXY_STEALTH
+              value: "on"
+            - name: HTTPPROXY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vpn-egress-credentials
+                  key: HTTPPROXY_USER
+            - name: HTTPPROXY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vpn-egress-credentials
+                  key: HTTPPROXY_PASSWORD
+            - name: SHADOWSOCKS
+              value: "on"
+            - name: SHADOWSOCKS_LOG
+              value: "off"
+            - name: SHADOWSOCKS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vpn-egress-credentials
+                  key: SHADOWSOCKS_PASSWORD
+            - name: UPDATER_PERIOD
+              value: 480h
+            - name: TZ
+              value: America/Chicago
+          ports:
+            - name: http-proxy
+              containerPort: 8888
+              protocol: TCP
+            - name: shadowsocks-tcp
+              containerPort: 8388
+              protocol: TCP
+            - name: shadowsocks-udp
+              containerPort: 8388
+              protocol: UDP
+          startupProbe:
+            exec:
+              command:
+                - /gluetun-entrypoint
+                - healthcheck
+            failureThreshold: 60
+            periodSeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /gluetun-entrypoint
+                - healthcheck
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - /gluetun-entrypoint
+                - healthcheck
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 0
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
+            - name: state
+              mountPath: /gluetun
+      volumes:
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+        - name: state
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nordvpn-egress
+  namespace: vpn-egress
+  labels:
+    app.kubernetes.io/name: nordvpn-egress
+    app.kubernetes.io/component: egress-proxy
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: nordvpn-egress
+  ports:
+    - name: http-proxy
+      port: 8888
+      targetPort: http-proxy
+      protocol: TCP
+    - name: shadowsocks-tcp
+      port: 8388
+      targetPort: shadowsocks-tcp
+      protocol: TCP
+    - name: shadowsocks-udp
+      port: 8388
+      targetPort: shadowsocks-udp
+      protocol: UDP

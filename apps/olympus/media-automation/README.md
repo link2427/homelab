@@ -6,9 +6,8 @@ library on Atlas:
 - Seerr handles user requests and talks to Plex, Radarr, and Sonarr.
 - Prowlarr manages explicitly configured, lawful indexer sources.
 - Radarr and Sonarr import into `Movies` and `TV Shows`.
-- qBittorrent shares its pod network namespace with a restartable Gluetun
-  sidecar. The application container does not start until the NordVPN tunnel and
-  firewall health check pass.
+- qBittorrent uses the shared, authenticated `vpn-egress` HTTP CONNECT proxy.
+  A pod-level IPv4/IPv6 OUTPUT lock prevents fallback to normal Internet egress.
 - The entire writable media path is one DATA-2 NFS mount so imports can use
   hardlinks instead of duplicating files.
 
@@ -27,12 +26,13 @@ they are not remote backups.
 ## Network exposure
 
 Only Seerr is exposed to the tailnet as `http://olympus-seerr`. The Servarr and
-qBittorrent admin APIs remain ClusterIP-only. qBittorrent has no independent
-network path: Gluetun initializes first and owns the pod firewall.
+qBittorrent admin APIs remain ClusterIP-only. qBittorrent can reach only the
+Olympus service and pod CIDRs; all external torrent traffic uses the shared
+NordVPN proxy. If the proxy is down, torrent traffic stops.
 
-## NordVPN secret
+## Shared VPN dependency
 
-`nordvpn-credentials` must contain NordVPN **service credentials**, not the
-normal account email/password. Store it only in a SOPS-encrypted
-`nordvpn.secret.yaml`, add that file to `kustomization.yaml`, and then change the
-qBittorrent deployment replica count from zero to one.
+The NordVPN service credentials live only in the SOPS-encrypted shared gateway
+Secret under `infrastructure/olympus/vpn-egress`. qBittorrent stores only the
+generated proxy-client login in its local application configuration. See the
+shared gateway README for reuse and security constraints.
