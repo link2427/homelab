@@ -872,6 +872,20 @@ resource "coder_agent" "main" {
         --noauth \
         > /home/coder/.local/share/filebrowser/server.log 2>&1 &
     fi
+    mkdir -p /home/coder/.local/state/reasonix
+    if ! curl -fsS http://127.0.0.1:8787/ >/dev/null 2>&1; then
+      rm -f /home/coder/.local/state/reasonix/serve.pid \
+        /home/coder/.local/state/reasonix/serve.addr
+      (
+        cd '${local.workspace_dir}'
+        nohup /home/coder/.local/bin/reasonix serve \
+          --addr 127.0.0.1:8787 \
+          --auth none \
+          --pid-file /home/coder/.local/state/reasonix/serve.pid \
+          --port-file /home/coder/.local/state/reasonix/serve.addr \
+          > /home/coder/.local/state/reasonix/serve.log 2>&1 &
+      )
+    fi
     %{endif~}
     %{if var.profile == "gpu"~}
     mkdir -p /home/coder/.cache/huggingface \
@@ -1095,14 +1109,33 @@ resource "coder_app" "opencode_cli" {
   EOT
 }
 
+resource "coder_app" "reasonix_desktop" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id     = coder_agent.main.id
+  slug         = "reasonix-desktop"
+  display_name = "Reasonix Desktop"
+  icon         = "/icon/code.svg"
+  group        = "AI Agents"
+  order        = 40
+  url          = "http://localhost:8787"
+  subdomain    = true
+  share        = "owner"
+
+  healthcheck {
+    url       = "http://localhost:8787/"
+    interval  = 5
+    threshold = 24
+  }
+}
+
 resource "coder_app" "reasonix" {
   count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
   agent_id     = coder_agent.main.id
   slug         = "reasonix"
-  display_name = "Reasonix"
+  display_name = "Reasonix CLI"
   icon         = "/icon/terminal.svg"
   group        = "AI Agents"
-  order        = 40
+  order        = 50
   open_in      = "slim-window"
   command      = <<-EOT
     #!/bin/bash

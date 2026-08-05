@@ -75,7 +75,8 @@ delete repositories or change their core settings.
 
 `olympus-agent` exposes the official Coder integrations for Codex, Claude Code,
 and OpenCode. It provides correctly branded launcher tiles for Codex, Claude
-Code, OpenCode CLI, and Reasonix, plus the OpenCode web interface. Node.js
+Code, OpenCode CLI, Reasonix CLI, and Reasonix Desktop, plus the OpenCode web
+interface. Node.js
 24.18.1 LTS, Reasonix 1.19.1, and AgentAPI are installed into the persistent
 home directory without requiring root privileges, so all four tools survive
 workspace rebuilds and keep their user-level configuration with the workspace.
@@ -83,7 +84,10 @@ The four launcher buttons enter named Zellij `v0.44.3` sessions, so closing and
 reopening a browser terminal reattaches to the same running agent while the
 workspace stays started. A workspace stop, update, or pod reschedule still ends
 live processes; files and agent history on the Longhorn home volume persist for
-normal resume afterward.
+normal resume afterward. Reasonix Desktop starts `reasonix serve` in the
+selected repository at `127.0.0.1:8787` and exposes it only through an
+owner-only Coder application. Its sessions, configuration, memory, and
+checkpoints use the same persistent `~/.reasonix` state as Reasonix CLI.
 Reasonix runs with `sandbox.bash = "off"` because Talos deliberately disables
 the nested user namespaces Bubblewrap requires and the Coder namespace rejects
 unconfined seccomp profiles. The enclosing workspace remains a non-root pod
