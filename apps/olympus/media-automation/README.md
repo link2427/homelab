@@ -33,6 +33,14 @@ qBittorrent can reach only the Olympus service and pod CIDRs; all external
 torrent traffic uses the shared NordVPN proxy. If the proxy is down, torrent
 traffic stops.
 
+Radarr, Sonarr, and Prowlarr use Forms authentication with authentication
+disabled only for local addresses. The Tailscale Kubernetes proxy reaches these
+services from the cluster-local network, so a tailnet user does not receive a
+second login prompt. The valid break-glass username and password are retained in
+the SOPS-encrypted `servarr-ui-credentials` Secret. If any admin endpoint is ever
+published beyond the tailnet, change `Authentication Required` to `Enabled` or
+place the service behind Authentik before publishing it.
+
 ## Shared VPN dependency
 
 The NordVPN service credentials live only in the SOPS-encrypted shared gateway
