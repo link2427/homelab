@@ -4,7 +4,9 @@ This stack provides private media requests and automation for the existing Plex
 library on Atlas:
 
 - Seerr handles user requests and talks to Plex, Radarr, and Sonarr.
-- Prowlarr manages explicitly configured, lawful indexer sources.
+- Prowlarr manages explicitly configured indexer sources. Its external HTTP/S
+  traffic uses the shared NordVPN proxy and a pod-level OUTPUT lock prevents
+  fallback to the household WAN.
 - Radarr and Sonarr import into `Movies` and `TV Shows`.
 - qBittorrent uses the shared, authenticated `vpn-egress` HTTP CONNECT proxy.
   A pod-level IPv4/IPv6 OUTPUT lock prevents fallback to normal Internet egress.
@@ -29,9 +31,9 @@ Seerr is exposed to the tailnet as `http://olympus-seerr`. Radarr, Sonarr, and
 Prowlarr have tailnet-only admin endpoints at `http://olympus-radarr`,
 `http://olympus-sonarr`, and `http://olympus-prowlarr`. qBittorrent's admin API
 remains ClusterIP-only and is surfaced only through the private Homepage widget.
-qBittorrent can reach only the Olympus service and pod CIDRs; all external
-torrent traffic uses the shared NordVPN proxy. If the proxy is down, torrent
-traffic stops.
+Prowlarr and qBittorrent can reach only the Olympus service and pod CIDRs
+directly. Their external traffic uses the shared NordVPN proxy. If the proxy is
+down, indexer queries and torrent traffic stop.
 
 Radarr, Sonarr, and Prowlarr use Forms authentication with authentication
 disabled only for local addresses. The Tailscale Kubernetes proxy reaches these
@@ -44,6 +46,8 @@ place the service behind Authentik before publishing it.
 ## Shared VPN dependency
 
 The NordVPN service credentials live only in the SOPS-encrypted shared gateway
-Secret under `infrastructure/olympus/vpn-egress`. qBittorrent stores only the
-generated proxy-client login in its local application configuration. See the
-shared gateway README for reuse and security constraints.
+Secret under `infrastructure/olympus/vpn-egress`. Prowlarr receives only the
+generated proxy-client login from the namespace-local SOPS Secret and enforces
+the proxy settings on every container start. qBittorrent stores the same
+proxy-client login in its local application configuration. See the shared
+gateway README for reuse and security constraints.
