@@ -9,4 +9,3 @@ resources:
   - nvidia-device-plugin
   - longhorn
   - spegel
-  - vpn-egress
