@@ -66,6 +66,19 @@ keys, sessions, memory, and checkpoints. Stopping the workspace terminates the
 server and CLI process, but their saved state survives on the Longhorn home
 volume and resumes after the workspace starts again.
 
+## Use an assigned GPU
+
+When the workspace metadata shows a selected GPU, Kubernetes pins the pod to
+that GPU's physical node, requests one `nvidia.com/gpu`, and uses the `nvidia`
+RuntimeClass. GPU access does not require `sudo`, privileged mode, or additional
+Linux capabilities. The base Agent image may not include `nvidia-smi`; use the
+project's CUDA userspace environment and application-level CUDA smoke test.
+
+If `NVIDIA_VISIBLE_DEVICES` is set but `/dev/nvidia*` is absent, report a Coder
+template/runtime integration failure to the cluster owner. Do not attempt to
+fix it with `sudo`, host package installation, manual device mounts, or broader
+container privileges.
+
 ## Export downloadable artifacts
 
 Copy a completed file or directory into the persistent export area:

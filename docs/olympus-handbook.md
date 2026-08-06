@@ -163,6 +163,11 @@ Coder GPU selection is physical and explicit:
 - `tesla-p40` pins the workspace to `atlas`
 - `none` leaves the workspace on normal Kubernetes scheduling
 
+Every selected GPU also sets `runtimeClassName: nvidia` and requests exactly
+one `nvidia.com/gpu`. The resource request reserves the physical card; the
+runtime class makes Talos containerd inject its device nodes and driver
+libraries into the otherwise unprivileged workspace container.
+
 The GPU template uses the PyTorch CUDA 12.6 runtime. CUDA 12.6 retains binary
 support for both the Maxwell M4000 and Pascal P2000; a CUDA 13-only image would
 drop the M4000.

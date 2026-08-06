@@ -29,8 +29,10 @@ the workspace to the exact physical card:
 - Tesla P40, 24 GiB, on `atlas`
 - No GPU, with normal Kubernetes placement
 
-GPU selection adds both the `nvidia.com/gpu: 1` limit and a hostname node
-selector, so Kubernetes cannot silently assign the other card.
+GPU selection adds the `nvidia` RuntimeClass, an `nvidia.com/gpu: 1` limit, and
+a hostname node selector. The runtime class makes Talos containerd inject the
+assigned device and driver libraries; the selector prevents Kubernetes from
+silently assigning a different physical card.
 
 The catalog uses a distinct built-in Coder icon for each template: Ubuntu for
 Linux, OpenAI for Agent, PyTorch for GPU, Code for Build, and Container for
