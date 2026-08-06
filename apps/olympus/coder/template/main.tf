@@ -1259,7 +1259,8 @@ resource "kubernetes_deployment_v1" "main" {
       }
 
       spec {
-        node_selector = local.node_selector
+        node_selector      = local.node_selector
+        runtime_class_name = data.coder_parameter.gpu.value != "none" ? "nvidia" : null
 
         security_context {
           run_as_non_root = true
