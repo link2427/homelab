@@ -49,9 +49,11 @@ olympus-preview 8000
 ```
 
 Coder also detects listening ports under **Open Ports**. The template's **Web
-Preview** card points at its selected primary preview port. Preview routes stop
-when the workspace stops and are owner-only; do not weaken sharing or add an
-unauthenticated tunnel unless Jacob explicitly requests it.
+Preview** card points at its selected primary preview port. The optional card
+does not participate in workspace health, so it remains neutral until a server
+is started; opening it while the port is idle can still return a proxy error.
+Preview routes stop when the workspace stops and are owner-only; do not weaken
+sharing or add an unauthenticated tunnel unless Jacob explicitly requests it.
 
 ## Use Reasonix Desktop or CLI
 
@@ -65,6 +67,21 @@ Both interfaces use the same persistent `~/.reasonix` configuration, provider
 keys, sessions, memory, and checkpoints. Stopping the workspace terminates the
 server and CLI process, but their saved state survives on the Longhorn home
 volume and resumes after the workspace starts again.
+
+## Use Prime Agent
+
+**Prime Agent** opens in a persistent Zellij terminal rooted in the selected
+repository. Prime Agent also runs its own background daemon, so closing the
+browser terminal does not stop active sessions while the workspace remains
+started. Its state lives under `~/.prime`, and this skill is discovered through
+the canonical `~/.agents/skills` directory.
+
+Coder supplies `DEEPSEEK_API_KEY` to the agent environment. The managed
+`~/.prime/agent/auth.json` entry refers to that environment-variable name and
+does not contain the secret value. Use the built-in DeepSeek provider without
+printing, copying, exporting, or committing the key. A workspace stop or update
+ends live daemon processes, but the Longhorn home volume retains Prime Agent's
+sessions and harness state for normal resume.
 
 ## Use an assigned GPU
 

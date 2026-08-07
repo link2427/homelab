@@ -298,9 +298,15 @@ placement and sends the pod to the card's physical node. Container Forge never
 uses automatic placement: the workspace and builder are pinned together to the
 selected build host because they share ReadWriteOnce volumes.
 
-The agent image installs Codex, Claude Code, OpenCode, Reasonix, AgentAPI, and
-Node.js 24 into persistent user storage. Editor and agent launchers open in the
-selected repository directory.
+The agent image installs Codex, Claude Code, OpenCode CLI, Prime Agent,
+Reasonix, and Node.js 24 into persistent user storage. Editor and agent
+launchers open in the selected repository directory. Prime Agent is pinned to
+v0.7.0 and verified against the upstream release checksum. It consumes the
+Coder-injected `DEEPSEEK_API_KEY` through an environment-variable reference in
+its persistent auth file, without copying the key value into that file. The
+redundant OpenCode AgentAPI web tile is intentionally absent; the grouped
+OpenCode CLI launcher remains. Prime lazily prepares its persistent IPython
+runtime on first use instead of delaying every workspace start.
 
 Reasonix is available through both **Reasonix Desktop** and **Reasonix CLI**.
 The desktop card proxies the loopback-only `reasonix serve` process on port 8787
@@ -328,15 +334,17 @@ forwarding. Select 3000, 5173, 8000, or 8080 as the primary card, or run
 `olympus-preview PORT` for any listening port. The returned route follows
 `https://<port>--main--<workspace>--<owner>.jacob-neel.dev`. Cloudflare sends
 that wildcard hostname through the existing `olympus-access` tunnel to Coder;
-Coder still enforces the workspace owner's Authentik session.
+Coder still enforces the workspace owner's Authentik session. The optional
+preview card has no health check, preventing an intentionally idle development
+port from marking the workspace degraded.
 
 The public-safe [`olympus-workspace`](../apps/olympus/coder/skills/olympus-workspace/SKILL.md)
 Agent Skill explains persistent paths, previews, exports, GitHub access, and the
 boundary between a temporary Coder preview and a long-lived Flux deployment.
 Each workspace refreshes it from this repository at startup, installs the
 canonical copy under `~/.agents/skills`, and links the native discovery paths
-for Codex, Claude Code, OpenCode, and Reasonix. Managed global instruction
-blocks tell every agent to load the skill for workspace operations.
+for Codex, Claude Code, OpenCode, Prime Agent, and Reasonix. Managed global
+instruction blocks tell every agent to load the skill for workspace operations.
 
 ### Container Forge
 

@@ -9,7 +9,7 @@ a disposable image-builder pod in the isolated `coder-forge` namespace.
 | Template | Profile | Purpose | Default storage |
 | --- | --- | --- | --- |
 | `olympus-linux` | `linux` | Lightweight everyday Linux development | Fast SSD, 2 replicas |
-| `olympus-agent` | `agent` | Autonomous agents with Codex, Claude Code, OpenCode, and Reasonix | Fast SSD, 2 replicas |
+| `olympus-agent` | `agent` | Autonomous agents with Codex, Claude Code, OpenCode, Prime Agent, and Reasonix | Fast SSD, 2 replicas |
 | `olympus-gpu` | `gpu` | CUDA 12.6 PyTorch development with JupyterLab and persistent model/kernel caches | Fast SSD, 2 replicas |
 | `olympus-build` | `build` | Large builds and caches pinned to the 7810 | Bulk HDD, 1 replica + backup |
 
@@ -75,15 +75,20 @@ receive a fresh token without saving it to the workspace. The GitHub App
 deliberately has no repository Administration permission, so agents cannot
 delete repositories or change their core settings.
 
-`olympus-agent` exposes the official Coder integrations for Codex, Claude Code,
-and OpenCode. It provides correctly branded launcher tiles for Codex, Claude
-Code, OpenCode CLI, Reasonix CLI, and Reasonix Desktop, plus the OpenCode web
-interface. Node.js
-24.18.1 LTS, Reasonix 1.19.1, and AgentAPI are installed into the persistent
-home directory without requiring root privileges, so all four tools survive
-workspace rebuilds and keep their user-level configuration with the workspace.
-The four launcher buttons enter named Zellij `v0.44.3` sessions, so closing and
-reopening a browser terminal reattaches to the same running agent while the
+`olympus-agent` exposes the official Coder integrations for Codex and Claude
+Code, plus persistent launcher tiles for OpenCode CLI, Prime Agent, Reasonix
+CLI, and Reasonix Desktop. Node.js 24.18.1 LTS, OpenCode 1.18.14, checksum-
+verified Prime Agent 0.7.0, and Reasonix 1.19.1 are installed into the
+persistent home directory without requiring root privileges. Prime Agent sees
+Coder's `DEEPSEEK_API_KEY` secret directly and stores only an environment-
+variable reference in `~/.prime/agent/auth.json`; the key value is not copied
+into that file. Its daemon state, sessions, IPython runtime, memories, and
+skills remain under the persistent home volume. Prime lazily prepares its
+IPython runtime on first use so template startup is not blocked by that larger
+one-time download.
+
+The five CLI launcher buttons enter named Zellij `v0.44.3` sessions, so closing
+and reopening a browser terminal reattaches to the same running agent while the
 workspace stays started. A workspace stop, update, or pod reschedule still ends
 live processes; files and agent history on the Longhorn home volume persist for
 normal resume afterward. Reasonix Desktop starts `reasonix serve` in the
@@ -106,8 +111,11 @@ download it from a normal browser after signing in to Coder. File Browser is
 pinned to v2.63.5 and its release checksum is verified before installation.
 
 Every template has an owner-only **Web Preview** card whose port is selected at
-workspace creation (3000, 5173, 8000, or 8080). Any other listening port is
-available through Coder's **Open Ports** view. The wildcard route is
+workspace creation (3000, 5173, 8000, or 8080). The card intentionally has no
+health check because the development server is optional; an idle preview port
+must not degrade overall workspace health. Opening it before starting a server
+can still return a normal proxy error. Any other listening port is available
+through Coder's **Open Ports** view. The wildcard route is
 `https://<port>--main--<workspace>--<owner>.jacob-neel.dev`; it reaches Coder
 through the shared `olympus-access` Cloudflare Tunnel and still requires the
 normal Coder/Authentik login.
@@ -115,7 +123,9 @@ normal Coder/Authentik login.
 At each workspace start, the public-safe `olympus-workspace` Agent Skill is
 refreshed from this repository into `~/.agents/skills`. Compatibility links and
 small global instruction blocks make it available to Codex, Claude Code,
-OpenCode, and Reasonix. The same installer provides `olympus-preview`, which
+OpenCode, Prime Agent, and Reasonix. Prime Agent natively discovers the
+canonical `~/.agents/skills` directory. The same installer provides
+`olympus-preview`, which
 prints the exact authenticated URL for any requested port.
 
 `olympus-gpu` uses the official PyTorch 2.13.0 CUDA 12.6 runtime image. CUDA

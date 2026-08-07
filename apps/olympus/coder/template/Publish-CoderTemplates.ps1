@@ -71,7 +71,7 @@ $templates = @(
   @{
     Name        = "olympus-agent"
     DisplayName = "Olympus Agent"
-    Description = "Persistent autonomous-agent workspace with Codex, Claude Code, OpenCode, and Reasonix."
+    Description = "Persistent autonomous-agent workspace with Codex, Claude Code, OpenCode, Prime Agent, and Reasonix."
     Icon        = "/icon/openai.svg"
     Profile     = "agent"
     Image       = "codercom/example-universal:ubuntu"
@@ -107,7 +107,7 @@ try {
 
     ConvertTo-Json -InputObject $variables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
     Write-Host "Publishing $($template.Name) with $($catalog.Count) GitHub repositories..."
-    & $CoderBinary templates push $template.Name -d $templateDirectory --variables-file $variablesFile -y -m "Add visual controls, placement choices, and presets"
+    & $CoderBinary templates push $template.Name -d $templateDirectory --variables-file $variablesFile -y -m "Refresh managed Olympus workspace catalog"
     if ($LASTEXITCODE -ne 0) {
       throw "Publishing $($template.Name) failed with exit code $LASTEXITCODE."
     }
@@ -130,7 +130,7 @@ try {
   }
   ConvertTo-Json -InputObject $forgeVariables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
   Write-Host "Publishing container-forge with $($catalog.Count) GitHub repositories..."
-  & $CoderBinary templates push container-forge -d $forgeDirectory --variables-file $variablesFile -y -m "Add visual controls, build-host choices, and presets"
+  & $CoderBinary templates push container-forge -d $forgeDirectory --variables-file $variablesFile -y -m "Refresh managed Olympus workspace catalog"
   if ($LASTEXITCODE -ne 0) {
     throw "Publishing container-forge failed with exit code $LASTEXITCODE."
   }
