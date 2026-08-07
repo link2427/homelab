@@ -769,7 +769,8 @@ resource "coder_agent" "main" {
     printf 'Export ready: /home/coder/exports/%s\n' "$${download_name}"
     EXPORT_HELPER
     chmod +x /home/coder/.local/bin/olympus-export
-    if ! command -v npm >/dev/null 2>&1; then
+    if ! command -v npm >/dev/null 2>&1 || \
+      ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major > 20 || (major === 20 && minor >= 6) ? 0 : 1)' >/dev/null 2>&1; then
       node_version="v24.18.1"
       node_dir="/home/coder/.local/lib/node-$${node_version}-linux-x64"
       if [ ! -x "$${node_dir}/bin/node" ]; then
@@ -783,10 +784,30 @@ resource "coder_agent" "main" {
       ln -sfn "$${node_dir}/bin/npm" /home/coder/.local/bin/npm
       ln -sfn "$${node_dir}/bin/npx" /home/coder/.local/bin/npx
     fi
+    opencode_version="1.18.14"
+    if ! /home/coder/.opencode/bin/opencode --version 2>/dev/null | grep -Fq "$${opencode_version}"; then
+      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -fsSL https://opencode.ai/install | \
+        VERSION="$${opencode_version}" bash
+    fi
+    prime_agent_version="0.7.0"
+    prime_agent_checksum="88b6578518c72cd51a825bc80f28e0fef9a64c67de4a7d6fd7afd7ca1b34da0b"
+    if ! /home/coder/.local/bin/prime-agent --version 2>/dev/null | grep -Fq "$${prime_agent_version}"; then
+      prime_agent_dir="$(mktemp -d /tmp/olympus-prime-agent.XXXXXX)"
+      prime_agent_archive="$${prime_agent_dir}/prime-agent-$${prime_agent_version}.tgz"
+      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
+        -o "$${prime_agent_archive}" \
+        "https://github.com/PrimeIntellect-ai/prime-agent/releases/download/v$${prime_agent_version}/prime-agent-$${prime_agent_version}.tgz"
+      printf '%s  %s\n' "$${prime_agent_checksum}" "$${prime_agent_archive}" | sha256sum -c -
+      npm install --global --prefix /home/coder/.local \
+        --no-fund --no-audit --loglevel=error --progress=false \
+        "$${prime_agent_archive}"
+      rm -rf "$${prime_agent_dir}"
+    fi
     if ! /home/coder/.local/bin/reasonix --version >/dev/null 2>&1; then
       npm install --global --prefix /home/coder/.local reasonix@1.19.1
     fi
     python3 - <<'PY'
+    import json
     import os
     import re
     from pathlib import Path
@@ -844,6 +865,22 @@ resource "coder_agent" "main" {
         temporary.write_text("\n".join(retained) + "\n", encoding="utf-8")
         os.chmod(temporary, 0o600)
         os.replace(temporary, credentials)
+
+        prime_home = Path("/home/coder/.prime/agent")
+        prime_home.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(prime_home, 0o700)
+        prime_auth = prime_home / "auth.json"
+        try:
+            auth = json.loads(prime_auth.read_text(encoding="utf-8")) if prime_auth.exists() else {}
+        except (json.JSONDecodeError, OSError):
+            auth = {}
+        if not isinstance(auth, dict):
+            auth = {}
+        auth["deepseek"] = {"type": "api_key", "key": "DEEPSEEK_API_KEY"}
+        prime_auth_tmp = prime_home / "auth.json.coder.tmp"
+        prime_auth_tmp.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
+        os.chmod(prime_auth_tmp, 0o600)
+        os.replace(prime_auth_tmp, prime_auth)
     PY
     touch /home/coder/.profile
     grep -Fqx 'export PATH="/home/coder/.local/bin:$PATH"' /home/coder/.profile || \
@@ -996,30 +1033,6 @@ module "claude_code" {
   workdir  = local.workspace_dir
 }
 
-module "opencode" {
-  count            = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  source           = "registry.coder.com/coder-labs/opencode/coder"
-  version          = "0.1.2"
-  agent_id         = coder_agent.main.id
-  workdir          = local.workspace_dir
-  icon             = "/icon/opencode.svg"
-  report_tasks     = false
-  cli_app          = false
-  install_agentapi = false
-
-  pre_install_script = <<-EOT
-    #!/bin/bash
-    set -euo pipefail
-    mkdir -p /home/coder/.local/bin
-    if [ ! -x /home/coder/.local/bin/agentapi ]; then
-      curl --retry 5 --retry-delay 5 --fail --retry-all-errors -L \
-        -o /home/coder/.local/bin/agentapi \
-        https://github.com/coder/agentapi/releases/download/v0.11.2/agentapi-linux-amd64
-      chmod +x /home/coder/.local/bin/agentapi
-    fi
-  EOT
-}
-
 resource "coder_app" "web_preview" {
   count        = data.coder_workspace.me.start_count
   agent_id     = coder_agent.main.id
@@ -1031,12 +1044,6 @@ resource "coder_app" "web_preview" {
   url          = "http://localhost:${data.coder_parameter.preview_port.value}"
   subdomain    = true
   share        = "owner"
-
-  healthcheck {
-    url       = "http://localhost:${data.coder_parameter.preview_port.value}/"
-    interval  = 5
-    threshold = 24
-  }
 }
 
 resource "coder_app" "exports" {
@@ -1109,6 +1116,23 @@ resource "coder_app" "opencode_cli" {
   EOT
 }
 
+resource "coder_app" "prime_agent" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id     = coder_agent.main.id
+  slug         = "prime-agent"
+  display_name = "Prime Agent"
+  icon         = "https://www.primeintellect.ai/favicon.ico"
+  group        = "AI Agents"
+  order        = 40
+  open_in      = "slim-window"
+  command      = <<-EOT
+    #!/bin/bash
+    set -e
+    export PATH="/home/coder/.local/bin:$PATH"
+    exec olympus-session prime-agent '${local.workspace_dir}' prime-agent
+  EOT
+}
+
 resource "coder_app" "reasonix_desktop" {
   count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
   agent_id     = coder_agent.main.id
@@ -1116,7 +1140,7 @@ resource "coder_app" "reasonix_desktop" {
   display_name = "Reasonix Desktop"
   icon         = "/icon/code.svg"
   group        = "AI Agents"
-  order        = 40
+  order        = 50
   url          = "http://localhost:8787"
   subdomain    = true
   share        = "owner"
@@ -1135,7 +1159,7 @@ resource "coder_app" "reasonix" {
   display_name = "Reasonix CLI"
   icon         = "/icon/terminal.svg"
   group        = "AI Agents"
-  order        = 50
+  order        = 60
   open_in      = "slim-window"
   command      = <<-EOT
     #!/bin/bash
