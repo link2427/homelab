@@ -301,9 +301,10 @@ selected build host because they share ReadWriteOnce volumes.
 The agent image installs Codex, Claude Code, OpenCode CLI, Prime Agent,
 Reasonix, and Node.js 24 into persistent user storage. Editor and agent
 launchers open in the selected repository directory. Prime Agent is pinned to
-v0.7.0 and verified against the upstream release checksum. It consumes the
-Coder-injected `DEEPSEEK_API_KEY` through an environment-variable reference in
-its persistent auth file, without copying the key value into that file. The
+v0.7.0 and verified against the upstream release checksum. Its lazy IPython
+kernel bootstrap uses a managed, checksum-verified `uv` 0.12.2 installation. It
+consumes the Coder-injected `DEEPSEEK_API_KEY` through an environment-variable
+reference in its persistent auth file, without copying the key value into that file. The
 redundant OpenCode AgentAPI web tile is intentionally absent; the grouped
 OpenCode CLI launcher remains. Prime lazily prepares its persistent IPython
 runtime on first use instead of delaying every workspace start.

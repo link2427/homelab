@@ -74,7 +74,9 @@ volume and resumes after the workspace starts again.
 repository. Prime Agent also runs its own background daemon, so closing the
 browser terminal does not stop active sessions while the workspace remains
 started. Its state lives under `~/.prime`, and this skill is discovered through
-the canonical `~/.agents/skills` directory.
+the canonical `~/.agents/skills` directory. A managed `uv` installation in
+`~/.local/bin` supports Prime's lazy IPython-kernel bootstrap; do not replace it
+with a root-owned installation or remove it from `PATH`.
 
 Coder supplies `DEEPSEEK_API_KEY` to the agent environment. The managed
 `~/.prime/agent/auth.json` entry refers to that environment-variable name and
