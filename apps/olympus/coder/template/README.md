@@ -78,14 +78,14 @@ delete repositories or change their core settings.
 `olympus-agent` exposes the official Coder integrations for Codex and Claude
 Code, plus persistent launcher tiles for OpenCode CLI, Prime Agent, Reasonix
 CLI, and Reasonix Desktop. Node.js 24.18.1 LTS, OpenCode 1.18.14, checksum-
-verified Prime Agent 0.7.0, and Reasonix 1.19.1 are installed into the
-persistent home directory without requiring root privileges. Prime Agent sees
+verified Prime Agent 0.7.0, checksum-verified `uv` 0.12.2, and Reasonix 1.19.1
+are installed into the persistent home directory without requiring root privileges. Prime Agent sees
 Coder's `DEEPSEEK_API_KEY` secret directly and stores only an environment-
 variable reference in `~/.prime/agent/auth.json`; the key value is not copied
 into that file. Its daemon state, sessions, IPython runtime, memories, and
-skills remain under the persistent home volume. Prime lazily prepares its
-IPython runtime on first use so template startup is not blocked by that larger
-one-time download.
+skills remain under the persistent home volume. The managed `uv` installation
+lets Prime lazily prepare its IPython runtime on first use, so template startup
+is not blocked by that larger one-time download.
 
 The five CLI launcher buttons enter named Zellij `v0.44.3` sessions, so closing
 and reopening a browser terminal reattaches to the same running agent while the

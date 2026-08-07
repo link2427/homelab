@@ -784,6 +784,20 @@ resource "coder_agent" "main" {
       ln -sfn "$${node_dir}/bin/npm" /home/coder/.local/bin/npm
       ln -sfn "$${node_dir}/bin/npx" /home/coder/.local/bin/npx
     fi
+    uv_version="0.12.2"
+    uv_checksum="d66e96b5f1ca3b99806eee283a8125d33a0bd669e6e6d9bc4ab7ffda63c41bf4"
+    if ! /home/coder/.local/bin/uv --version 2>/dev/null | grep -Fq "uv $${uv_version}"; then
+      uv_dir="$(mktemp -d /tmp/olympus-uv.XXXXXX)"
+      uv_archive="$${uv_dir}/uv-x86_64-unknown-linux-gnu.tar.gz"
+      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
+        -o "$${uv_archive}" \
+        "https://github.com/astral-sh/uv/releases/download/$${uv_version}/uv-x86_64-unknown-linux-gnu.tar.gz"
+      printf '%s  %s\n' "$${uv_checksum}" "$${uv_archive}" | sha256sum -c -
+      tar -xzf "$${uv_archive}" -C "$${uv_dir}"
+      install -m 0755 "$${uv_dir}/uv-x86_64-unknown-linux-gnu/uv" /home/coder/.local/bin/uv
+      install -m 0755 "$${uv_dir}/uv-x86_64-unknown-linux-gnu/uvx" /home/coder/.local/bin/uvx
+      rm -rf "$${uv_dir}"
+    fi
     opencode_version="1.18.14"
     if ! /home/coder/.opencode/bin/opencode --version 2>/dev/null | grep -Fq "$${opencode_version}"; then
       curl --retry 5 --retry-delay 3 --fail --retry-all-errors -fsSL https://opencode.ai/install | \
@@ -1129,6 +1143,7 @@ resource "coder_app" "prime_agent" {
     #!/bin/bash
     set -e
     export PATH="/home/coder/.local/bin:$PATH"
+    export PRIME_AGENT_INSTALL_UV=1
     exec olympus-session prime-agent '${local.workspace_dir}' prime-agent
   EOT
 }
