@@ -105,8 +105,8 @@ locals {
       default      = false
       cpu          = "4"
       memory       = "8"
-      home_disk    = "80"
-      cache_disk   = "40"
+      home_disk    = "20"
+      cache_disk   = "10"
       storage_tier = "fast"
       node         = "atlas"
     }
@@ -117,8 +117,8 @@ locals {
       default      = false
       cpu          = "8"
       memory       = "24"
-      home_disk    = "120"
-      cache_disk   = "80"
+      home_disk    = "20"
+      cache_disk   = "20"
       storage_tier = "fast"
       node         = "atlas"
     }
@@ -129,7 +129,7 @@ locals {
       default      = false
       cpu          = "12"
       memory       = "24"
-      home_disk    = "80"
+      home_disk    = "20"
       cache_disk   = "40"
       storage_tier = "fast"
       node         = "atlas"
@@ -142,7 +142,7 @@ locals {
       cpu          = "24"
       memory       = "40"
       home_disk    = "350"
-      cache_disk   = "250"
+      cache_disk   = "100"
       storage_tier = "bulk"
       node         = "atlas"
     }
@@ -189,31 +189,31 @@ data "coder_parameter" "home_disk_size" {
   description  = "Persistent capacity in GiB for build contexts, Docker archives, logs, and AI-agent state. Large PyTorch/CUDA archives can consume tens of GiB each."
   type         = "number"
   form_type    = "slider"
-  default      = "80"
+  default      = "20"
   mutable      = false
   order        = 40
   icon         = "/icon/database.svg"
 
   validation {
-    min = 80
+    min = 20
     max = 500
   }
 }
 
 data "coder_parameter" "cache_disk_size" {
   name         = "cache_disk_size"
-  display_name = "Builder cache"
-  description  = "Disposable Kaniko base-image cache in GiB. This volume is not backed up."
+  display_name = "Ephemeral builder cache"
+  description  = "Node-local Kaniko cache in GiB. It is deleted when the builder pod is recreated and consumes no Longhorn capacity."
   type         = "number"
   form_type    = "slider"
-  default      = "40"
+  default      = "20"
   mutable      = false
   order        = 50
   icon         = "/icon/database.svg"
 
   validation {
-    min = 40
-    max = 500
+    min = 10
+    max = 100
   }
 }
 
@@ -1397,41 +1397,6 @@ resource "kubernetes_persistent_volume_claim_v1" "home" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim_v1" "builder_cache" {
-  metadata {
-    name      = "${local.workspace_name}-builder-cache"
-    namespace = var.namespace
-    labels = {
-      "app.kubernetes.io/name"        = "container-builder-cache"
-      "app.kubernetes.io/part-of"     = "coder"
-      "com.coder.resource"            = "true"
-      "com.coder.workspace.id"        = data.coder_workspace.me.id
-      "com.coder.workspace.name"      = data.coder_workspace.me.name
-      "com.coder.user.id"             = data.coder_workspace_owner.me.id
-      "com.coder.user.username"       = data.coder_workspace_owner.me.name
-      "olympus.dev/workspace-profile" = "container-forge"
-      "olympus.dev/data-role"         = "disposable-builder-cache"
-      "olympus.dev/storage-tier"      = data.coder_parameter.storage_tier.value
-    }
-  }
-
-  wait_until_bound = false
-
-  spec {
-    access_modes       = ["ReadWriteOnce"]
-    storage_class_name = local.storage_classes[data.coder_parameter.storage_tier.value]
-    resources {
-      requests = {
-        storage = "${data.coder_parameter.cache_disk_size.value}Gi"
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = all
-  }
-}
-
 resource "kubernetes_service_account_v1" "workspace" {
   metadata {
     name      = "${local.workspace_name}-forge"
@@ -1691,7 +1656,6 @@ resource "kubernetes_stateful_set_v1" "builder" {
 
   depends_on = [
     kubernetes_persistent_volume_claim_v1.home,
-    kubernetes_persistent_volume_claim_v1.builder_cache,
     kubernetes_service_v1.builder,
   ]
 
@@ -1850,9 +1814,8 @@ resource "kubernetes_stateful_set_v1" "builder" {
 
         volume {
           name = "builder-cache"
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim_v1.builder_cache.metadata[0].name
-            read_only  = false
+          empty_dir {
+            size_limit = "${data.coder_parameter.cache_disk_size.value}Gi"
           }
         }
       }
@@ -1896,7 +1859,7 @@ resource "coder_metadata" "workspace" {
 
   item {
     key   = "Builder cache"
-    value = "${data.coder_parameter.storage_tier.value} · ${data.coder_parameter.cache_disk_size.value} GiB · disposable"
+    value = "${data.coder_parameter.cache_disk_size.value} GiB · node-local ephemeral"
   }
 
   item {
