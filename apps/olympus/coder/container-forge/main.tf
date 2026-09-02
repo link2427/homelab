@@ -52,7 +52,7 @@ variable "kubectl_version" {
 variable "build_node" {
   type        = string
   description = "Exact Kubernetes hostname that holds both the interactive workspace and builder. Pinning is required because the two pods share ReadWriteOnce volumes."
-  default     = "precision-7810-01"
+  default     = "atlas"
 
   validation {
     condition     = trimspace(var.build_node) != ""
@@ -107,8 +107,8 @@ locals {
       memory       = "8"
       home_disk    = "80"
       cache_disk   = "40"
-      storage_tier = "bulk"
-      node         = "precision-7810-01"
+      storage_tier = "fast"
+      node         = "atlas"
     }
     standard = {
       name         = "Standard Forge"
@@ -117,10 +117,10 @@ locals {
       default      = false
       cpu          = "8"
       memory       = "24"
-      home_disk    = "200"
-      cache_disk   = "120"
-      storage_tier = "bulk"
-      node         = "precision-7810-01"
+      home_disk    = "120"
+      cache_disk   = "80"
+      storage_tier = "fast"
+      node         = "atlas"
     }
     fast = {
       name         = "Fast Iteration"
@@ -136,7 +136,7 @@ locals {
     }
     cuda = {
       name         = "Large CUDA Image"
-      description  = "Atlas compute and roomy bulk storage for multi-stage CUDA/PyTorch images."
+      description  = "Atlas compute with bulk storage for multi-stage CUDA/PyTorch images; requires the Precision 7810 storage node online."
       icon         = "/icon/pytorch.svg"
       default      = false
       cpu          = "24"
@@ -189,7 +189,7 @@ data "coder_parameter" "home_disk_size" {
   description  = "Persistent capacity in GiB for build contexts, Docker archives, logs, and AI-agent state. Large PyTorch/CUDA archives can consume tens of GiB each."
   type         = "number"
   form_type    = "slider"
-  default      = "200"
+  default      = "80"
   mutable      = false
   order        = 40
   icon         = "/icon/database.svg"
@@ -206,7 +206,7 @@ data "coder_parameter" "cache_disk_size" {
   description  = "Disposable Kaniko base-image cache in GiB. This volume is not backed up."
   type         = "number"
   form_type    = "slider"
-  default      = "120"
+  default      = "40"
   mutable      = false
   order        = 50
   icon         = "/icon/database.svg"
@@ -220,23 +220,23 @@ data "coder_parameter" "cache_disk_size" {
 data "coder_parameter" "storage_tier" {
   name         = "storage_tier"
   display_name = "Storage tier"
-  description  = "Bulk is appropriate for large export archives; fast is better for repeated builds."
+  description  = "Fast SSD is the reliable default. Bulk depends on the Precision 7810 storage node being online."
   form_type    = "radio"
-  default      = "bulk"
+  default      = "fast"
   mutable      = false
   order        = 60
   icon         = "/icon/database.svg"
 
   option {
-    name        = "Bulk HDD · 1 replica + backup"
+    name        = "Bulk HDD · requires online 7810"
     value       = "bulk"
-    description = "Recommended for large archives and caches where capacity matters most."
+    description = "Large one-replica archives and caches. Volumes cannot start while precision-7810-01 is offline."
     icon        = "/icon/database.svg"
   }
   option {
     name        = "Fast SSD · 2 replicas"
     value       = "fast"
-    description = "Faster rebuild loops, but each GiB consumes two GiB of SSD capacity."
+    description = "Recommended default; starts on Atlas even when the bulk-storage node is unavailable."
     icon        = "/icon/database.svg"
   }
   option {
@@ -260,14 +260,14 @@ data "coder_parameter" "forge_node" {
   option {
     name        = "Precision 7810 · 8 CPU / 31 GiB"
     value       = "precision-7810-01"
-    description = "Default bulk-storage build host."
+    description = "Bulk-storage host; unavailable whenever this node is offline."
     icon        = "/icon/node.svg"
   }
 
   option {
     name        = "Atlas · 72 CPU / 62 GiB"
     value       = "atlas"
-    description = "Best for large parallel builds and high-memory image assembly."
+    description = "Recommended default for reliable builds and high-memory image assembly."
     icon        = "/icon/node.svg"
   }
 

@@ -126,7 +126,7 @@ try {
     workspace_image          = "codercom/example-base:ubuntu"
     kaniko_image             = "ghcr.io/osscontainertools/kaniko:v1.28.2-alpine@sha256:44f90ae1ba366aeedbd0f2d56dbe246354553e47904338dd9321a41a44bea9ff"
     kubectl_version          = "v1.35.2"
-    build_node               = "precision-7810-01"
+    build_node               = "atlas"
   }
   ConvertTo-Json -InputObject $forgeVariables -Depth 4 | Set-Content -LiteralPath $variablesFile -Encoding utf8NoBOM
   Write-Host "Publishing container-forge with $($catalog.Count) GitHub repositories..."
