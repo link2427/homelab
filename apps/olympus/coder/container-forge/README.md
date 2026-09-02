@@ -13,15 +13,18 @@ a host Docker socket.
 
 The interactive agent and a disposable Kaniko builder run in the isolated
 `coder-forge` namespace. Projects, export bundles, and registry credentials are
-stored on the workspace home volume. Builder cache has a separate disposable
-volume. The builder is recycled after every build.
+stored on the backed-up workspace home volume. Builder cache uses a separate
+node-local `emptyDir`, consumes no Longhorn replica capacity, and is discarded
+whenever the builder pod is recreated. The builder is recycled after every
+build.
 
 The creation form has sliders for builder CPU, builder memory, persistent
 project/export capacity, and disposable cache capacity. Visual storage and host
 choices explain the tradeoffs. Four presets cover quick images, the normal
 Forge, SSD-backed iteration, and large CUDA images. Host choice always pins both
-pods to the same node so their shared ReadWriteOnce volumes remain safe. Atlas
-and `longhorn-fast` are the reliable defaults. `longhorn-bulk` is an explicit
+pods to the same node so they can safely share the persistent project volume.
+The current defaults use Atlas and a 20 GiB `longhorn-fast` home volume to fit
+the cluster's available SSD scheduling headroom. `longhorn-bulk` is an explicit
 capacity choice backed only by the Precision 7810 HDD; a Forge using it cannot
 start while `precision-7810-01` is offline.
 
