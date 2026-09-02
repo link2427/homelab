@@ -20,7 +20,10 @@ The creation form has sliders for builder CPU, builder memory, persistent
 project/export capacity, and disposable cache capacity. Visual storage and host
 choices explain the tradeoffs. Four presets cover quick images, the normal
 Forge, SSD-backed iteration, and large CUDA images. Host choice always pins both
-pods to the same node so their shared ReadWriteOnce volumes remain safe.
+pods to the same node so their shared ReadWriteOnce volumes remain safe. Atlas
+and `longhorn-fast` are the reliable defaults. `longhorn-bulk` is an explicit
+capacity choice backed only by the Precision 7810 HDD; a Forge using it cannot
+start while `precision-7810-01` is offline.
 
 Build an image with:
 
