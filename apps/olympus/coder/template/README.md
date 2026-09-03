@@ -9,7 +9,7 @@ a disposable image-builder pod in the isolated `coder-forge` namespace.
 | Template | Profile | Purpose | Default storage |
 | --- | --- | --- | --- |
 | `olympus-linux` | `linux` | Lightweight everyday Linux development | Fast SSD, 2 replicas |
-| `olympus-agent` | `agent` | Autonomous agents with Codex, Claude Code, OpenCode, Prime Agent, and Reasonix | Fast SSD, 2 replicas |
+| `olympus-agent` | `agent` | Autonomous agents with Codex, Claude Code, OpenCode, Pi, Prime Agent, and Reasonix | Fast SSD, 2 replicas |
 | `olympus-gpu` | `gpu` | CUDA 12.6 PyTorch development with JupyterLab and persistent model/kernel caches | Fast SSD, 2 replicas |
 | `olympus-build` | `build` | Large builds and caches pinned to the 7810 | Bulk HDD, 1 replica + backup |
 
@@ -76,10 +76,10 @@ deliberately has no repository Administration permission, so agents cannot
 delete repositories or change their core settings.
 
 `olympus-agent` exposes the official Coder integrations for Codex and Claude
-Code, plus persistent launcher tiles for OpenCode CLI, Prime Agent, Reasonix
-CLI, and Reasonix Desktop. Node.js 24.18.1 LTS, OpenCode 1.18.14, checksum-
-verified Prime Agent 0.7.0, checksum-verified `uv` 0.12.2, and Reasonix 1.19.1
-are installed into the persistent home directory without requiring root privileges. Prime Agent sees
+Code, plus persistent launcher tiles for OpenCode CLI, Pi, Prime Agent, Reasonix
+CLI, and Reasonix Desktop. Node.js 24.18.1 LTS, OpenCode, Pi, checksum-verified
+Prime Agent 0.7.0, checksum-verified `uv` 0.12.2, and Reasonix are installed into
+the persistent home directory without requiring root privileges. Prime Agent sees
 Coder's `DEEPSEEK_API_KEY` secret directly and stores only an environment-
 variable reference in `~/.prime/agent/auth.json`; the key value is not copied
 into that file. Its daemon state, sessions, IPython runtime, memories, and
@@ -87,7 +87,7 @@ skills remain under the persistent home volume. The managed `uv` installation
 lets Prime lazily prepare its IPython runtime on first use, so template startup
 is not blocked by that larger one-time download.
 
-The five CLI launcher buttons enter named Zellij `v0.44.3` sessions, so closing
+The six CLI launcher buttons enter named Zellij `v0.44.3` sessions, so closing
 and reopening a browser terminal reattaches to the same running agent while the
 workspace stays started. A workspace stop, update, or pod reschedule still ends
 live processes; files and agent history on the Longhorn home volume persist for
@@ -120,10 +120,21 @@ through Coder's **Open Ports** view. The wildcard route is
 through the shared `olympus-access` Cloudflare Tunnel and still requires the
 normal Coder/Authentik login.
 
+At each workspace start, Codex and Claude Code are refreshed by their official
+Coder modules, while `olympus-agent-update` checks Pi, OpenCode, Prime Agent,
+and Reasonix for stable updates. Every check is best-effort: registry or network
+failure retains the installed tool and never prevents workspace login. Run
+`olympus-agent-update` at any time to request the same refresh manually.
+
+Coder Dev Container discovery is explicitly disabled in these normal agent
+pods because they intentionally have no Docker socket. This removes the
+misleading Docker endpoint errors without affecting Container Forge, whose
+isolated builder is a separate template and namespace.
+
 At each workspace start, the public-safe `olympus-workspace` Agent Skill is
 refreshed from this repository into `~/.agents/skills`. Compatibility links and
 small global instruction blocks make it available to Codex, Claude Code,
-OpenCode, Prime Agent, and Reasonix. Prime Agent natively discovers the
+OpenCode, Pi, Prime Agent, and Reasonix. Prime Agent natively discovers the
 canonical `~/.agents/skills` directory. The same installer provides
 `olympus-preview`, which
 prints the exact authenticated URL for any requested port.

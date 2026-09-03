@@ -630,6 +630,10 @@ locals {
       "OLYMPUS_CODER_WORKSPACE"           = data.coder_workspace.me.name
       "OLYMPUS_CODER_AGENT"               = "main"
       "OLYMPUS_WORKSPACE_SKILL_BASE_URL"  = "https://raw.githubusercontent.com/link2427/homelab/main/apps/olympus/coder/skills/olympus-workspace"
+      # Normal agent workspaces deliberately have no Docker socket. Coder 2.24+
+      # otherwise enables Dev Container discovery by default and continuously
+      # reports a misleading 500 when it cannot reach Docker.
+      "CODER_AGENT_DEVCONTAINERS_ENABLE"   = "false"
     },
     var.profile == "agent" ? {
       "PATH" = "/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -818,8 +822,72 @@ resource "coder_agent" "main" {
       rm -rf "$${prime_agent_dir}"
     fi
     if ! /home/coder/.local/bin/reasonix --version >/dev/null 2>&1; then
-      npm install --global --prefix /home/coder/.local reasonix@1.19.1
+      npm install --global --prefix /home/coder/.local \
+        --no-fund --no-audit --loglevel=error --progress=false \
+        reasonix@latest
     fi
+    if ! /home/coder/.local/bin/pi --version >/dev/null 2>&1; then
+      npm install --global --prefix /home/coder/.local \
+        --no-fund --no-audit --loglevel=error --progress=false \
+        @mariozechner/pi-coding-agent@latest
+    fi
+    cat > /home/coder/.local/bin/olympus-agent-update <<'AGENT_UPDATE'
+    #!/bin/bash
+    # Refresh user-space agent CLIs without ever making workspace startup fatal.
+    # Codex and Claude Code are managed separately by their official Coder
+    # modules, both configured for latest releases below.
+    set -u
+    export PATH="/home/coder/.local/bin:/home/coder/.opencode/bin:$PATH"
+    state_dir="/home/coder/.local/state/agent-updates"
+    lock_dir="$${state_dir}/lock"
+    mkdir -p "$${state_dir}"
+    if ! mkdir "$${lock_dir}" 2>/dev/null; then
+      echo "Agent update already running; skipping."
+      exit 0
+    fi
+    trap 'rmdir "$${lock_dir}" 2>/dev/null || true' EXIT
+
+    update_npm_agent() {
+      label="$1"
+      package="$2"
+      binary="$3"
+      latest="$(npm view "$${package}" version 2>/dev/null || true)"
+      installed="$(npm list --global --prefix /home/coder/.local --depth=0 --json "$${package}" 2>/dev/null | \
+        node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{let j=JSON.parse(s);let n=process.argv[1];process.stdout.write(j.dependencies?.[n]?.version||"")}catch{}})' "$${package}" || true)"
+      if [ -z "$${latest}" ]; then
+        echo "$${label}: registry unavailable; retaining $${installed:-installed version}."
+        return 0
+      fi
+      if [ "$${installed}" = "$${latest}" ] && command -v "$${binary}" >/dev/null 2>&1; then
+        echo "$${label}: current ($${installed})."
+        return 0
+      fi
+      echo "$${label}: updating $${installed:-not installed} -> $${latest}."
+      if npm install --global --prefix /home/coder/.local \
+        --no-fund --no-audit --loglevel=error --progress=false \
+        "$${package}@$${latest}" && command -v "$${binary}" >/dev/null 2>&1; then
+        "$${binary}" --version 2>/dev/null | head -n 1 || true
+      else
+        echo "$${label}: update failed; workspace will continue." >&2
+      fi
+    }
+
+    update_npm_agent "Pi" "@mariozechner/pi-coding-agent" "pi"
+    update_npm_agent "Reasonix" "reasonix" "reasonix"
+
+    if command -v opencode >/dev/null 2>&1; then
+      opencode upgrade --method curl >/dev/null 2>&1 || \
+        echo "OpenCode: update check failed; retaining installed version." >&2
+    fi
+    if command -v prime-agent >/dev/null 2>&1; then
+      PRIME_AGENT_INSTALL_UV=1 prime-agent update >/dev/null 2>&1 || \
+        echo "Prime Agent: update check failed; retaining installed version." >&2
+    fi
+    date -u +%FT%TZ > "$${state_dir}/last-attempt"
+    AGENT_UPDATE
+    chmod +x /home/coder/.local/bin/olympus-agent-update
+    /home/coder/.local/bin/olympus-agent-update || \
+      echo "Agent updates encountered an unexpected error; workspace startup will continue." >&2
     python3 - <<'PY'
     import json
     import os
@@ -1032,19 +1100,22 @@ module "jupyterlab" {
 }
 
 module "codex" {
-  count    = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  source   = "registry.coder.com/coder-labs/codex/coder"
-  version  = "5.3.0"
-  agent_id = coder_agent.main.id
-  workdir  = local.workspace_dir
+  count         = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  source        = "registry.coder.com/coder-labs/codex/coder"
+  version       = "5.3.0"
+  agent_id      = coder_agent.main.id
+  workdir       = local.workspace_dir
+  codex_version = "latest"
 }
 
 module "claude_code" {
-  count    = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  source   = "registry.coder.com/coder/claude-code/coder"
-  version  = "5.2.0"
-  agent_id = coder_agent.main.id
-  workdir  = local.workspace_dir
+  count               = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  source              = "registry.coder.com/coder/claude-code/coder"
+  version             = "5.4.0"
+  agent_id            = coder_agent.main.id
+  workdir             = local.workspace_dir
+  claude_code_version = "latest"
+  disable_autoupdater = false
 }
 
 resource "coder_app" "web_preview" {
@@ -1125,8 +1196,25 @@ resource "coder_app" "opencode_cli" {
   command      = <<-EOT
     #!/bin/bash
     set -e
-    export PATH="/home/coder/.opencode/bin:/home/coder/.local/bin:$PATH"
+    export PATH="/home/coder/.local/bin:/home/coder/.opencode/bin:$PATH"
     exec olympus-session opencode '${local.workspace_dir}' opencode
+  EOT
+}
+
+resource "coder_app" "pi" {
+  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id     = coder_agent.main.id
+  slug         = "pi"
+  display_name = "Pi"
+  icon         = "/icon/terminal.svg"
+  group        = "AI Agents"
+  order        = 40
+  open_in      = "slim-window"
+  command      = <<-EOT
+    #!/bin/bash
+    set -e
+    export PATH="/home/coder/.local/bin:$PATH"
+    exec olympus-session pi '${local.workspace_dir}' pi
   EOT
 }
 
@@ -1137,7 +1225,7 @@ resource "coder_app" "prime_agent" {
   display_name = "Prime Agent"
   icon         = "https://www.primeintellect.ai/favicon.ico"
   group        = "AI Agents"
-  order        = 40
+  order        = 50
   open_in      = "slim-window"
   command      = <<-EOT
     #!/bin/bash
@@ -1155,7 +1243,7 @@ resource "coder_app" "reasonix_desktop" {
   display_name = "Reasonix Desktop"
   icon         = "/icon/code.svg"
   group        = "AI Agents"
-  order        = 50
+  order        = 60
   url          = "http://localhost:8787"
   subdomain    = true
   share        = "owner"
@@ -1174,7 +1262,7 @@ resource "coder_app" "reasonix" {
   display_name = "Reasonix CLI"
   icon         = "/icon/terminal.svg"
   group        = "AI Agents"
-  order        = 60
+  order        = 70
   open_in      = "slim-window"
   command      = <<-EOT
     #!/bin/bash

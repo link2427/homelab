@@ -62,6 +62,7 @@ link_skill() {
 link_skill "$workspace_home/.codex/skills/olympus-workspace"
 link_skill "$workspace_home/.claude/skills/olympus-workspace"
 link_skill "$workspace_home/.config/opencode/skills/olympus-workspace"
+link_skill "$workspace_home/.pi/agent/skills/olympus-workspace"
 link_skill "$workspace_home/.reasonix/skills/olympus-workspace"
 
 python3 - "$workspace_home" <<'PY'
@@ -86,6 +87,7 @@ paths = [
     home / ".codex" / "AGENTS.md",
     home / ".claude" / "CLAUDE.md",
     home / ".config" / "opencode" / "AGENTS.md",
+    home / ".pi" / "agent" / "AGENTS.md",
     home / ".reasonix" / "REASONIX.md",
 ]
 
