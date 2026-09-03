@@ -71,7 +71,7 @@ $templates = @(
   @{
     Name        = "olympus-agent"
     DisplayName = "Olympus Agent"
-    Description = "Persistent autonomous-agent workspace with Codex, Claude Code, OpenCode, Prime Agent, and Reasonix."
+    Description = "Persistent autonomous-agent workspace with Codex, Claude Code, OpenCode, Pi, Prime Agent, and Reasonix."
     Icon        = "/icon/openai.svg"
     Profile     = "agent"
     Image       = "codercom/example-universal:ubuntu"
