@@ -6,6 +6,12 @@ rendered-page tests and a restricted-container smoke test. GitHub Actions
 publishes a GHCR image and updates only this deployment's immutable image pin
 using a dedicated homelab SSH deploy key.
 
+A dedicated `flux-system/cosmotrak` Kustomization owns these resources, registered
+in `clusters/olympus/cosmotrak.yaml`. It depends on infrastructure and reconciles
+independently of the aggregate apps health checks, so unrelated Plex or monitoring
+failures cannot delay website releases. Do not also add this directory to the
+aggregate apps Kustomization.
+
 The stateless Node service uses no database, persistent storage, Kubernetes API
 access, or application secrets. It runs non-root with a read-only root filesystem.
 `/healthz` reports the running source revision.
