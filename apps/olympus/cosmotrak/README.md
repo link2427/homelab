@@ -7,9 +7,10 @@ publishes a GHCR image and updates only this deployment's immutable image pin
 using a dedicated homelab SSH deploy key.
 
 A dedicated `flux-system/cosmotrak` Kustomization owns these resources, registered
-in `clusters/olympus/cosmotrak.yaml`. It depends on infrastructure and reconciles
-independently of the aggregate apps health checks, so unrelated Plex or monitoring
-failures cannot delay website releases. Do not also add this directory to the
+in `clusters/olympus/cosmotrak.yaml`. It uses only built-in Kubernetes resources
+and needs no storage or operator dependency. It reconciles independently of the
+aggregate infrastructure and apps health checks, so an offline node or unrelated
+Plex or monitoring failure cannot delay website releases. Do not add this directory to the
 aggregate apps Kustomization.
 
 The stateless Node service uses no database, persistent storage, Kubernetes API

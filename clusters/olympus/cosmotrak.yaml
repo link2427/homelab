@@ -4,8 +4,6 @@ metadata:
   name: cosmotrak
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: infrastructure
   interval: 5m
   retryInterval: 1m
   timeout: 5m
