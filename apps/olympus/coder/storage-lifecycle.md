@@ -47,3 +47,13 @@ resource UIDs, before/after measurements, and recovery metadata are recorded in
 the gitignored Homelab AI context. Files on the offline 7810 cannot be physically
 verified or reclaimed until that node returns; compare any later orphan replicas
 against the recorded retired-volume inventory before deleting them.
+
+After automatic replica rebuilding, online SSD use fell from about 390 GiB to
+273 GiB out of 1,166 GiB, leaving 894 GiB free. Scheduled replica allocation fell
+from 1,020 GiB to 517 GiB. The active Coder home regained two healthy replicas;
+the personal website database regained three. Offline HDD figures are excluded.
+
+All five active templates were published and their downloaded source verified.
+A disposable 1 GiB claim preserved a file across pod replacement, then its PVC
+deletion automatically removed the PV and Longhorn volume. Test resources were
+removed. No production workspace was restarted to perform this verification.
