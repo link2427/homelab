@@ -74,6 +74,11 @@ All responses have `Cache-Control: no-store`.
 Cluster URLs are `http://satellite-data-status.satellite-data-ENV.svc.cluster.local`.
 Production also has private Tailscale hostname `olympus-satellite-data`.
 Dev is ClusterIP only. No public DNS or Cloudflare route is created.
+The full private hostname is `olympus-satellite-data.taild90e78.ts.net`
+(`100.81.168.98`). No NodePort is allocated. Liveness, summary and data health
+were verified through the internal Services and the Tailscale route. Runtime
+acceptance also tested fresh, stale, failed, missing and malformed status:
+data health returns 503 for bad data while liveness and summary remain 200.
 Use `/health/live` for pod probes. Never restart ingestion in response to
 `/health/data`; an upstream outage or stale database requires investigation.
 Future monitoring should run outside Olympus, alert only on failure/recovery
@@ -108,6 +113,17 @@ does not stop an active Job: await its termination or explicitly stop that exact
 job before starting any alternate publisher. Restore a verified backup into a
 new PVC if needed. Do not enable the Mac or EC2 while a cluster writer exists.
 The old Mac installation and historical S3 objects remain recovery copies.
+
+Both initial backups, `satellite-dev-initial-20260906` and
+`satellite-prod-initial-20260906`, reached Completed / 100% in the existing
+`olympus-longhorn-backups` R2 target. Dev has two healthy Longhorn replicas;
+production has three. Restore drills were not performed during this cutover.
+
+Provisioning the private status route exposed a pre-existing Tailscale operator
+crash loop: version 1.102.3 expected the absent PeerRelay CRD. GitOps now includes
+that version's upstream CRD and matching resource permissions, and pins the
+operator to its already-running digest. The operator and new status proxy are
+healthy. Other offline-node proxy recovery is outside this migration.
 
 ## R2 dual publication next
 
