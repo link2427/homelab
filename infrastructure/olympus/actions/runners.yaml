@@ -27,131 +27,9 @@ spec:
     githubConfigUrl: https://github.com/link2427/Cosmotrak-Website
     githubConfigSecret: github-link2427
     runnerScaleSetName: olympus-cosmotrak
-    minRunners: 0
-    maxRunners: 2
-    controllerServiceAccount:
-      namespace: arc-system
-      name: arc-controller
-    listenerTemplate:
-      spec:
-        nodeSelector:
-          kubernetes.io/arch: amd64
-        containers:
-        - name: listener
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 500m
-              memory: 256Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 1000
-          seccompProfile:
-            type: RuntimeDefault
-    template:
-      spec:
-        automountServiceAccountToken: false
-        nodeSelector:
-          kubernetes.io/hostname: atlas
-        terminationGracePeriodSeconds: 60
-        initContainers:
-        - name: init-dind-externals
-          image: ghcr.io/link2427/olympus-runner@sha256:ca4a16c5666196f881c6462e581cf2ed8edeacfa9c08b69ac5b4c009e9ca06f9
-          command:
-          - cp
-          - -r
-          - /home/runner/externals/.
-          - /home/runner/tmpDir/
-          volumeMounts:
-          - name: dind-externals
-            mountPath: /home/runner/tmpDir
-        - name: dind
-          image: docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515
-          args:
-          - dockerd
-          - --host=unix:///var/run/docker.sock
-          - --group=123
-          - --storage-driver=overlay2
-          securityContext:
-            privileged: true
-          restartPolicy: Always
-          startupProbe:
-            exec:
-              command:
-              - docker
-              - info
-            periodSeconds: 5
-            failureThreshold: 24
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: '2'
-              memory: 2Gi
-              ephemeral-storage: 12Gi
-          volumeMounts:
-          - &id001
-            name: work
-            mountPath: /home/runner/_work
-          - &id002
-            name: dind-sock
-            mountPath: /var/run
-          - name: dind-externals
-            mountPath: /home/runner/externals
-          - name: docker-data
-            mountPath: /var/lib/docker
-        containers:
-        - name: runner
-          image: ghcr.io/link2427/olympus-runner@sha256:ca4a16c5666196f881c6462e581cf2ed8edeacfa9c08b69ac5b4c009e9ca06f9
-          command:
-          - /home/runner/run.sh
-          env:
-          - name: DOCKER_HOST
-            value: unix:///var/run/docker.sock
-          - name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS
-            value: '120'
-          - name: OLYMPUS_BUILDKIT_ENDPOINT
-            value: tcp://buildkit.actions-runners.svc.cluster.local:1234
-          - name: OLYMPUS_BUILDKIT_TLS
-            value: /etc/olympus/buildkit
-          resources:
-            requests:
-              cpu: '1'
-              memory: 1Gi
-            limits:
-              cpu: '8'
-              memory: 6Gi
-              ephemeral-storage: 12Gi
-          volumeMounts:
-          - *id001
-          - *id002
-          - name: buildkit-tls
-            mountPath: /etc/olympus/buildkit
-            readOnly: true
-        volumes:
-        - name: work
-          emptyDir:
-            sizeLimit: 12Gi
-        - name: dind-sock
-          emptyDir: {}
-        - name: dind-externals
-          emptyDir: {}
-        - name: docker-data
-          emptyDir:
-            sizeLimit: 12Gi
-        - name: buildkit-tls
-          secret:
-            secretName: buildkit-client-tls
-    scaleSetLabels:
-    - olympus-linux
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -171,129 +49,469 @@ spec:
     githubConfigUrl: https://github.com/Telchar-Dynamics
     githubConfigSecret: github-telchar-dynamics
     runnerScaleSetName: olympus-telchar
-    minRunners: 0
-    maxRunners: 2
-    controllerServiceAccount:
-      namespace: arc-system
-      name: arc-controller
-    listenerTemplate:
-      spec:
-        nodeSelector:
-          kubernetes.io/arch: amd64
-        containers:
-        - name: listener
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 500m
-              memory: 256Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 1000
-          seccompProfile:
-            type: RuntimeDefault
-    template:
-      spec:
-        automountServiceAccountToken: false
-        nodeSelector:
-          kubernetes.io/hostname: atlas
-        terminationGracePeriodSeconds: 60
-        initContainers:
-        - name: init-dind-externals
-          image: ghcr.io/link2427/olympus-runner@sha256:ca4a16c5666196f881c6462e581cf2ed8edeacfa9c08b69ac5b4c009e9ca06f9
-          command:
-          - cp
-          - -r
-          - /home/runner/externals/.
-          - /home/runner/tmpDir/
-          volumeMounts:
-          - name: dind-externals
-            mountPath: /home/runner/tmpDir
-        - name: dind
-          image: docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515
-          args:
-          - dockerd
-          - --host=unix:///var/run/docker.sock
-          - --group=123
-          - --storage-driver=overlay2
-          securityContext:
-            privileged: true
-          restartPolicy: Always
-          startupProbe:
-            exec:
-              command:
-              - docker
-              - info
-            periodSeconds: 5
-            failureThreshold: 24
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: '2'
-              memory: 2Gi
-              ephemeral-storage: 12Gi
-          volumeMounts:
-          - &id001
-            name: work
-            mountPath: /home/runner/_work
-          - &id002
-            name: dind-sock
-            mountPath: /var/run
-          - name: dind-externals
-            mountPath: /home/runner/externals
-          - name: docker-data
-            mountPath: /var/lib/docker
-        containers:
-        - name: runner
-          image: ghcr.io/link2427/olympus-runner@sha256:ca4a16c5666196f881c6462e581cf2ed8edeacfa9c08b69ac5b4c009e9ca06f9
-          command:
-          - /home/runner/run.sh
-          env:
-          - name: DOCKER_HOST
-            value: unix:///var/run/docker.sock
-          - name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS
-            value: '120'
-          - name: OLYMPUS_BUILDKIT_ENDPOINT
-            value: tcp://buildkit.actions-runners.svc.cluster.local:1234
-          - name: OLYMPUS_BUILDKIT_TLS
-            value: /etc/olympus/buildkit
-          resources:
-            requests:
-              cpu: '1'
-              memory: 1Gi
-            limits:
-              cpu: '8'
-              memory: 6Gi
-              ephemeral-storage: 12Gi
-          volumeMounts:
-          - *id001
-          - *id002
-          - name: buildkit-tls
-            mountPath: /etc/olympus/buildkit
-            readOnly: true
-        volumes:
-        - name: work
-          emptyDir:
-            sizeLimit: 12Gi
-        - name: dind-sock
-          emptyDir: {}
-        - name: dind-externals
-          emptyDir: {}
-        - name: docker-data
-          emptyDir:
-            sizeLimit: 12Gi
-        - name: buildkit-tls
-          secret:
-            secretName: buildkit-client-tls
     runnerGroup: Olympus trusted
-    scaleSetLabels:
-    - olympus-linux
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-cosmotrak
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Cosmotrak
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-cosmotrak
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-counterwear
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Counterwear
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-counterwear
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-manyhand
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/ManyHand
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-manyhand
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-ai-commerce
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/ai-commerce
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-ai-commerce
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-shaderloom
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/shaderloom
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-shaderloom
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-rolecite
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/RoleCite
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-rolecite
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-personal-website
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Personal-Website
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-personal-website
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-ashandoath
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/AshAndOath
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-ashandoath
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-minivoxels
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/MiniVoxels
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-minivoxels
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-jsearch
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/jsearch
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-jsearch
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-habitrak
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Habitrak
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-habitrak
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-aedile
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Aedile
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-aedile
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-urbansift
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Urbansift
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-urbansift
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-voxhole
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Voxhole
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-voxhole
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-satellitedataapi
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/SatelliteDataApi
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-satellitedataapi
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-cosmotrak-v2
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Cosmotrak-V2
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-cosmotrak-v2
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-microfront
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/Microfront
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-microfront
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-jarvis-projects
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/JARVIS-Projects
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-jarvis-projects
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-cosmotrak-online
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/cosmotrak-online
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-cosmotrak-online
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-raideyes
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/RaidEyes
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-raideyes
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: runner-link-bot
+  namespace: actions-runners
+spec:
+  interval: 10m
+  timeout: 5m
+  chartRef:
+    kind: OCIRepository
+    name: arc-runners
+  dependsOn:
+  - name: arc-controller
+    namespace: arc-system
+  values:
+    githubConfigUrl: https://github.com/link2427/LINK-Bot
+    githubConfigSecret: github-link2427
+    runnerScaleSetName: olympus-link-bot
+  valuesFrom:
+  - kind: ConfigMap
+    name: runner-defaults

@@ -7,3 +7,4 @@ resources:
 - buildkit-tls.secret.yaml
 - github-app.secret.yaml
 - runners.yaml
+- runner-defaults.yaml
