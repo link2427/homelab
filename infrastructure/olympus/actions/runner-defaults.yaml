@@ -20,8 +20,8 @@ data:
     \      command:\n      - cp\n      - -r\n      - /home/runner/externals/.\n  \
     \    - /home/runner/tmpDir/\n      volumeMounts:\n      - name: dind-externals\n\
     \        mountPath: /home/runner/tmpDir\n      resources:\n        requests:\n\
-    \          cpu: 100m\n          memory: 64Mi\n        limits:\n          cpu:\
-    \ '2'\n          memory: 256Mi\n    - name: dind\n      image: docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515\n\
+    \          cpu: 100m\n          memory: 128Mi\n        limits:\n          cpu:\
+    \ '2'\n          memory: 1Gi\n    - name: dind\n      image: docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515\n\
     \      args:\n      - dockerd\n      - --host=unix:///var/run/docker.sock\n  \
     \    - --group=123\n      - --storage-driver=overlay2\n      securityContext:\n\
     \        privileged: true\n      restartPolicy: Always\n      startupProbe:\n\
