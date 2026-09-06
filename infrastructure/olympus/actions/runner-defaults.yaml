@@ -6,44 +6,116 @@ metadata:
   labels:
     reconcile.fluxcd.io/watch: Enabled
 data:
-  values.yaml: "minRunners: 0\nmaxRunners: 2\ncontrollerServiceAccount:\n  namespace:\
-    \ arc-system\n  name: arc-controller\nlistenerTemplate:\n  spec:\n    nodeSelector:\n\
-    \      kubernetes.io/arch: amd64\n    containers:\n    - name: listener\n    \
-    \  resources:\n        requests:\n          cpu: 50m\n          memory: 64Mi\n\
-    \        limits:\n          cpu: 500m\n          memory: 256Mi\n      securityContext:\n\
-    \        allowPrivilegeEscalation: false\n        capabilities:\n          drop:\n\
-    \          - ALL\n    securityContext:\n      runAsNonRoot: true\n      runAsUser:\
-    \ 1000\n      seccompProfile:\n        type: RuntimeDefault\ntemplate:\n  spec:\n\
-    \    automountServiceAccountToken: false\n    nodeSelector:\n      kubernetes.io/hostname:\
-    \ atlas\n    terminationGracePeriodSeconds: 60\n    initContainers:\n    - name:\
-    \ init-dind-externals\n      image: ghcr.io/link2427/olympus-runner@sha256:716b9b5378ac92028b7aab6f6d84b3f633d0919a11c45efb40f0b6c927e028be\n\
-    \      command:\n      - cp\n      - -r\n      - /home/runner/externals/.\n  \
-    \    - /home/runner/tmpDir/\n      volumeMounts:\n      - name: dind-externals\n\
-    \        mountPath: /home/runner/tmpDir\n      resources:\n        requests:\n\
-    \          cpu: 100m\n          memory: 128Mi\n        limits:\n          cpu:\
-    \ '2'\n          memory: 1Gi\n    - name: dind\n      image: docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515\n\
-    \      args:\n      - dockerd\n      - --host=unix:///var/run/docker.sock\n  \
-    \    - --group=123\n      - --storage-driver=overlay2\n      securityContext:\n\
-    \        privileged: true\n      restartPolicy: Always\n      startupProbe:\n\
-    \        exec:\n          command:\n          - docker\n          - info\n   \
-    \     periodSeconds: 5\n        failureThreshold: 24\n        timeoutSeconds:\
-    \ 10\n      resources:\n        requests:\n          cpu: 100m\n          memory:\
-    \ 128Mi\n        limits:\n          cpu: '2'\n          memory: 2Gi\n        \
-    \  ephemeral-storage: 12Gi\n      volumeMounts:\n      - &id001\n        name:\
-    \ work\n        mountPath: /home/runner/_work\n      - &id002\n        name: dind-sock\n\
-    \        mountPath: /var/run\n      - name: dind-externals\n        mountPath:\
-    \ /home/runner/externals\n      - name: docker-data\n        mountPath: /var/lib/docker\n\
-    \    containers:\n    - name: runner\n      image: ghcr.io/link2427/olympus-runner@sha256:716b9b5378ac92028b7aab6f6d84b3f633d0919a11c45efb40f0b6c927e028be\n\
-    \      command:\n      - /home/runner/run.sh\n      env:\n      - name: DOCKER_HOST\n\
-    \        value: unix:///var/run/docker.sock\n      - name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS\n\
-    \        value: '120'\n      - name: OLYMPUS_BUILDKIT_ENDPOINT\n        value:\
-    \ tcp://buildkit.actions-runners.svc.cluster.local:1234\n      - name: OLYMPUS_BUILDKIT_TLS\n\
-    \        value: /etc/olympus/buildkit\n      resources:\n        requests:\n \
-    \         cpu: '1'\n          memory: 1Gi\n        limits:\n          cpu: '8'\n\
-    \          memory: 6Gi\n          ephemeral-storage: 12Gi\n      volumeMounts:\n\
-    \      - *id001\n      - *id002\n      - name: buildkit-tls\n        mountPath:\
-    \ /etc/olympus/buildkit\n        readOnly: true\n    volumes:\n    - name: work\n\
-    \      emptyDir:\n        sizeLimit: 12Gi\n    - name: dind-sock\n      emptyDir:\
-    \ {}\n    - name: dind-externals\n      emptyDir: {}\n    - name: docker-data\n\
-    \      emptyDir:\n        sizeLimit: 12Gi\n    - name: buildkit-tls\n      secret:\n\
-    \        secretName: buildkit-client-tls\nscaleSetLabels:\n- olympus-linux\n"
+  values.yaml: |
+    minRunners: 0
+    maxRunners: 2
+    controllerServiceAccount:
+      namespace: arc-system
+      name: arc-controller
+    listenerTemplate:
+      spec:
+        nodeSelector:
+          kubernetes.io/arch: amd64
+        containers:
+        - name: listener
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          seccompProfile:
+            type: RuntimeDefault
+    template:
+      spec:
+        automountServiceAccountToken: false
+        nodeSelector:
+          kubernetes.io/hostname: atlas
+        terminationGracePeriodSeconds: 60
+        initContainers:
+        - name: dind
+          image: ghcr.io/link2427/olympus-runner-dind@sha256:b849ca6e1e7533e3ffa60aa04b784c22e607fcca973e0a1c7ad4b672cea37779
+          args:
+          - dockerd
+          - --host=unix:///var/run/docker.sock
+          - --group=123
+          - --storage-driver=overlay2
+          securityContext:
+            privileged: true
+          restartPolicy: Always
+          startupProbe:
+            exec:
+              command:
+              - docker
+              - info
+            periodSeconds: 5
+            failureThreshold: 24
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: '2'
+              memory: 2Gi
+              ephemeral-storage: 12Gi
+          volumeMounts:
+          - &id001
+            name: work
+            mountPath: /home/runner/_work
+          - &id002
+            name: dind-sock
+            mountPath: /var/run
+          - name: docker-data
+            mountPath: /var/lib/docker
+        containers:
+        - name: runner
+          image: ghcr.io/link2427/olympus-runner@sha256:716b9b5378ac92028b7aab6f6d84b3f633d0919a11c45efb40f0b6c927e028be
+          command:
+          - /home/runner/run.sh
+          env:
+          - name: DOCKER_HOST
+            value: unix:///var/run/docker.sock
+          - name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS
+            value: '120'
+          - name: OLYMPUS_BUILDKIT_ENDPOINT
+            value: tcp://buildkit.actions-runners.svc.cluster.local:1234
+          - name: OLYMPUS_BUILDKIT_TLS
+            value: /etc/olympus/buildkit
+          resources:
+            requests:
+              cpu: '1'
+              memory: 1Gi
+            limits:
+              cpu: '8'
+              memory: 6Gi
+              ephemeral-storage: 12Gi
+          volumeMounts:
+          - *id001
+          - *id002
+          - name: buildkit-tls
+            mountPath: /etc/olympus/buildkit
+            readOnly: true
+        volumes:
+        - name: work
+          emptyDir:
+            sizeLimit: 12Gi
+        - name: dind-sock
+          emptyDir: {}
+        - name: docker-data
+          emptyDir:
+            sizeLimit: 12Gi
+        - name: buildkit-tls
+          secret:
+            secretName: buildkit-client-tls
+    scaleSetLabels:
+    - olympus-linux
