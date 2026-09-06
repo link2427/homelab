@@ -3,14 +3,20 @@ description: Use the authenticated persistent cluster builder, or a GitHub-hoste
 runs:
   using: composite
   steps:
+    - name: Read runner builder configuration
+      id: config
+      shell: bash
+      run: |
+        printf 'endpoint=%s\n' "${OLYMPUS_BUILDKIT_ENDPOINT:-}" >> "$GITHUB_OUTPUT"
+        printf 'tls=%s\n' "${OLYMPUS_BUILDKIT_TLS:-}" >> "$GITHUB_OUTPUT"
     - uses: docker/setup-buildx-action@v3
-      if: env.OLYMPUS_BUILDKIT_ENDPOINT != ''
+      if: steps.config.outputs.endpoint != ''
       with:
         driver: remote
-        endpoint: ${{ env.OLYMPUS_BUILDKIT_ENDPOINT }}
+        endpoint: ${{ steps.config.outputs.endpoint }}
         driver-opts: |
-          cacert=${{ env.OLYMPUS_BUILDKIT_TLS }}/ca.crt
-          cert=${{ env.OLYMPUS_BUILDKIT_TLS }}/tls.crt
-          key=${{ env.OLYMPUS_BUILDKIT_TLS }}/tls.key
+          cacert=${{ steps.config.outputs.tls }}/ca.crt
+          cert=${{ steps.config.outputs.tls }}/tls.crt
+          key=${{ steps.config.outputs.tls }}/tls.key
     - uses: docker/setup-buildx-action@v3
-      if: env.OLYMPUS_BUILDKIT_ENDPOINT == ''
+      if: steps.config.outputs.endpoint == ''
