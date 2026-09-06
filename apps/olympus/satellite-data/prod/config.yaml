@@ -7,5 +7,5 @@ data:
   publisher.json: "{\n  \"environment\": \"prod\",\n  \"root\": \"/data/prod\",\n\
     \  \"app\": \"/app/SatelliteDataApi.dll\",\n  \"dotnet\": \"/usr/share/dotnet/dotnet\"\
     ,\n  \"credentials\": \"/run/secrets/s3/credentials.json\",\n  \"allow_production_publish\"\
-    : false,\n  \"storage\": {\n    \"bucket\": \"cosmotrak-data\",\n    \"region\"\
+    : true,\n  \"storage\": {\n    \"bucket\": \"cosmotrak-data\",\n    \"region\"\
     : \"us-east-1\",\n    \"prefix\": \"Satellite_Database/\"\n  }\n}"

@@ -5,7 +5,7 @@ metadata:
   namespace: satellite-data-prod
 spec:
   suspend: true
-  schedule: '*/15 * * * *'
+  schedule: 7-59/15 * * * *
   timeZone: Etc/UTC
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 600
@@ -48,6 +48,7 @@ spec:
             image: ghcr.io/link2427/satellite-data-api@sha256:f2748e998997c430e529311af2c0a78bd0979fc40a881b01c7e4c909cd3f2512
             args:
             - /config/publisher.json
+            - --publish
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
