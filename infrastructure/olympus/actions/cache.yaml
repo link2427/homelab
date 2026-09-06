@@ -1,0 +1,159 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-ci-cache
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: '1'
+  staleReplicaTimeout: '60'
+  fsType: ext4
+  dataLocality: best-effort
+  diskSelector: fast
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: buildkit-cache
+  namespace: actions-runners
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: longhorn-ci-cache
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkit-config
+  namespace: actions-runners
+data:
+  buildkitd.toml: "[grpc]\n  address = [\"tcp://0.0.0.0:1234\", \"unix:///run/buildkit/buildkitd.sock\"\
+    ]\n  [grpc.tls]\n    cert = \"/tls/tls.crt\"\n    key = \"/tls/tls.key\"\n   \
+    \ ca = \"/tls/ca.crt\"\n[worker.oci]\n  gc = true\n  max-parallelism = 4\n  reservedSpace\
+    \ = \"2GB\"\n  maxUsedSpace = \"15GB\"\n  minFreeSpace = \"4GB\"\n[[worker.oci.gcpolicy]]\n\
+    \  reservedSpace = \"1GB\"\n  maxUsedSpace = \"4GB\"\n  keepDuration = \"168h\"\
+    \n  filters = [\"type==source.local\", \"type==exec.cachemount\", \"type==source.git.checkout\"\
+    ]\n[[worker.oci.gcpolicy]]\n  all = true\n  reservedSpace = \"2GB\"\n  maxUsedSpace\
+    \ = \"15GB\"\n  minFreeSpace = \"4GB\"\n"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buildkit
+  namespace: actions-runners
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: buildkit
+  template:
+    metadata:
+      labels:
+        app: buildkit
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: atlas
+      containers:
+      - name: buildkit
+        image: moby/buildkit:v0.33.0
+        args:
+        - --config
+        - /etc/buildkit/buildkitd.toml
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: '1'
+            memory: 1Gi
+          limits:
+            cpu: '8'
+            memory: 12Gi
+        ports:
+        - name: buildkit
+          containerPort: 1234
+        readinessProbe:
+          exec:
+            command:
+            - buildctl
+            - debug
+            - workers
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - buildctl
+            - debug
+            - workers
+          periodSeconds: 30
+          failureThreshold: 6
+        volumeMounts:
+        - name: cache
+          mountPath: /var/lib/buildkit
+        - name: config
+          mountPath: /etc/buildkit
+          readOnly: true
+        - name: tls
+          mountPath: /tls
+          readOnly: true
+      volumes:
+      - name: cache
+        persistentVolumeClaim:
+          claimName: buildkit-cache
+      - name: config
+        configMap:
+          name: buildkit-config
+      - name: tls
+        secret:
+          secretName: buildkit-server-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buildkit
+  namespace: actions-runners
+spec:
+  selector:
+    app: buildkit
+  ports:
+  - name: buildkit
+    port: 1234
+    targetPort: buildkit
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ci-budget
+  namespace: actions-runners
+spec:
+  hard:
+    requests.cpu: '16'
+    requests.memory: 24Gi
+    limits.cpu: '48'
+    limits.memory: 48Gi
+    pods: '50'
+    requests.storage: 20Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ci-defaults
+  namespace: actions-runners
+spec:
+  limits:
+  - type: Container
+    defaultRequest:
+      cpu: 50m
+      memory: 64Mi
+    default:
+      cpu: '1'
+      memory: 512Mi
