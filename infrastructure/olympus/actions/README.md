@@ -25,7 +25,9 @@ or unenforced NetworkPolicy does not fix that. Use a separate VM/node security
 boundary before accepting untrusted code.
 
 Runners execute on Atlas, with ephemeral job workspaces and Docker daemons.
-Cosmotrak and Telchar keep one idle runner ready; other pools scale to zero.
+All pools scale to zero so idle pods do not consume the shared quota while
+other repositories have queued jobs. The matching Docker sidecar contains
+prebaked container-action tools, avoiding a large copy on each pod startup.
 There are at most two runners per scale set; namespace quotas also
 bound aggregate CPU, memory and pod consumption. BuildKit permits four parallel
 build operations and is limited to eight CPUs and 12 GiB memory. The runner
