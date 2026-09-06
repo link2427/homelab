@@ -79,7 +79,7 @@ data:
             mountPath: /var/lib/docker
         containers:
         - name: runner
-          image: ghcr.io/link2427/olympus-runner@sha256:716b9b5378ac92028b7aab6f6d84b3f633d0919a11c45efb40f0b6c927e028be
+          image: ghcr.io/link2427/olympus-runner@sha256:4e8b332b7527d9b87290cb09e684c43dc07af0d6f0894a2c2951ca59ba1a4d3b
           command:
           - /home/runner/run.sh
           env:
