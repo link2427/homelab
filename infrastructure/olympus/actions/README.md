@@ -25,10 +25,11 @@ or unenforced NetworkPolicy does not fix that. Use a separate VM/node security
 boundary before accepting untrusted code.
 
 Runners execute on Atlas, with ephemeral job workspaces and Docker daemons.
-They scale to zero, with at most two jobs per scale set; namespace quotas also
+Cosmotrak and Telchar keep one idle runner ready; other pools scale to zero.
+There are at most two runners per scale set; namespace quotas also
 bound aggregate CPU, memory and pod consumption. BuildKit permits four parallel
 build operations and is limited to eight CPUs and 12 GiB memory. The runner
-image includes Node 22, Python 3, Rust 1.98.1, PowerShell 7.6.5 and common native
+image includes Node 22, Python 3, Rust 1.98.1, PowerShell 7.6.5, Docker Compose 5.5.1, and common native
 build tools. Setup actions can install other SDK versions into disposable job
 storage. macOS and Windows jobs require compatible runners elsewhere.
 

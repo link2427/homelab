@@ -16,22 +16,24 @@ data:
     \ 1000\n      seccompProfile:\n        type: RuntimeDefault\ntemplate:\n  spec:\n\
     \    automountServiceAccountToken: false\n    nodeSelector:\n      kubernetes.io/hostname:\
     \ atlas\n    terminationGracePeriodSeconds: 60\n    initContainers:\n    - name:\
-    \ init-dind-externals\n      image: ghcr.io/link2427/olympus-runner@sha256:ca4a16c5666196f881c6462e581cf2ed8edeacfa9c08b69ac5b4c009e9ca06f9\n\
+    \ init-dind-externals\n      image: ghcr.io/link2427/olympus-runner@sha256:716b9b5378ac92028b7aab6f6d84b3f633d0919a11c45efb40f0b6c927e028be\n\
     \      command:\n      - cp\n      - -r\n      - /home/runner/externals/.\n  \
     \    - /home/runner/tmpDir/\n      volumeMounts:\n      - name: dind-externals\n\
-    \        mountPath: /home/runner/tmpDir\n    - name: dind\n      image: docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515\n\
+    \        mountPath: /home/runner/tmpDir\n      resources:\n        requests:\n\
+    \          cpu: 100m\n          memory: 64Mi\n        limits:\n          cpu:\
+    \ '2'\n          memory: 256Mi\n    - name: dind\n      image: docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515\n\
     \      args:\n      - dockerd\n      - --host=unix:///var/run/docker.sock\n  \
     \    - --group=123\n      - --storage-driver=overlay2\n      securityContext:\n\
     \        privileged: true\n      restartPolicy: Always\n      startupProbe:\n\
     \        exec:\n          command:\n          - docker\n          - info\n   \
-    \     periodSeconds: 5\n        failureThreshold: 24\n      resources:\n     \
-    \   requests:\n          cpu: 100m\n          memory: 128Mi\n        limits:\n\
-    \          cpu: '2'\n          memory: 2Gi\n          ephemeral-storage: 12Gi\n\
-    \      volumeMounts:\n      - &id001\n        name: work\n        mountPath: /home/runner/_work\n\
-    \      - &id002\n        name: dind-sock\n        mountPath: /var/run\n      -\
-    \ name: dind-externals\n        mountPath: /home/runner/externals\n      - name:\
-    \ docker-data\n        mountPath: /var/lib/docker\n    containers:\n    - name:\
-    \ runner\n      image: ghcr.io/link2427/olympus-runner@sha256:ca4a16c5666196f881c6462e581cf2ed8edeacfa9c08b69ac5b4c009e9ca06f9\n\
+    \     periodSeconds: 5\n        failureThreshold: 24\n        timeoutSeconds:\
+    \ 10\n      resources:\n        requests:\n          cpu: 100m\n          memory:\
+    \ 128Mi\n        limits:\n          cpu: '2'\n          memory: 2Gi\n        \
+    \  ephemeral-storage: 12Gi\n      volumeMounts:\n      - &id001\n        name:\
+    \ work\n        mountPath: /home/runner/_work\n      - &id002\n        name: dind-sock\n\
+    \        mountPath: /var/run\n      - name: dind-externals\n        mountPath:\
+    \ /home/runner/externals\n      - name: docker-data\n        mountPath: /var/lib/docker\n\
+    \    containers:\n    - name: runner\n      image: ghcr.io/link2427/olympus-runner@sha256:716b9b5378ac92028b7aab6f6d84b3f633d0919a11c45efb40f0b6c927e028be\n\
     \      command:\n      - /home/runner/run.sh\n      env:\n      - name: DOCKER_HOST\n\
     \        value: unix:///var/run/docker.sock\n      - name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS\n\
     \        value: '120'\n      - name: OLYMPUS_BUILDKIT_ENDPOINT\n        value:\
