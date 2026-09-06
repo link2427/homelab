@@ -24,7 +24,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: runner
           load: true
@@ -36,7 +36,7 @@ jobs:
           docker run --rm ghcr.io/link2427/olympus-runner:${{ github.sha }} bash -ec 'node --version; npm --version; python --version; cargo --version; rustfmt --version; cargo clippy --version; pwsh --version; docker --version; docker compose version; git --version; gh --version; dpkg -s libgl1-mesa-dev libwebkit2gtk-4.1-dev >/dev/null'
       - run: docker push ghcr.io/link2427/olympus-runner:${{ github.sha }}
       - name: Build matching Docker sidecar
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: runner
           file: runner/Dockerfile.dind
