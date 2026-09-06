@@ -1,0 +1,7 @@
+ARG RUNNER_IMAGE
+FROM ${RUNNER_IMAGE} AS runner
+FROM docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515
+# Container actions need this path in the daemon's filesystem. Baking it into
+# the image avoids copying hundreds of megabytes into an emptyDir for each job.
+COPY --from=runner /home/runner/externals/ /home/runner/externals/
+LABEL org.opencontainers.image.source="https://github.com/link2427/homelab"
