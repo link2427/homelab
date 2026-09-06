@@ -27,6 +27,7 @@ spec:
     githubConfigUrl: https://github.com/link2427/Cosmotrak-Website
     githubConfigSecret: github-link2427
     runnerScaleSetName: olympus-cosmotrak
+    minRunners: 1
   valuesFrom:
   - kind: ConfigMap
     name: runner-defaults
@@ -50,6 +51,7 @@ spec:
     githubConfigSecret: github-telchar-dynamics
     runnerScaleSetName: olympus-telchar
     runnerGroup: Olympus trusted
+    minRunners: 1
   valuesFrom:
   - kind: ConfigMap
     name: runner-defaults

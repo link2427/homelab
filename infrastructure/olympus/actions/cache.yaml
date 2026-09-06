@@ -88,6 +88,7 @@ spec:
             - debug
             - workers
           periodSeconds: 10
+          timeoutSeconds: 10
         livenessProbe:
           exec:
             command:
@@ -96,6 +97,7 @@ spec:
             - workers
           periodSeconds: 30
           failureThreshold: 6
+          timeoutSeconds: 10
         volumeMounts:
         - name: cache
           mountPath: /var/lib/buildkit
