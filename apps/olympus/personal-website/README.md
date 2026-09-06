@@ -25,12 +25,12 @@ initializes the six existing Drizzle tables only on an empty volume. Future
 schema changes need reviewed migrations and backups. The web database role has
 no superuser or role-creation privilege. Existing admin password/salt remain.
 
-PostgreSQL17.9 uses a retained 4Gi `longhorn-resilient` PVC requesting three
+PostgreSQL 17.9 uses a retained 4Gi `longhorn-resilient` PVC requesting three
 replicas. At migration, only Atlas had logical scheduling capacity. Existing
 Longhorn policy permits starting degraded with one replica. Do not claim three
 healthy copies until live status confirms them. Do not raise global storage
 overprovisioning or delete unrelated volumes to conceal this limitation.
-`olympus-app-backup` backs up daily at02:00UTC to R2 and retains seven copies.
+`olympus-app-backup` backs up daily at 02:00 UTC to R2 and retains seven copies.
 Verify an initial backup at cutover. The PVC is excluded from Flux pruning.
 
 Revert image pins through Git. Database recovery needs a PostgreSQL dump or
@@ -41,10 +41,18 @@ restoring service through it requires a deliberate database connection change.
 ## Credentials and dependencies
 
 Runtime, PostgreSQL and registry credentials are SOPS encrypted. The registry
-token has read:packages only and expires September5,2027; renew before expiry.
+token has read:packages only and expires September 5, 2027; renew before expiry.
 The source Actions secret `HOMELAB_DEPLOY_KEY` holds its dedicated homelab write
-deploy key162425527. CI has no cluster or runtime database credentials.
+deploy key 162426151. CI has no cluster or runtime database credentials.
 
 Ollama, legacy hardware metrics and Raspberry Pi live ADS-B were already offline
 before migration. The separate ADS-B deployment workflow still uses EC2 as a
 staging hop; review that and development services before retiring the instance.
+
+## Cutover verification
+
+Flux and both pods were healthy on September 6, 2026. Public pages, database
+APIs, admin login/logout and real analytics writes passed. The initial full R2
+backup `personal-website-initial-20260906` completed at 100%. The volume is
+`pvc-0e04a1f3-0e76-4432-86e8-e49023d7ce91`, currently degraded with one replica.
+The old EC2 origin was `54.225.174.184`; Cloudflare tunnel configuration is v4.
