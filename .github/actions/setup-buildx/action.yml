@@ -1,0 +1,16 @@
+name: Set up cached Olympus Buildx
+description: Use the authenticated persistent cluster builder, or a GitHub-hosted builder.
+runs:
+  using: composite
+  steps:
+    - uses: docker/setup-buildx-action@v3
+      if: env.OLYMPUS_BUILDKIT_ENDPOINT != ''
+      with:
+        driver: remote
+        endpoint: ${{ env.OLYMPUS_BUILDKIT_ENDPOINT }}
+        driver-opts: |
+          cacert=${{ env.OLYMPUS_BUILDKIT_TLS }}/ca.crt
+          cert=${{ env.OLYMPUS_BUILDKIT_TLS }}/tls.crt
+          key=${{ env.OLYMPUS_BUILDKIT_TLS }}/tls.key
+    - uses: docker/setup-buildx-action@v3
+      if: env.OLYMPUS_BUILDKIT_ENDPOINT == ''
