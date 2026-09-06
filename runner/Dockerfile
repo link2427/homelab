@@ -4,7 +4,7 @@ FROM ghcr.io/actions/actions-runner:2.337.0
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential ca-certificates curl git git-lfs jq unzip zip zstd rsync \
-    python3 python3-venv python3-pip pkg-config libssl-dev cmake ninja-build \
+    python3 python3-venv python3-pip python-is-python3 gh pkg-config libssl-dev cmake ninja-build \
     openssh-client postgresql-client ffmpeg libicu74 liblttng-ust1t64 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
@@ -19,6 +19,14 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && chmod +x /opt/microsoft/powershell/7/pwsh \
     && ln -s /opt/microsoft/powershell/7/pwsh /usr/local/bin/pwsh \
     && rm /tmp/pwsh.tgz
+RUN mkdir -p /usr/local/lib/docker/cli-plugins \
+    && curl -fsSL https://github.com/docker/compose/releases/download/v5.5.1/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose \
+    && echo 'db1889184726840f75c4f9c001048430d4f25b3be3cb084d3ddd762bc0aed576  /usr/local/lib/docker/cli-plugins/docker-compose' | sha256sum -c - \
+    && chmod +x /usr/local/lib/docker/cli-plugins/docker-compose \
+    && mkdir -p /opt/hostedtoolcache/node/22.23.2 \
+    && ln -s /usr/local /opt/hostedtoolcache/node/22.23.2/x64 \
+    && touch /opt/hostedtoolcache/node/22.23.2/x64.complete \
+    && chown -R runner:runner /opt/hostedtoolcache/node
 ENV RUNNER_TOOL_CACHE=/opt/hostedtoolcache
 ENV AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache
 USER runner
