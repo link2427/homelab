@@ -3,3 +3,8 @@ kind: Kustomization
 resources:
 - gotk-components.yaml
 - gotk-sync.yaml
+patches:
+- target:
+    kind: GitRepository
+    name: flux-system
+  patch: "- op: replace\n  path: /spec/interval\n  value: 1m0s\n"
