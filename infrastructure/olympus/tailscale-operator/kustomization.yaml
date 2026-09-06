@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
 - resources.yaml
 - operator-oauth.secret.yaml
+- peerrelays.yaml

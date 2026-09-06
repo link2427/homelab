@@ -58,7 +58,8 @@ spec:
               fieldPath: metadata.uid
         - name: PROXY_TAGS
           value: tag:k8s-operator
-        image: tailscale/k8s-operator:stable
+        # 1.102.3, matching the installed CRDs. Keep image and CRDs together.
+        image: tailscale/k8s-operator@sha256:d86a8be7ad9d38714968f5d4e010ba8dad30c8f672736ef94eda9b250febeb12
         imagePullPolicy: Always
         name: operator
         resources: {}
@@ -303,6 +304,8 @@ rules:
   - proxyclasses/status
   - proxygroups
   - proxygroups/status
+  - peerrelays
+  - peerrelays/status
   verbs:
   - get
   - list
