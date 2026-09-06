@@ -1,6 +1,6 @@
 ARG RUNNER_IMAGE
 FROM ${RUNNER_IMAGE} AS runner
-FROM docker:29.6.1-dind@sha256:66d292e5c26bd33a6f6f61cacb880de2186339a524ecba1ce098dbbaceed6515
+FROM docker:29.8.0-dind@sha256:5efed980cba3fc126cf54e21a5a6ff8849d05b6e0623d6e7612f48e9cd6cd17e
 # Container actions need this path in the daemon's filesystem. Baking it into
 # the image avoids copying hundreds of megabytes into an emptyDir for each job.
 COPY --from=runner /home/runner/externals/ /home/runner/externals/
