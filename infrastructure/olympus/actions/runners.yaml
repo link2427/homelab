@@ -26,7 +26,7 @@ spec:
   values:
     githubConfigUrl: https://github.com/link2427/Cosmotrak-Website
     githubConfigSecret: github-link2427
-    runnerScaleSetName: olympus-linux
+    runnerScaleSetName: olympus-cosmotrak
     minRunners: 0
     maxRunners: 2
     controllerServiceAccount:
@@ -140,6 +140,8 @@ spec:
         - name: buildkit-tls
           secret:
             secretName: buildkit-client-tls
+    scaleSetLabels:
+    - olympus-linux
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -158,7 +160,7 @@ spec:
   values:
     githubConfigUrl: https://github.com/Telchar-Dynamics
     githubConfigSecret: github-telchar-dynamics
-    runnerScaleSetName: olympus-linux
+    runnerScaleSetName: olympus-telchar
     minRunners: 0
     maxRunners: 2
     controllerServiceAccount:
@@ -273,3 +275,5 @@ spec:
           secret:
             secretName: buildkit-client-tls
     runnerGroup: Olympus trusted
+    scaleSetLabels:
+    - olympus-linux
