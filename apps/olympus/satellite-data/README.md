@@ -14,7 +14,7 @@ that exact application revision. No legacy continuous .NET worker is deployed.
 | PVC | satellite-data, 2Gi longhorn-fast | satellite-data, 5Gi longhorn-resilient |
 | S3 bucket | cosmotrak-data-dev | cosmotrak-data |
 | IAM user | olympus-satellite-dev | olympus-satellite-prod |
-| Routine schedule | suspended | enable only after verified cutover |
+| Routine schedule | suspended | enabled, minutes 7/22/37/52 UTC |
 
 Both S3 targets are in `us-east-1`. **Released clients require production keys
 `Satellite_Database/satellite-database-YYYY-MM-DD.db`. Keep that contract.**
@@ -36,6 +36,19 @@ There is one CronJob per environment: every 15 minutes UTC, Forbid concurrency,
 no job retries, 6000-second deadline, and the publisher's volume-wide POSIX lock.
 The persisted `next_attempt` gates daily ingestion. An early check makes no
 upstream requests and is not proof of successful publication.
+Production checks at minutes 7/22/37/52. This retains the recovered Mac deadline
+without firing just before its satellite refresh becomes 24 hours old: the
+first due ingestion check is September 7 at 04:22 UTC. Future successful full
+runs schedule themselves 24 hours after completion.
+
+September 6 cutover evidence: dev published at 06:07:29 UTC and production
+published at 06:10:21 UTC. The independent anonymous production download returned
+200 and 20,443,136 bytes, SHA-256
+`d30a6d942e00edad7ddc50b40d34aaafcf7f7fe1ba491f8c6e316a097a95b721`.
+The validated catalog has 14,631 satellites refreshed at 04:15:55 UTC and a
+median TLE epoch of September 5 at 15:06:35 UTC. Dev anonymous downloads return
+403. CI run `34015125354` passed 28 .NET tests, 27 Python tests, both preflights,
+the container build, and restricted runtime checks.
 
 Dev stays suspended. Use a copied candidate and `--reuse-snapshot` for routine
 validation or a deliberate dev upload. Never put production credentials or the

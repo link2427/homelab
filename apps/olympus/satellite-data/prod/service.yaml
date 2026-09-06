@@ -29,5 +29,6 @@ spec:
   - name: http
     port: 80
     targetPort: http
+    nodePort: 0
   loadBalancerClass: tailscale
   allocateLoadBalancerNodePorts: false
