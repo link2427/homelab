@@ -57,7 +57,7 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: runner-cosmotrak
+  name: runner-cosmotrak-app
   namespace: actions-runners
 spec:
   interval: 10m
@@ -71,7 +71,7 @@ spec:
   values:
     githubConfigUrl: https://github.com/link2427/Cosmotrak
     githubConfigSecret: github-link2427
-    runnerScaleSetName: olympus-cosmotrak
+    runnerScaleSetName: olympus-cosmotrak-app
   valuesFrom:
   - kind: ConfigMap
     name: runner-defaults
