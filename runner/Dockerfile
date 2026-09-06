@@ -35,3 +35,10 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup.sh 
     && rm /tmp/rustup.sh
 ENV PATH="/home/runner/.cargo/bin:${PATH}"
 LABEL org.opencontainers.image.source="https://github.com/link2427/homelab"
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxrandr-dev libxi-dev \
+    libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev \
+    libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+    && rm -rf /var/lib/apt/lists/*
+USER runner

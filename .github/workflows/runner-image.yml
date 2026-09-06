@@ -33,7 +33,7 @@ jobs:
           cache-to: type=gha,scope=olympus-runner,mode=max
       - name: Verify installed tools
         run: |
-          docker run --rm ghcr.io/link2427/olympus-runner:${{ github.sha }} bash -ec 'node --version; npm --version; python --version; cargo --version; rustfmt --version; cargo clippy --version; pwsh --version; docker --version; docker compose version; git --version; gh --version'
+          docker run --rm ghcr.io/link2427/olympus-runner:${{ github.sha }} bash -ec 'node --version; npm --version; python --version; cargo --version; rustfmt --version; cargo clippy --version; pwsh --version; docker --version; docker compose version; git --version; gh --version; dpkg -s libgl1-mesa-dev libwebkit2gtk-4.1-dev >/dev/null'
       - run: docker push ghcr.io/link2427/olympus-runner:${{ github.sha }}
       - name: Build matching Docker sidecar
         uses: docker/build-push-action@v6
