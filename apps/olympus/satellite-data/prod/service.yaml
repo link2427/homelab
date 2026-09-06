@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: satellite-data-status
+  namespace: satellite-data-prod
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: satellite-data-status
+    app.kubernetes.io/part-of: satellite-data
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: satellite-data-status-tailscale
+  namespace: satellite-data-prod
+  annotations:
+    tailscale.com/hostname: olympus-satellite-data
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: satellite-data-status
+    app.kubernetes.io/part-of: satellite-data
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  loadBalancerClass: tailscale
