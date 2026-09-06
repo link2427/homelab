@@ -32,8 +32,10 @@ There are at most two runners per scale set; namespace quotas also
 bound aggregate CPU, memory and pod consumption. BuildKit permits four parallel
 build operations and is limited to eight CPUs and 12 GiB memory. The runner
 image includes Node 22, Python 3, Rust 1.98.1, PowerShell 7.6.5, Docker Compose 5.5.1, and common native
-build tools. Setup actions can install other SDK versions into disposable job
-storage. macOS and Windows jobs require compatible runners elsewhere.
+build tools, GL/X11/Wayland development libraries and the Tauri Linux SDK.
+Node 22 is also preseeded in the setup-node tool cache. Workflows skip native
+package installation when these dependencies are already present. Setup actions
+can install other SDK versions into disposable job storage. macOS and Windows jobs require compatible runners elsewhere.
 
 ## Persistent cache
 
@@ -56,6 +58,20 @@ Use the shared BuildKit builder for persistent Docker layers and `RUN --mount=ty
 package caches. Keep repository-scoped GitHub Actions dependency caches for
 non-Docker npm, pip and Cargo jobs; ephemeral runners cannot preserve arbitrary
 home-directory files. Cache keys must include OS, toolchain and lockfile hash.
+
+## Verified performance
+
+Two successful Cosmotrak deployments of the same commit on different ephemeral
+runners measured the Docker build step at **3m13s cold and 41s warm** (79% faster).
+The complete image job fell from 4m42s to 2m04s, excluding queue time. Both runs
+passed tests, container smoke checks, image publication and public deployment
+verification: [benchmark run, attempts 1 and 2](https://github.com/link2427/Cosmotrak-Website/actions/runs/34004369961).
+
+Preinstalling native libraries reduced AshAndOath's dependency setup from
+**7m18s to under one second**; this measures setup, not the entire test suite.
+The updated [Linux tests](https://github.com/link2427/AshAndOath/actions/runs/34006243969)
+and [performance benchmarks](https://github.com/link2427/AshAndOath/actions/runs/34006243981)
+both passed. Actual gains depend on cache hits, workload and cluster contention.
 
 ## Recovery and maintenance
 
