@@ -58,8 +58,10 @@ home-directory files. Cache keys must include OS, toolchain and lockfile hash.
 ## Recovery and maintenance
 
 The runner image is built by `.github/workflows/runner-image.yml` on a GitHub
-hosted runner, so recovery does not depend on ARC. Pin its published digest in
-`runners.yaml` after tool checks pass. Keep the runner version current: GitHub
+hosted runner, so recovery does not depend on ARC. After tool checks pass, it
+automatically commits its digest to `runner-defaults.yaml`, which Flux deploys.
+Dependabot checks Docker bases and GitHub Actions weekly and opens update PRs.
+Merge reviewed updates promptly. Keep the runner version current: GitHub
 eventually stops assigning jobs to obsolete versions. Review updates to ARC,
 Docker, BuildKit and the image together; do not point production at `latest`.
 

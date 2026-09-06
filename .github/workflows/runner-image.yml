@@ -14,7 +14,7 @@ jobs:
     # Bootstrap and recovery must work when the cluster runners are unavailable.
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v4
@@ -35,3 +35,17 @@ jobs:
         run: |
           docker run --rm ghcr.io/link2427/olympus-runner:${{ github.sha }} bash -ec 'node --version; npm --version; python --version; cargo --version; rustfmt --version; cargo clippy --version; pwsh --version; docker --version; docker compose version; git --version; gh --version'
       - run: docker push ghcr.io/link2427/olympus-runner:${{ github.sha }}
+      - name: Update the Flux runner image pin
+        run: |
+          image=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/link2427/olympus-runner:${{ github.sha }})
+          python3 runner/update-image.py "$image"
+          git config user.name 'Olympus runner deployment'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add infrastructure/olympus/actions/runner-defaults.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m 'Deploy verified Olympus runner image'
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1
