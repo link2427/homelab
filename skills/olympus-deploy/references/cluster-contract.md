@@ -38,8 +38,13 @@ Always inspect the current repository before relying on this summary.
 | `longhorn-resilient` | 3 | Databases and important, difficult-to-rebuild state |
 | `longhorn-bulk` | 1 | Large rebuildable caches/build data on bulk storage |
 
-All three Longhorn classes expand volumes and use `Retain`. Capacity and replica
-placement still need live verification before creating large claims.
+All three application Longhorn classes expand volumes and use `Retain`. Coder
+has separate `coder-fast`, `coder-resilient`, and `coder-bulk` classes with the
+same placement and replica counts but `Delete` policy: explicitly deleting a
+workspace releases its local disk; stopping keeps the PVC. Do not use the Coder
+classes for application databases. Existing workspace PVCs retain their original
+policy. Capacity and replica placement still need live verification before
+creating large claims.
 
 The legacy `nfs-data1` and `nfs-data2` StorageClasses remain for rollback. Their
 dynamic provisioners are scaled to zero; do not use them for new claims. Existing

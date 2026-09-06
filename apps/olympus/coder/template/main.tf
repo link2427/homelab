@@ -262,9 +262,9 @@ locals {
 
   selected_profile = local.profiles[var.profile]
   storage_classes = {
-    fast      = "longhorn-fast"
-    resilient = "longhorn-resilient"
-    bulk      = "longhorn-bulk"
+    fast      = "coder-fast"
+    resilient = "coder-resilient"
+    bulk      = "coder-bulk"
   }
   gpu_nodes = {
     quadro-m4000 = "precision-5810-01"
@@ -310,7 +310,7 @@ data "coder_parameter" "memory" {
 data "coder_parameter" "home_disk_size" {
   name         = "home_disk_size"
   display_name = "Home disk"
-  description  = "Persistent Longhorn home disk size in GiB. Storage tier is selected below."
+  description  = "Home disk capacity in GiB. Files survive stops and restarts. Deleting the workspace deletes its disk; export needed files first. Daily backups are separate."
   type         = "number"
   form_type    = "slider"
   default      = local.selected_profile.disk

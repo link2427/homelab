@@ -51,3 +51,60 @@ parameters:
   fsType: ext4
   dataLocality: disabled
   diskSelector: bulk
+---
+# Workspace deletion releases storage; stopping a workspace keeps its PVC.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: coder-fast
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "2"
+  staleReplicaTimeout: "480"
+  fromBackup: ""
+  fsType: ext4
+  dataLocality: best-effort
+  diskSelector: fast
+---
+# Workspace deletion releases storage; stopping a workspace keeps its PVC.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: coder-resilient
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "480"
+  fromBackup: ""
+  fsType: ext4
+  dataLocality: best-effort
+  diskSelector: storage
+---
+# Workspace deletion releases storage; stopping a workspace keeps its PVC.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: coder-bulk
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "480"
+  fromBackup: ""
+  fsType: ext4
+  dataLocality: disabled
+  diskSelector: bulk

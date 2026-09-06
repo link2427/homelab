@@ -13,7 +13,19 @@ a disposable image-builder pod in the isolated `coder-forge` namespace.
 | `olympus-gpu` | `gpu` | CUDA 12.6 PyTorch development with JupyterLab and persistent model/kernel caches | Fast SSD, 2 replicas |
 | `olympus-build` | `build` | Large builds and caches pinned to the 7810 | Bulk HDD, 1 replica + backup |
 
-Persistent home volumes receive scheduled Longhorn backups to Cloudflare R2.
+Persistent home volumes receive daily Longhorn backups to Cloudflare R2 (three
+retained per volume). New workspaces use `coder-fast`, `coder-resilient`, or
+`coder-bulk`: the same placement and replica counts as the application storage
+classes, with `Delete` reclaim policy. Stopping or restarting a workspace keeps
+its PVC. Explicitly deleting the workspace destroys its PVC and local volume;
+export needed files or verify a completed backup before deletion. Existing R2
+backups are retained independently; deletion does not create a final backup.
+
+Existing PVCs keep their original class and reclaim policy because Terraform
+ignores changes to the home claim. Review those retained PVs explicitly after
+workspace deletion. Do not delete a volume merely because it is detached: a
+stopped workspace still needs its home. See [storage lifecycle](../storage-lifecycle.md).
+
 The creation form is ordered as repository, compute, storage, placement, and
 GPU. CPU, memory, and disk capacity use sliders; storage, node placement, and
 GPU use visual choices with descriptions and icons. Each template also offers

@@ -23,10 +23,16 @@ project/export capacity, and disposable cache capacity. Visual storage and host
 choices explain the tradeoffs. Four presets cover quick images, the normal
 Forge, SSD-backed iteration, and large CUDA images. Host choice always pins both
 pods to the same node so they can safely share the persistent project volume.
-The current defaults use Atlas and a 20 GiB `longhorn-fast` home volume to fit
-the cluster's available SSD scheduling headroom. `longhorn-bulk` is an explicit
+The current defaults use Atlas and a 20 GiB `coder-fast` home volume to fit
+the cluster's available SSD scheduling headroom. `coder-bulk` is an explicit
 capacity choice backed only by the Precision 7810 HDD; a Forge using it cannot
 start while `precision-7810-01` is offline.
+
+New workspace home claims use the Coder-specific `Delete` storage classes.
+Stopping a workspace preserves its home; explicitly deleting it removes the
+local disk. Export required files or verify a completed R2 backup first. The
+last three daily backups remain independent of local volume deletion. See the
+[storage lifecycle runbook](../storage-lifecycle.md).
 
 Build an image with:
 

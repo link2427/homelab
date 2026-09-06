@@ -93,9 +93,9 @@ data "coder_workspace_owner" "me" {}
 locals {
   github_repositories = jsondecode(var.github_repositories_json)
   storage_classes = {
-    fast      = "longhorn-fast"
-    resilient = "longhorn-resilient"
-    bulk      = "longhorn-bulk"
+    fast      = "coder-fast"
+    resilient = "coder-resilient"
+    bulk      = "coder-bulk"
   }
   forge_presets = {
     quick = {
@@ -186,7 +186,7 @@ data "coder_parameter" "builder_memory" {
 data "coder_parameter" "home_disk_size" {
   name         = "home_disk_size"
   display_name = "Projects and exports"
-  description  = "Persistent capacity in GiB for build contexts, Docker archives, logs, and AI-agent state. Large PyTorch/CUDA archives can consume tens of GiB each."
+  description  = "Capacity in GiB for build contexts, archives, logs, and agent state. Files survive stops and restarts. Deleting the workspace deletes its disk; export needed files first. Daily backups are separate."
   type         = "number"
   form_type    = "slider"
   default      = "20"

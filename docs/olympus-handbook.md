@@ -93,8 +93,14 @@ Olympus deliberately has two storage planes.
 | `longhorn-bulk` | 1 | 7810 HDD tagged `bulk` | large rebuildable caches and build data |
 | `longhorn-static` | operator-managed | existing Longhorn volumes | recovery/import only |
 
-All custom Longhorn classes use `Retain`, allow expansion, and reserve space for
-Talos and image/container storage. Coder PostgreSQL uses a 10 GiB
+Application Longhorn classes use `Retain`, allow expansion, and reserve space for
+Talos and image/container storage. Since September 6, Coder has separate
+`coder-fast`, `coder-resilient`, and `coder-bulk` classes with `Delete` reclaim
+policy, so explicit workspace deletion removes local storage. Stops and restarts
+preserve the PVC; completed R2 backups are independent. Existing workspace PVCs
+keep their original policy. See the
+[Coder storage lifecycle](../apps/olympus/coder/storage-lifecycle.md).
+Coder PostgreSQL uses a 10 GiB
 `longhorn-resilient` claim. Normal Coder workspaces default to fast storage;
 the build template defaults to bulk storage. Longhorn permits a conservative
 110% of post-reservation logical provisioning so sparse volume capacity does
