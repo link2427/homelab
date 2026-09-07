@@ -17,6 +17,13 @@ The stateless Node service uses no database, persistent storage, Kubernetes API
 access, or application secrets. It runs non-root with a read-only root filesystem.
 `/healthz` reports the running source revision.
 
+`/status` is the public satellite-data status page. Its same-origin `/api/status`
+route reads only the internal production service through `SATELLITE_STATUS_URL`.
+The server exposes an allowlisted health summary, with bounded requests and
+`Cache-Control: no-store`. It needs no storage credentials and never starts an
+update. Dev has no public route. Data-health failures must not change the website's
+process probes. See the website's `docs/service-status.md` for behavior and tests.
+
 Cloudflare account: `52018eaf0359596038f45ce3b2443891`.
 Zone: `508ea866237e7780a349696c4341f945` (`cosmotrak.com`).
 The existing remotely managed `olympus-access` tunnel

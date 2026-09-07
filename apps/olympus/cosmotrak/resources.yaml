@@ -67,6 +67,8 @@ spec:
               value: production
             - name: PORT
               value: "8080"
+            - name: SATELLITE_STATUS_URL
+              value: http://satellite-data-status.satellite-data-prod.svc.cluster.local
 ---
 apiVersion: v1
 kind: Service
