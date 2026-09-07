@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: web
-          image: ghcr.io/link2427/shaderweave-web@sha256:b9a1d58ec355be74b3ca86a9064ff117f8a346ee5e77e867aede40be6a419987
+          image: ghcr.io/link2427/shaderweave-web@sha256:aa14e7ca00a481dd060447bd4395ee432a824a061f16d97ccf0b18ddb4f9adfe
           ports:
             - { name: http, containerPort: 3000 }
           securityContext:
