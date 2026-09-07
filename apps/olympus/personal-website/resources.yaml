@@ -31,7 +31,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: site
-        image: ghcr.io/link2427/personal-website@sha256:ffb205aa110d04ff3b15bc5a90b41dd013b96b0d8588471a7d827887c99b272c
+        image: ghcr.io/link2427/personal-website@sha256:d1d0f9a1e59476558e806e9cef7ab652c0472dae446115f205ac1018fad91490
         ports:
         - name: http
           containerPort: 8080
