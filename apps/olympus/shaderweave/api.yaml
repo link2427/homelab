@@ -12,6 +12,8 @@ spec:
       app.kubernetes.io/name: shaderweave-api
   template:
     metadata:
+      annotations:
+        shaderweave.com/billing-config-revision: '2026-09-07-1'
       labels:
         app.kubernetes.io/name: shaderweave-api
         app.kubernetes.io/part-of: shaderweave

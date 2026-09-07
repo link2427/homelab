@@ -65,3 +65,17 @@ See the source repository's `docs/BILLING-OLYMPUS.md` for the event list,
 idempotent setup command, credit model and financial recovery constraints.
 Live account activation and final billing verification are tracked in private
 operational notes; do not interpret deployed pods alone as payment readiness.
+
+The dedicated live restricted key and webhook signing secret are encrypted in
+`env.secret.yaml`, together with portal configuration
+`bpc_1UD95qQ1a8tKTJjx22Cpelgl`. The key permits customer, Checkout and customer
+portal writes, and charge/refund, product, price, invoice and subscription reads.
+It has no payout, bank-account, credential-management or webhook-management
+permissions. Provisioning the catalog or webhook is an operator action, not a
+runtime permission or deployment step.
+
+Webhook destination `we_1UD92tQ1a8tKTJjxfAzCRXxS` uses API version
+`2026-08-26.dahlia` and the application's nine billing events. Automatic tax
+remains disabled until applicable registrations are configured. Change the API
+pod's billing-config-revision annotation when rotating the encrypted credentials
+so Flux rolls the process onto the new values.
