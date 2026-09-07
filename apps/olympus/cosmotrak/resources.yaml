@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: site
-          image: ghcr.io/link2427/cosmotrak-website@sha256:f010da1b83565a3dfa6f360fab19864e40cdeb2a9580a31b6e5017c712b7667b
+          image: ghcr.io/link2427/cosmotrak-website@sha256:45298945cbe7120906c914d3f822de0d2ff84e654909bf795e228716f937ba5e
           ports:
             - name: http
               containerPort: 8080
