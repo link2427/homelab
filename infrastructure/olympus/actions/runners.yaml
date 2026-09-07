@@ -157,7 +157,7 @@ spec:
   - name: arc-controller
     namespace: arc-system
   values:
-    githubConfigUrl: https://github.com/link2427/shaderloom
+    githubConfigUrl: https://github.com/link2427/shaderweave
     githubConfigSecret: github-link2427
     runnerScaleSetName: olympus-shaderloom
   valuesFrom:
