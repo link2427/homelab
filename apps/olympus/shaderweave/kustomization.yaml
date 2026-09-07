@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: shaderweave
+resources:
+  - namespace.yaml
+  - storage.yaml
+  - api.yaml
+  - web.yaml
+  - env.secret.yaml
+  - registry.secret.yaml
+configMapGenerator:
+  - name: shaderweave-config
+    literals:
+      - APP_ORIGIN=https://shaderweave.com
+      - SHADERWEAVE_LOCAL_MODE=0
+      - STRIPE_MODE=live
+      - STRIPE_MAKER_PRICE_ID=price_1UCu84Q1a8tKTJjxc4DHlLsA
+      - STRIPE_PRO_PRICE_ID=price_1UCu8fQ1a8tKTJjxSl2fP3Rq
+      - STRIPE_CREDITS_PRICE_ID=price_1UCu8fQ1a8tKTJjxSmjI3mwo
+      - STRIPE_AUTOMATIC_TAX=0

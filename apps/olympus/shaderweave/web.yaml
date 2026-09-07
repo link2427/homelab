@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shaderweave-web
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shaderweave-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shaderweave-web
+        app.kubernetes.io/part-of: shaderweave
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      imagePullSecrets:
+        - name: shaderweave-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ghcr.io/link2427/shaderweave-web@sha256:6c4817c8ba6b8aa5a3b0f2c47b0fd6e10695c5c5f3da7585198d560eb9f983f3
+          ports:
+            - { name: http, containerPort: 3000 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          envFrom:
+            - configMapRef: { name: shaderweave-config }
+          env:
+            - name: API_INTERNAL_URL
+              value: http://shaderweave-api:3001
+            - name: TRUST_CLOUDFLARE_IP
+              value: '1'
+          resources:
+            requests: { cpu: 100m, memory: 192Mi, ephemeral-storage: 128Mi }
+            limits: { cpu: '1', memory: 768Mi, ephemeral-storage: 1Gi }
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 20
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: next-cache, mountPath: /app/apps/web/.next/cache }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 128Mi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shaderweave-web
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: shaderweave-web
+  ports:
+    - { name: http, port: 80, targetPort: http }
