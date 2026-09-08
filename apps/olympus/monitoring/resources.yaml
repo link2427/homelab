@@ -120,10 +120,7 @@ spec:
     matchLabels:
       app: prometheus
   strategy:
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
-    type: RollingUpdate
+    type: Recreate
   template:
     metadata:
       labels:
@@ -134,12 +131,26 @@ spec:
         - --config.file=/etc/prometheus/prometheus.yml
         - --storage.tsdb.path=/prometheus
         - --storage.tsdb.retention.time=30d
-        image: prom/prometheus:latest
+        - --storage.tsdb.retention.size=16GB
+        image: prom/prometheus@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
         imagePullPolicy: Always
         name: prometheus
         ports:
         - containerPort: 9090
           protocol: TCP
+        startupProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 180
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          periodSeconds: 10
+          timeoutSeconds: 5
         resources:
           limits:
             cpu: 500m
