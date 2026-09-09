@@ -20,6 +20,15 @@ spec:
         spec:
           automountServiceAccountToken: false
           restartPolicy: Never
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: NotIn
+                        values: [atlas]
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
