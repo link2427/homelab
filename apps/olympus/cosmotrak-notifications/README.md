@@ -24,6 +24,14 @@ PostgreSQL uses a separate retained 5Gi `longhorn-resilient` claim with three
 replicas, expansion enabled and daily `olympus-app-backup` R2 backup selection.
 Do not prune or replace the claim during an app rollback.
 
+`initial-backup.yaml` retains the first Snapshot and R2 Backup as deployment
+evidence. The Snapshot was reconciled before the Backup because Longhorn's
+admission check requires an existing snapshot. The backup completed September 9,
+2026 at 06:22:30 UTC; it contains no registered recipients or delivery history.
+Future data protection comes from the daily recurring job, not repeated creation
+of this initial snapshot. A live `pg_dump` also passed a restore into an isolated
+local PostgreSQL test database; a full R2 volume restore has not been exercised.
+
 `application.secret.yaml` contains generated application/DB/SSO configuration.
 `database.secret.yaml` provides the database password. `registry.secret.yaml` is
 the namespace's encrypted authentication for the private GHCR image. Credentials
