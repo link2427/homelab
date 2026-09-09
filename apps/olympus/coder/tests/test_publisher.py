@@ -3,6 +3,7 @@ import io
 from pathlib import Path
 import tarfile
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 SOURCE = Path(__file__).resolve().parents[1]
@@ -38,7 +39,8 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual(first, publisher.bundle(SOURCE / 'template'))
         with tarfile.open(fileobj=io.BytesIO(first)) as archive:
             self.assertIn('runtime/main.tf', archive.getnames())
-            self.assertTrue(all(name.endswith(('.tf', '.tftpl')) for name in archive.getnames()))
+            self.assertTrue(archive.getmember('runtime').isdir())
+            self.assertTrue(all(item.name.endswith(('.tf', '.tftpl')) for item in archive.getmembers() if item.isfile()))
 
     def test_fingerprint_changes_only_for_meaningful_input(self):
         self.assertEqual(publisher.fingerprint(b'code', {'b': 2, 'a': 1}), publisher.fingerprint(b'code', {'a': 1, 'b': 2}))
@@ -67,6 +69,24 @@ class PublisherTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 publisher.publish(Client(), 'olympus-agent', [], {'workspace': 'image'}, 'link2427')
         self.assertTrue(all(method == 'GET' for _,method in calls))
+
+    def test_new_import_uses_coder_file_hash_response(self):
+        calls = []
+        class Client:
+            def api(self, path, method='GET', body=None, content_type=None):
+                calls.append((path,method,body))
+                if path == '/files': return {'hash': 'uploaded-file-id'}
+                if method == 'POST':
+                    self_test.assertEqual(body['file_id'], 'uploaded-file-id')
+                    return {'id': 'candidate', 'job': {'status': 'pending'}}
+                if path.startswith('/organizations/'):
+                    return {'id':'template','active_version_id':'old'}
+                if '/templates/' in path:
+                    raise urllib.error.HTTPError(path,404,'not found',None,None)
+                return {'id':'candidate','job':{'status':'succeeded'}}
+        self_test = self
+        publisher.publish(Client(), 'olympus-agent', [], {'workspace':'image'}, 'link2427', activate=False)
+        self.assertFalse(any(method == 'PATCH' for _,method,_ in calls))
 
     def test_canary_gate_preserves_active_production_version(self):
         calls = []

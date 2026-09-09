@@ -95,7 +95,12 @@ def bundle(directory):
     for path in (SOURCE / 'runtime/module').glob('*.tf'):
         files['runtime/' + path.name] = path.read_bytes().replace(b'\r\n', b'\n')
     stream = io.BytesIO()
-    with tarfile.open(fileobj=stream, mode='w') as archive:
+    with tarfile.open(fileobj=stream, mode='w', format=tarfile.USTAR_FORMAT) as archive:
+        for parent in sorted({str(Path(name).parent) for name in files if str(Path(name).parent) != '.'}):
+            entry = tarfile.TarInfo(parent + '/')
+            entry.type = tarfile.DIRTYPE
+            entry.mode = 0o755
+            archive.addfile(entry)
         for name, body in sorted(files.items()):
             entry = tarfile.TarInfo(name)
             entry.size = len(body)
@@ -160,7 +165,7 @@ def publish(client, name, entries, images, owner, activate=True, target_name=Non
             version = None
     if not version:
         upload = client.api('/files', 'POST', archive, 'application/x-tar')
-        body = {"name": version_name, "storage_method": "file", "file_id": upload['id'],
+        body = {"name": version_name, "storage_method": "file", "file_id": upload['hash'],
                 "provisioner": "terraform", "message": "Managed Olympus runtime and repository catalog",
                 "user_variable_values": [{"name": key, "value": value} for key, value in values.items()],
                 "tags": {"scope": "organization", "owner": ""}}

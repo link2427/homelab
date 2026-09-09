@@ -127,7 +127,7 @@ def binary(tool, directory):
 def env_for(tool, directory, home=None, offline=True):
     env = os.environ.copy()
     env.update({"PATH": f"{BIN}:/usr/local/bin:/usr/bin:/bin:" + env.get("PATH", ""),
-                "DISABLE_AUTOUPDATER": "1", "OPENCODE_DISABLE_AUTOUPDATE": "true",
+                "DISABLE_AUTOUPDATER": "1", "OPENCODE_DISABLE_AUTOUPDATE": "true", "GROK_DISABLE_AUTOUPDATER": "1",
                 "PRIME_AGENT_INSTALL_UV": "1", "UV_PYTHON": "/opt/olympus/python/bin/python3",
                 "UV_PYTHON_DOWNLOADS": "never"})
     if home:
@@ -187,6 +187,8 @@ def smoke_web(tool, directory, log, env, testhome):
         for sock in sockets:
             sock.close()
     env = env.copy()
+    instance = uuid.uuid4().hex
+    env['OLYMPUS_SERVICE_INSTANCE'] = instance
     port = ports[0]
     if tool == 'reasonix':
         args = ['serve', '--addr', f'127.0.0.1:{port}', '--auth', 'none']
@@ -223,6 +225,7 @@ def smoke_web(tool, directory, log, env, testhome):
         with contextlib.suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
         process.wait()
+        reap_instance(instance)
         if tool == 'deepseek':
             # Never bake shared browser credentials or telemetry identity into an image.
             for name in ('.credentials.yaml', '.anonymous-user-id'):
@@ -511,25 +514,26 @@ redirect_stderr=true
     print("Olympus runtime ready; downloads run separately from login.")
 
 
+def reap_instance(instance):
+    """Also find descendants that created their own process groups."""
+    for path in Path('/proc').glob('[0-9]*/environ'):
+        try:
+            if not instance or ('OLYMPUS_SERVICE_INSTANCE=' + instance).encode() not in path.read_bytes().split(b'\0'):
+                continue
+            pid = int(path.parent.name)
+            if pid != os.getpid():
+                os.kill(pid, signal.SIGKILL)
+        except (OSError, ValueError):
+            pass
+
+
 def prepare_service(name):
-    """Reap only this supervisor program's orphaned group after launcher crashes."""
+    """Reap only this supervisor program's descendants after launcher crashes."""
     marker = STATE / 'services' / (name + '.json')
     namespace = os.readlink('/proc/self/ns/pid')
     previous = read_json(marker)
     if previous.get('namespace') == namespace:
-        group = previous.get('group')
-        instance = previous.get('instance', '')
-        for path in Path('/proc').glob('[0-9]*/environ'):
-            try:
-                if not instance or ('OLYMPUS_SERVICE_INSTANCE=' + instance).encode() not in path.read_bytes().split(b'\0'):
-                    continue
-                # Canvas starts backend children in separate process groups.
-                # The inherited random instance identifies those descendants too.
-                pid = int(path.parent.name)
-                if pid != os.getpid():
-                    os.kill(pid, signal.SIGKILL)
-            except (OSError, ValueError):
-                pass
+        reap_instance(previous.get('instance', ''))
     instance = uuid.uuid4().hex
     atomic_json(marker, {'namespace': namespace, 'group': os.getpgrp(), 'instance': instance})
     os.environ['OLYMPUS_SERVICE_INSTANCE'] = instance

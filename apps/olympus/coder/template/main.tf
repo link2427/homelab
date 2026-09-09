@@ -653,6 +653,7 @@ locals {
       "OLYMPUS_EXPORTS_BASE_PATH"   = local.exports_base_path
       "DISABLE_AUTOUPDATER"         = "1"
       "OPENCODE_DISABLE_AUTOUPDATE" = "true"
+      "GROK_DISABLE_AUTOUPDATER"     = "1"
       "PATH"                        = "/opt/olympus/bin:/usr/local/bin:/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     } : {},
     var.profile == "gpu" ? {
@@ -824,7 +825,7 @@ resource "coder_app" "exports" {
   slug         = "exports"
   display_name = "Exports"
   icon         = "/icon/folder.svg"
-  group        = "Development"
+  group        = "Exports"
   order        = 1
   url          = "http://localhost:13339${local.exports_base_path}"
   subdomain    = false

@@ -78,6 +78,22 @@ class RuntimeTests(unittest.TestCase):
         with runtime.lock('update'):
             pass
 
+    def test_reap_only_tagged_processes_across_process_groups(self):
+        instance = 'isolated-lifecycle-test'
+        children = [subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
+                                    env={**os.environ, 'OLYMPUS_SERVICE_INSTANCE': tag}, start_new_session=True)
+                    for tag in (instance, instance, 'unrelated-service')]
+        try:
+            runtime.reap_instance(instance)
+            for child in children[:2]:
+                self.assertEqual(child.wait(timeout=5), -9)
+            self.assertIsNone(children[2].poll())
+        finally:
+            for child in children:
+                if child.poll() is None:
+                    child.kill()
+                child.wait(timeout=5)
+
     def test_concurrent_update_does_not_install(self):
         with runtime.lock('update'), patch.object(runtime, 'latest') as latest:
             runtime.update(['codex'])
