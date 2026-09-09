@@ -1,0 +1,261 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: cosmotrak-notifications
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+      app.kubernetes.io/part-of: cosmotrak-notifications
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+        app.kubernetes.io/part-of: cosmotrak-notifications
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: /metrics
+        prometheus.io/port: '8080'
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - atlas
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - optiplex-hermes
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 60
+      imagePullSecrets:
+      - name: registry
+      initContainers:
+      - name: migrate
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:ddbbb5005b05a8fbf42c17cb7fd8d53c0f56b1d0a7d1dd2cb87b946f41c093ba
+        command:
+        - alembic
+        - upgrade
+        - head
+        securityContext: &id001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        envFrom: &id002
+        - secretRef:
+            name: application
+        - configMapRef:
+            name: settings
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      containers:
+      - name: api
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:ddbbb5005b05a8fbf42c17cb7fd8d53c0f56b1d0a7d1dd2cb87b946f41c093ba
+        securityContext: *id001
+        envFrom: *id002
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: '1'
+            memory: 384Mi
+            ephemeral-storage: 256Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        ports:
+        - name: http
+          containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          periodSeconds: 3
+          failureThreshold: 40
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          periodSeconds: 10
+          timeoutSeconds: 8
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          periodSeconds: 20
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: cosmotrak-notifications
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worker
+      app.kubernetes.io/part-of: cosmotrak-notifications
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker
+        app.kubernetes.io/part-of: cosmotrak-notifications
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - atlas
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - optiplex-hermes
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 60
+      imagePullSecrets:
+      - name: registry
+      initContainers:
+      - name: migrate
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:ddbbb5005b05a8fbf42c17cb7fd8d53c0f56b1d0a7d1dd2cb87b946f41c093ba
+        command:
+        - alembic
+        - upgrade
+        - head
+        securityContext: &id001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        envFrom: &id002
+        - secretRef:
+            name: application
+        - configMapRef:
+            name: settings
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      containers:
+      - name: worker
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:ddbbb5005b05a8fbf42c17cb7fd8d53c0f56b1d0a7d1dd2cb87b946f41c093ba
+        securityContext: *id001
+        envFrom: *id002
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: '1'
+            memory: 384Mi
+            ephemeral-storage: 256Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        command:
+        - python
+        - -m
+        - app.worker
+        startupProbe: &id003
+          exec:
+            command:
+            - python
+            - -m
+            - app.health
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe: *id003
+        livenessProbe: *id003
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: cosmotrak-notifications
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: cosmotrak-notifications
+  ports:
+  - name: http
+    port: 80
+    targetPort: http

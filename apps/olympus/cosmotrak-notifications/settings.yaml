@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settings
+  namespace: cosmotrak-notifications
+data:
+  API_URL: https://api.cosmotrak.com
+  ADMIN_URL: https://manage.cosmotrak.com
+  ADMIN_EMAIL: jacob.neel@gmail.com
+  OIDC_ISSUER: https://auth.jacob-neel.dev/application/o/cosmotrak-notifications/
+  APNS_TOPIC: neel-industries.Cosmotrak
+  DELIVERY_ENABLED: "false"
+  DEVELOPMENT: "false"
+  WORKER_POLL_SECONDS: "15"

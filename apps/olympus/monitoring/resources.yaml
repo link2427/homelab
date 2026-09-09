@@ -372,6 +372,8 @@ data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
+    rule_files:
+      - /etc/prometheus/cosmotrak.rules.yml
     scrape_configs:
     - job_name: prometheus
       static_configs:
@@ -409,6 +411,38 @@ data:
         regex: ([^:]+)(?::\d+)?;(\d+)
         replacement: $1:$2
         target_label: __address__
+  cosmotrak.rules.yml: |
+    groups:
+      - name: cosmotrak-notifications
+        rules:
+          - alert: CosmotrakNotificationsUnavailable
+            expr: absent(cosmotrak_sends_enabled)
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: Cosmotrak notification API metrics are unavailable
+          - alert: CosmotrakNotificationWorkerStale
+            expr: cosmotrak_worker_heartbeat_age_seconds > 120
+            for: 3m
+            labels:
+              severity: warning
+            annotations:
+              summary: Cosmotrak scheduler heartbeat is stale
+          - alert: CosmotrakNotificationQueueDelayed
+            expr: (cosmotrak_queue_age_seconds > 300) and on(instance) (cosmotrak_sends_enabled == 1)
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: Eligible Cosmotrak delivery queue is delayed
+          - alert: CosmotrakAPNsRejections
+            expr: cosmotrak_apns_rejections_last_hour > 5
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: Cosmotrak APNs requests are being rejected or failing
 kind: ConfigMap
 metadata:
   name: prometheus-config
