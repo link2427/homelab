@@ -118,6 +118,18 @@ class RuntimeTests(unittest.TestCase):
             runtime.install('codex', '1.1.0', {'source': 'unused'})
         self.assertEqual(runtime.selected('codex'), self.old)
 
+    def test_available_baseline_is_reused_without_installing_or_requiring_disk(self):
+        prebuilt = runtime.BASE / 'codex/1.1.0'
+        (prebuilt / 'bin').mkdir(parents=True)
+        (prebuilt / 'bin/codex').write_text('validated image executable')
+        runtime.atomic_json(prebuilt / 'ready.json', {'version': '1.1.0'})
+        with patch.object(runtime, 'latest', return_value=('1.1.0', {})), \
+                patch.object(runtime, 'run_checked', side_effect=AssertionError('No reinstall')), \
+                patch.object(runtime.shutil, 'disk_usage', side_effect=AssertionError('No disk needed')):
+            self.assertEqual(runtime.update(['codex']), 0)
+        self.assertEqual(runtime.selected('codex'), prebuilt)
+        self.assertFalse((runtime.ROOT / 'codex/1.1.0').exists())
+
     def test_checksum_failure(self):
         artifact = self.root / 'bad-binary'
         artifact.write_bytes(b'corrupted download')

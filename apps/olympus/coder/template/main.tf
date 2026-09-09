@@ -688,8 +688,9 @@ resource "terraform_data" "repository_request" {
 }
 
 resource "coder_agent" "main" {
-  os   = "linux"
-  arch = "amd64"
+  os                 = "linux"
+  arch               = "amd64"
+  connection_timeout = var.profile == "agent" ? 900 : 180
 
   startup_script_behavior = "non-blocking"
   startup_script          = var.profile == "agent" ? "" : <<-EOT

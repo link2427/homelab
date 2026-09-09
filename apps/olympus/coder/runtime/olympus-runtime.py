@@ -238,6 +238,9 @@ def install(tool, version, release, baseline=False):
     directory = ROOT / tool / version
     if (directory / "ready.json").exists():
         return directory
+    prebuilt = BASE / tool / version
+    if not baseline and (prebuilt / "ready.json").exists() and binary(tool, prebuilt).is_file():
+        return prebuilt
     if shutil.disk_usage(ROOT).free < 3 * 1024 ** 3:
         raise RuntimeError("Less than 3 GiB free; retaining installed tools")
     if directory.exists():

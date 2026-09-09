@@ -14,6 +14,12 @@ nonblocking Coder scripts start the services, configure local helpers, and check
 releases independently. A registry failure is shown in Diagnostics without
 preventing login.
 
+The release check reuses an already validated image installation when its version
+matches upstream, avoiding duplicate downloads and writes into the home volume.
+Persistent homes skip recursive ownership changes when the root already has the
+correct group. A first start on a node without the image allows up to 15 minutes
+for its cold pull; later starts reuse the local image cache.
+
 The unprivileged supervisor restarts failed services, including cleaning up that
 service's orphaned child processes after a launcher crash. A minute-by-minute
 Coder recovery script also restarts a failed supervisor or a service that exhausted

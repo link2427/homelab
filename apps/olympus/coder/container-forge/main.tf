@@ -515,8 +515,9 @@ resource "terraform_data" "repository_request" {
 }
 
 resource "coder_agent" "main" {
-  os   = "linux"
-  arch = "amd64"
+  os                 = "linux"
+  arch               = "amd64"
+  connection_timeout = 900
 
   startup_script          = templatefile("${path.module}/forge-bootstrap.sh.tftpl", {})
   startup_script_behavior = "non-blocking"
