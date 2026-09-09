@@ -43,6 +43,10 @@ resource "coder_script" "context" {
   timeout            = 180
   script             = <<-EOT
     export PATH="/opt/olympus/bin:/usr/local/bin:$PATH"
+    mkdir -p "$HOME/.config/zellij"
+    if [ ! -e "$HOME/.config/zellij/config.kdl" ]; then
+      printf '%s\n' 'default_mode "locked"' 'show_startup_tips false' 'show_release_notes false' > "$HOME/.config/zellij/config.kdl"
+    fi
     OLYMPUS_WORKSPACE_SKILL_BASE_URL=file:///opt/olympus/skill bash /opt/olympus/skill/scripts/install-olympus-workspace
     /usr/bin/python3 /opt/olympus/runtime/configure.py
     /usr/bin/python3 /opt/olympus/runtime/configure-canvas.py
