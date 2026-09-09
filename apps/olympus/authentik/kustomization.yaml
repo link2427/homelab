@@ -8,6 +8,7 @@ resources:
   - authentik-secrets.secret.yaml
   - cloudflared-token.secret.yaml
   - identity-blueprint.yaml
+  - cosmotrak-blueprint.yaml
   - database.yaml
   - cloudflared.yaml
 configMapGenerator:

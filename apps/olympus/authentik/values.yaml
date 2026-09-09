@@ -14,9 +14,12 @@ authentik:
 blueprints:
   configMaps:
     - olympus-identity-blueprint
+    - cosmotrak-notifications-blueprint
 
 server:
   replicas: 1
+  podAnnotations:
+    olympus/configuration-revision: cosmotrak-notifications-20260909
   service:
     type: ClusterIP
   resources:
@@ -34,6 +37,8 @@ server:
 
 worker:
   replicas: 1
+  podAnnotations:
+    olympus/configuration-revision: cosmotrak-notifications-20260909
   resources:
     requests:
       cpu: 200m
