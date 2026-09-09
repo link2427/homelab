@@ -1,6 +1,11 @@
 name: Build and verify Coder workspaces
 on:
   workflow_dispatch:
+    inputs:
+      publisher_only:
+        description: Rebuild only the catalog publisher, preserving the tested workspace digest
+        type: boolean
+        default: false
   schedule:
     - cron: '17 8 * * *'
   push:
@@ -28,7 +33,29 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Select release mode
+        id: mode
+        env:
+          PUBLISHER_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publisher_only }}
+        run: |
+          python - <<'PY'
+          import json,os,re
+          from pathlib import Path
+          data=json.loads(Path('apps/olympus/coder/publisher/images.json').read_text())
+          pinned=bool(re.fullmatch(r'ghcr.io/link2427/olympus-workspace@sha256:[a-f0-9]{64}',data['workspace']))
+          publisher_only=os.environ['PUBLISHER_ONLY']=='true'
+          if publisher_only and not pinned:
+              raise SystemExit('Publisher-only release requires a verified workspace digest')
+          # Preserve the initial canary image through scheduled runs until promotion.
+          hold_canary=os.environ['GITHUB_EVENT_NAME']=='schedule' and not data['promote_runtime'] and pinned
+          build_runtime=not (publisher_only or hold_canary)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('build_runtime='+str(build_runtime).lower()+'\n')
+          if not build_runtime:
+              (Path(os.environ['RUNNER_TEMP'])/'workspace-digest').write_text(data['workspace']+'\n')
+          PY
       - name: Reserve disk for the full workspace image
+        if: steps.mode.outputs.build_runtime == 'true'
         run: |
           for path in /usr/share/dotnet /usr/local/lib/android /opt/ghc; do
             if [ -d "$path" ] && [ "$(realpath "$path")" = "$path" ]; then sudo rm -rf -- "$path"; fi
@@ -55,6 +82,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build directly into the local image store
+        if: steps.mode.outputs.build_runtime == 'true'
         env:
           WORKSPACE_IMAGE: ghcr.io/link2427/olympus-workspace:${{ github.sha }}-${{ github.run_number }}
         run: |
@@ -63,6 +91,7 @@ jobs:
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             -f apps/olympus/coder/runtime/Dockerfile -t "$WORKSPACE_IMAGE" apps/olympus/coder
       - name: Verify offline startup and service recovery
+        if: steps.mode.outputs.build_runtime == 'true'
         env:
           WORKSPACE_IMAGE: ghcr.io/link2427/olympus-workspace:${{ github.sha }}-${{ github.run_number }}
         run: |
@@ -79,6 +108,7 @@ jobs:
             docker exec coder-check python3 /tmp/check_services.py
           done
       - name: Publish verified workspace image
+        if: steps.mode.outputs.build_runtime == 'true'
         env:
           WORKSPACE_IMAGE: ghcr.io/link2427/olympus-workspace:${{ github.sha }}-${{ github.run_number }}
         run: |

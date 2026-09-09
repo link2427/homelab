@@ -103,6 +103,13 @@ during the initial 24-hour Agent/Forge canary. The publisher can validate new
 production template versions while leaving their active versions unchanged.
 Linux, GPU, and Build catalog refreshes continue normally.
 
+Scheduled image releases preserve the pinned workspace image while this initial
+gate is closed. After the full soak passes, set `promote_runtime` true while
+retaining that exact tested workspace digest, then dispatch the
+`coder-workspaces.yml` workflow with `publisher_only=true`. This updates the
+publisher's promotion gate without replacing the canary image. Subsequent daily
+workspace builds resume their offline checks and immutable publication.
+
 Create canary templates with `publish.py --canary`. For an Agent recovery test,
 `--canary-home-pvc` accepts an already cloned same-namespace home PVC. The source
 workspace must never be passed as the recovery PVC: use a distinct Longhorn
