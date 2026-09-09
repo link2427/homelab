@@ -1,5 +1,5 @@
 {
-  "workspace": "ghcr.io/link2427/olympus-workspace@sha256:05afaa508d0e2844a230a3e521bff8a28f1e8a03758226bcc61abf5118221ff9",
+  "workspace": "ghcr.io/link2427/olympus-workspace@sha256:3bbb9e007e126629d75437107ea610436deaefb82d9d4c67f6b4215093ce4510",
   "linux": "codercom/example-base:ubuntu@sha256:11632124077b27ec949697f7e4b9698179998de3bf2e8c1bdfbfdef5050ae9ad",
   "gpu": "pytorch/pytorch:2.13.0-cuda12.6-cudnn9-runtime@sha256:6acf597eeb8e376a96580dde4952f37cc017fef732bb40bfc73f28f25e3f64b4",
   "build": "codercom/example-universal:ubuntu@sha256:19dfa110f52bc3297891d6a3acaf9d7bfe60604264c2a959d2007063957fc7c8",
