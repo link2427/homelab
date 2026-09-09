@@ -15,7 +15,9 @@ releases independently. A registry failure is shown in Diagnostics without
 preventing login.
 
 The unprivileged supervisor restarts failed services, including cleaning up that
-service's orphaned child processes after a launcher crash. It never resumes a
+service's orphaned child processes after a launcher crash. A minute-by-minute
+Coder recovery script also restarts a failed supervisor or a service that exhausted
+its startup retries; deliberately stopped services stay stopped. It never resumes a
 saved agent task. Terminal agents run in named Zellij sessions so a dropped
 browser connection can reattach to the running session. Across a pod restart,
 files, credentials, and saved histories persist; choose the task to resume.

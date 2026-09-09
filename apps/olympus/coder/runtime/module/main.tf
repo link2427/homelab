@@ -64,6 +64,29 @@ resource "coder_script" "update" {
   script             = "/opt/olympus/bin/olympus-agent-update"
 }
 
+resource "coder_script" "recover" {
+  agent_id           = var.agent_id
+  display_name       = "Recover unavailable services"
+  start_blocks_login = false
+  cron               = "0 * * * * *"
+  timeout            = 60
+  script             = <<-EOT
+    set -eu
+    mkdir -p "$HOME/.local/state/olympus"
+    exec 9> "$HOME/.local/state/olympus/recover.lock"
+    flock -n 9 || exit 0
+    if ! /opt/olympus/bin/olympus-services pid >/dev/null 2>&1; then
+      /usr/bin/python3 /opt/olympus/runtime/olympus-runtime.py init
+    fi
+    for service in editor exports reasonix deepseek openhands; do
+      state="$(/opt/olympus/bin/olympus-services status "$service" || true)"
+      case "$state" in
+        *" FATAL "*|*" EXITED "*) /opt/olympus/bin/olympus-services start "$service" ;;
+      esac
+    done
+  EOT
+}
+
 resource "coder_app" "terminal" {
   for_each     = local.terminals
   agent_id     = var.agent_id
