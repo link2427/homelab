@@ -6,6 +6,12 @@ metadata:
     app.kubernetes.io/name: coder-image-cache
     app.kubernetes.io/part-of: spegel
 spec:
+  minReadySeconds: 60
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: coder-image-cache
@@ -15,10 +21,12 @@ spec:
         app.kubernetes.io/name: coder-image-cache
         app.kubernetes.io/part-of: spegel
     spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64
       terminationGracePeriodSeconds: 5
       containers:
         - name: universal
-          image: codercom/example-universal:ubuntu
+          image: ghcr.io/link2427/olympus-workspace@sha256:1b736edff236174d3560b498cea51129f22ced4fb2449efc899116fac2074794
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -37,7 +45,7 @@ spec:
               drop:
                 - ALL
         - name: base
-          image: codercom/example-base:ubuntu
+          image: codercom/example-base:ubuntu@sha256:11632124077b27ec949697f7e4b9698179998de3bf2e8c1bdfbfdef5050ae9ad
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh

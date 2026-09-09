@@ -5,8 +5,16 @@ advertises the OCI layers in its local containerd content store so another node
 can fetch those layers over the cluster network before falling back to the
 upstream registry. Mutable `latest` tags bypass Spegel.
 
-The `coder-image-cache` DaemonSet keeps the standard Coder base and universal
-workspace images present on all nodes. `coder-gpu-image-cache` does the same for
+The `coder-image-cache` DaemonSet keeps the pinned Coder base and verified Olympus
+workspace images present on the four amd64 compute nodes. The Olympus image
+includes the universal build toolchain and the offline agent tools. The Coder
+image workflow updates these cache pins with each tested release. Its rolling
+update warms one node at a time, with a one-minute settling interval, to avoid
+simultaneous image unpacking competing with Longhorn replication. Complete
+storage recovery before beginning the initial cache rollout and verify all
+eligible cache pods run the intended digest before promoting the workspace.
+
+`coder-gpu-image-cache` does the same for
 the PyTorch CUDA image on the three GPU nodes. These images use `IfNotPresent`, so
 the pre-pullers do not repeatedly contact the upstream registry after a node has
 the image.

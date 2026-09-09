@@ -18,7 +18,11 @@ The release check reuses an already validated image installation when its versio
 matches upstream, avoiding duplicate downloads and writes into the home volume.
 Persistent homes skip recursive ownership changes when the root already has the
 correct group. A first start on a node without the image allows up to 15 minutes
-for its cold pull; later starts reuse the local image cache.
+for its cold pull; later starts reuse the local image cache. The existing Spegel
+image pre-puller now follows the verified workspace digest on all four amd64
+compute nodes. It updates one node at a time. Before promotion, verify its
+rollout completed and Longhorn recovered; cold unpacking during replica rebuilds
+can otherwise exceed that allowance even when CPU and memory are available.
 
 The unprivileged supervisor restarts failed services, including cleaning up that
 service's orphaned child processes after a launcher crash. A minute-by-minute
