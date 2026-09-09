@@ -67,7 +67,12 @@ ConfigMap updates.
 
 Verify the dedicated Flux applied SHA, API/worker/Postgres rollout, public
 health/contract, real Authentik sign-in, private-route rejection, internal metrics,
-three healthy storage replicas and a completed R2 backup. App rollback reverts
-the image-pin commit and keeps storage/secrets. Database migrations are a separate
+three healthy storage replicas and a completed R2 backup. Future app rollback
+restores only the four image references to the previous verified digest and keeps
+the namespace, storage and secrets. The initial deployment has no previous image:
+take it offline by removing its two public ingress rules and scaling API/worker
+to zero through GitOps while retaining PostgreSQL. Never remove the initial
+Kustomization or namespace as an image rollback; namespace deletion can bypass a
+PVC's Flux prune protection. Database migrations are a separate
 recovery boundary: restore a verified backup into a new isolated volume with
 sending disabled. Never downgrade or overwrite a live database to test recovery.
