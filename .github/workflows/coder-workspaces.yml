@@ -62,6 +62,9 @@ jobs:
           build-args: TOOL_REFRESH=${{ github.run_id }}
           load: true
           tags: ghcr.io/link2427/olympus-workspace:${{ github.sha }}-${{ github.run_number }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha,scope=olympus-workspace
           cache-to: type=gha,scope=olympus-workspace,mode=max
       - name: Verify offline startup and service recovery
@@ -101,6 +104,9 @@ jobs:
           file: apps/olympus/coder/publisher/Dockerfile
           push: true
           tags: ghcr.io/link2427/coder-catalog:${{ github.sha }}-${{ github.run_number }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
       - name: Update Flux publisher image
         env:
           PUBLISHER_DIGEST: ${{ steps.publisher.outputs.digest }}
@@ -110,7 +116,7 @@ jobs:
           from pathlib import Path
           path=Path('apps/olympus/coder/publisher.yaml')
           text=path.read_text()
-          text,count=re.subn(r'image: ghcr.io/link2427/coder-catalog@sha256:[a-f0-9]{64}', 'image: ghcr.io/link2427/coder-catalog@'+os.environ['PUBLISHER_DIGEST'],text)
+          text,count=re.subn(r'image: (?:ghcr.io/link2427/coder-catalog@sha256:[a-f0-9]{64}|pending-validation)', 'image: ghcr.io/link2427/coder-catalog@'+os.environ['PUBLISHER_DIGEST'],text)
           assert count==1
           path.write_text(text)
           PY

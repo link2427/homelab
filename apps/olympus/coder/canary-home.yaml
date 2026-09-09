@@ -1,0 +1,18 @@
+# Temporary recovery canary; this is a separate volume, never the live home.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: coder-reliability-canary-home
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    olympus.dev/canary: "true"
+spec:
+  storageClassName: longhorn-fast
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 60Gi
+  dataSource:
+    kind: PersistentVolumeClaim
+    name: coder-cb51956e-8f85-44a6-b612-02cd422e841f-home

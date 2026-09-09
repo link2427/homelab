@@ -1,0 +1,84 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: coder-catalog
+spec:
+  schedule: "*/15 * * * *"
+  timeZone: America/Chicago
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 1800
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: coder-catalog
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: publisher
+              image: pending-validation
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: CODER_URL
+                  value: http://coder.coder.svc.cluster.local
+                - name: CODER_SESSION_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: coder-catalog-credentials
+                      key: CODER_SESSION_TOKEN
+                - name: GITHUB_APP_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: coder-catalog-credentials
+                      key: GITHUB_APP_ID
+                - name: GITHUB_INSTALLATION_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: coder-catalog-credentials
+                      key: GITHUB_INSTALLATION_ID
+                - name: GITHUB_APP_PRIVATE_KEY_FILE
+                  value: /run/catalog/github-private-key.pem
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: credentials
+                  mountPath: /run/catalog
+                  readOnly: true
+                - name: temporary
+                  mountPath: /tmp
+          volumes:
+            - name: credentials
+              secret:
+                secretName: coder-catalog-credentials
+                defaultMode: 0440
+                items:
+                  - key: GITHUB_APP_PRIVATE_KEY
+                    path: github-private-key.pem
+            - name: temporary
+              emptyDir:
+                sizeLimit: 64Mi
