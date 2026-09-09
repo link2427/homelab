@@ -152,6 +152,8 @@ def publish(client, name, entries, images, owner, activate=True, target_name=Non
         if error.code != 404:
             raise
         template = None
+    if template is None and not activate:
+        raise RuntimeError('Creating a production template requires canary promotion first')
     version = None
     if template:
         try:
@@ -176,7 +178,9 @@ def publish(client, name, entries, images, owner, activate=True, target_name=Non
     if not template:
         template = client.api(f'/organizations/{ORG}/templates', 'POST', {
             'name': target_name, 'display_name': target_name.replace('-', ' ').title(),
-            'version_id': version['id'], 'default_ttl_ms': 0,
+            'template_version_id': version['id'], 'default_ttl_ms': 0,
+            'disable_everyone_group_access': target_name != name,
+            'template_use_classic_parameter_flow': False,
             'description': 'Olympus workspace with persistent home storage', 'icon': '/icon/code.svg'})
     elif activate and template['active_version_id'] != version['id']:
         client.api(f'/templates/{template["id"]}/versions', 'PATCH', {'id': version['id']})

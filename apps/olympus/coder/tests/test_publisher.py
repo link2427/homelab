@@ -88,6 +88,32 @@ class PublisherTests(unittest.TestCase):
         publisher.publish(Client(), 'olympus-agent', [], {'workspace':'image'}, 'link2427', activate=False)
         self.assertFalse(any(method == 'PATCH' for _,method,_ in calls))
 
+    def test_canary_creation_is_private_and_uses_template_version_id(self):
+        calls = []
+        class Client:
+            def api(self, path, method='GET', body=None, content_type=None):
+                calls.append((path,method,body))
+                if path == '/files': return {'hash':'file'}
+                if method == 'POST' and path.endswith('/templateversions'):
+                    return {'id':'candidate','job':{'status':'pending'}}
+                if method == 'POST': return {'id':'private-canary'}
+                if path.startswith('/organizations/'):
+                    raise urllib.error.HTTPError(path,404,'not found',None,None)
+                return {'id':'candidate','job':{'status':'succeeded'}}
+        publisher.publish(Client(), 'olympus-agent', [], {'workspace':'image'}, 'link2427',
+                          target_name='olympus-agent-canary')
+        body = next(body for path,method,body in calls if method == 'POST' and path.endswith('/templates'))
+        self.assertEqual(body['template_version_id'], 'candidate')
+        self.assertTrue(body['disable_everyone_group_access'])
+
+    def test_missing_production_template_cannot_bypass_canary_gate(self):
+        class Client:
+            def api(self, path, method='GET', body=None, content_type=None):
+                if method != 'GET': raise AssertionError('Gate must refuse before any writes')
+                raise urllib.error.HTTPError(path,404,'not found',None,None)
+        with self.assertRaisesRegex(RuntimeError, 'canary promotion'):
+            publisher.publish(Client(), 'olympus-agent', [], {'workspace':'image'}, 'link2427', activate=False)
+
     def test_canary_gate_preserves_active_production_version(self):
         calls = []
         class Client:
