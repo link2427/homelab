@@ -8,6 +8,8 @@ resources:
   - coder-secrets.secret.yaml
   - database.yaml
   - canary-home.yaml
+  - publisher-credentials.secret.yaml
+  - publisher.yaml
 configMapGenerator:
   - name: coder-values
     files:
