@@ -7,6 +7,7 @@ resources:
   - release.yaml
   - r2-credentials.secret.yaml
   - storageclasses.yaml
+  - rebuild-settings.yaml
   - coder-recurring-jobs.yaml
   - identity-recurring-job.yaml
   - netbox-recurring-jobs.yaml
