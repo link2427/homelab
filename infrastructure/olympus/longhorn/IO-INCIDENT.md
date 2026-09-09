@@ -13,12 +13,25 @@ The original Coder workspace remained on its existing build and pod with zero
 restarts. Healthy snapshots after recovery do not establish safe behavior under
 the same load.
 
+At 05:01:49 UTC, the required recovery-clone replica rebuild also triggered an
+Atlas replica failure for the Coder PostgreSQL volume. Its remaining replicas
+kept the database available. Image unpack is therefore not the only workload
+that exposes the storage limitation.
+
 ## Retained mitigation and rollout hold
 
 `rebuild-settings.yaml` limits simultaneous replica rebuilds to one per node,
 reducing competing recovery work. Replica counts and storage layout are
 unchanged. The existing Coder cache has the verified image on all four compute
 nodes, so current canary restarts do not require a cold pull.
+
+The recovery template also allocated an unused 60 GiB ordinary home alongside
+its external cloned home. That empty claim reserved another 120 GiB across two
+replicas and prevented the clone's second replica from scheduling at the
+configured 110% overprovisioning limit. The template now omits the unused claim;
+its deletion was verified against zero actual data and no pod references. The
+real clone, original home, replica counts, and storage reservation policy were
+preserved. The second clone replica could then rebuild normally.
 
 Keep Coder's `publisher/images.json` promotion gate false. This also holds
 scheduled workspace image rebuilding during the initial rollout. Harness
