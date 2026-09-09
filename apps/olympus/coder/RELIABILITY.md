@@ -24,6 +24,10 @@ compute nodes. It updates one node at a time. Before promotion, verify its
 rollout completed and Longhorn recovered; cold unpacking during replica rebuilds
 can otherwise exceed that allowance even when CPU and memory are available.
 
+The Forge builder also skips recursive ownership changes on an existing home.
+Startup and recovery restore owner-only permissions on DeepSeek's credentials;
+older Kubernetes mounts may have added group access, which DeepSeek rejects.
+
 The unprivileged supervisor restarts failed services, including cleaning up that
 service's orphaned child processes after a launcher crash. A minute-by-minute
 Coder recovery script also restarts a failed supervisor or a service that exhausted

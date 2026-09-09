@@ -8,6 +8,18 @@ variable "agent_id" { type = string }
 variable "workspace_dir" { type = string }
 
 locals {
+  private_credentials = <<-EOT
+    /usr/bin/python3 - <<'PY'
+    from pathlib import Path
+    import sys
+    credentials = Path.home() / '.dsh/.credentials.yaml'
+    try:
+        if credentials.is_file():
+            credentials.chmod(0o600)
+    except OSError:
+        print('DeepSeek credential permissions need attention', file=sys.stderr)
+    PY
+  EOT
   terminals = {
     codex        = { name = "Codex", bin = "codex", icon = "/icon/openai.svg", order = 10 }
     claude-code  = { name = "Claude Code", bin = "claude", icon = "/icon/claude.svg", order = 20 }
@@ -32,7 +44,11 @@ resource "coder_script" "initialize" {
   run_on_start       = true
   start_blocks_login = false
   timeout            = 60
-  script             = "/usr/bin/python3 /opt/olympus/runtime/olympus-runtime.py init"
+  script             = <<-EOT
+    set -eu
+    ${local.private_credentials}
+    /usr/bin/python3 /opt/olympus/runtime/olympus-runtime.py init
+  EOT
 }
 
 resource "coder_script" "context" {
@@ -72,6 +88,7 @@ resource "coder_script" "recover" {
   timeout            = 60
   script             = <<-EOT
     set -eu
+    ${local.private_credentials}
     mkdir -p "$HOME/.local/state/olympus"
     exec 9> "$HOME/.local/state/olympus/recover.lock"
     flock -n 9 || exit 0

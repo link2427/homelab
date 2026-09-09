@@ -979,7 +979,8 @@ resource "kubernetes_stateful_set_v1" "builder" {
         termination_grace_period_seconds = 10
 
         security_context {
-          fs_group = 1000
+          fs_group               = 1000
+          fs_group_change_policy = "OnRootMismatch"
           seccomp_profile {
             type = "RuntimeDefault"
           }
