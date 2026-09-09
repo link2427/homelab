@@ -863,7 +863,15 @@ resource "coder_app" "github_repository_action" {
   url          = local.github_action_url
 }
 
+# Preserve existing workspace claims when adding the recovery-home condition.
+moved {
+  from = kubernetes_persistent_volume_claim_v1.home
+  to   = kubernetes_persistent_volume_claim_v1.home[0]
+}
+
 resource "kubernetes_persistent_volume_claim_v1" "home" {
+  count = var.recovery_home_pvc == "" ? 1 : 0
+
   metadata {
     name      = "${local.workspace_name}-home"
     namespace = var.namespace
@@ -1016,7 +1024,7 @@ resource "kubernetes_deployment_v1" "main" {
         volume {
           name = "home"
           persistent_volume_claim {
-            claim_name = var.recovery_home_pvc != "" ? var.recovery_home_pvc : kubernetes_persistent_volume_claim_v1.home.metadata[0].name
+            claim_name = var.recovery_home_pvc != "" ? var.recovery_home_pvc : kubernetes_persistent_volume_claim_v1.home[0].metadata[0].name
             read_only  = false
           }
         }

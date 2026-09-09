@@ -133,8 +133,9 @@ Create canary templates with `publish.py --canary`. For an Agent recovery test,
 `--canary-home-pvc` accepts an already cloned same-namespace home PVC. The source
 workspace must never be passed as the recovery PVC: use a distinct Longhorn
 CSI clone, owned by the same user. This administrator-only option is empty in
-normal templates. The ordinary unused home claim created for that test workspace
-can be removed along with the test workspace after the canary is retired.
+normal templates. Recovery canaries use only that cloned claim, avoiding an
+unused second home and its replica reservations. A Terraform `moved` block
+preserves existing normal home claims when adopting this conditional resource.
 
 Acceptance covers fresh and restored homes, offline web/backend startup,
 supervised launcher crashes, dropped terminal connections, Grok ACP initialize,
