@@ -8,3 +8,4 @@ resources:
   - registry.secret.yaml
   - database.yaml
   - resources.yaml
+  - initial-backup.yaml

@@ -1,0 +1,12 @@
+apiVersion: longhorn.io/v1beta2
+kind: Snapshot
+metadata:
+  name: cosmotrak-notifications-initial-20260909
+  namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  volume: pvc-15b668bd-8272-4da5-9517-7348f17c163f
+  createSnapshot: true
+  labels:
+    olympus.dev/purpose: cosmotrak-notifications-initial-backup
