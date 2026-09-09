@@ -126,34 +126,6 @@ spec:
       labels:
         app: prometheus
     spec:
-      initContainers:
-      - name: preserve-damaged-wal
-        image: prom/prometheus@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
-        command:
-        - /bin/sh
-        - -ec
-        - |
-          archive=/prometheus/recovery-20260909
-          if [ -f "$archive/complete" ]; then exit 0; fi
-          test ! -e "$archive"
-          test -d /prometheus/wal
-          mkdir "$archive"
-          mv /prometheus/wal "$archive/wal"
-          if [ -d /prometheus/chunks_head ]; then
-            mv /prometheus/chunks_head "$archive/chunks_head"
-          fi
-          touch "$archive/complete"
-          echo 'Original journal preserved in /prometheus/recovery-20260909'
-        resources:
-          requests:
-            cpu: 10m
-            memory: 16Mi
-          limits:
-            cpu: 100m
-            memory: 32Mi
-        volumeMounts:
-        - mountPath: /prometheus
-          name: data
       containers:
       - args:
         - --config.file=/etc/prometheus/prometheus.yml
