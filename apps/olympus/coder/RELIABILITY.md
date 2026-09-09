@@ -28,6 +28,11 @@ The Forge builder also skips recursive ownership changes on an existing home.
 Startup and recovery restore owner-only permissions on DeepSeek's credentials;
 older Kubernetes mounts may have added group access, which DeepSeek rejects.
 
+The initial rollout is currently held by a reproduced Atlas storage problem.
+Read the [storage incident](../../../infrastructure/olympus/longhorn/IO-INCIDENT.md)
+before changing the image pin or promotion gate. Cached-image startup and an
+idle soak do not establish that future cold image rotation is safe.
+
 The unprivileged supervisor restarts failed services, including cleaning up that
 service's orphaned child processes after a launcher crash. A minute-by-minute
 Coder recovery script also restarts a failed supervisor or a service that exhausted
