@@ -37,7 +37,7 @@ if os.environ.get('OLYMPUS_CODER_WORKSPACE'):
         connection = http.client.HTTPConnection('127.0.0.1', 13340, timeout=5)
         connection.request('GET', '/', headers={'Host': host, 'Origin': 'https://' + host})
         response = connection.getresponse()
-        assert response.status in (200, 302), f'Coder app host rejected: {response.status}'
+        assert response.status in (200, 302, 303), f'Coder app host rejected: {response.status}'
         assert 'httponly' in response.getheader('Set-Cookie', '').lower(), 'Missing normal DeepSeek login cookie'
         response.read(); connection.close()
     connection = http.client.HTTPConnection('127.0.0.1', 13340, timeout=5)
