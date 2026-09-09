@@ -1,0 +1,126 @@
+name: Build and verify Coder workspaces
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 8 * * *'
+  push:
+    branches: [main]
+    paths:
+      - apps/olympus/coder/runtime/**
+      - apps/olympus/coder/template/**
+      - apps/olympus/coder/container-forge/**
+      - apps/olympus/coder/skills/**
+      - apps/olympus/coder/publisher/**
+      - '!apps/olympus/coder/publisher/images.json'
+      - apps/olympus/coder/tests/**
+      - .github/workflows/coder-workspaces.yml
+permissions:
+  contents: read
+concurrency:
+  group: coder-workspaces
+  cancel-in-progress: false
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reserve disk for the full workspace image
+        run: |
+          for path in /usr/share/dotnet /usr/local/lib/android /opt/ghc; do
+            if [ -d "$path" ] && [ "$(realpath "$path")" = "$path" ]; then sudo rm -rf -- "$path"; fi
+          done
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test recovery and publication behavior
+        run: python -m unittest discover -s apps/olympus/coder/tests -v
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+      - name: Validate both template bundles
+        run: |
+          python apps/olympus/coder/publisher/publish.py --bundle-dir "$RUNNER_TEMP/coder-bundles"
+          for name in template container-forge; do
+            terraform -chdir="$RUNNER_TEMP/coder-bundles/$name" init -backend=false -no-color
+            terraform -chdir="$RUNNER_TEMP/coder-bundles/$name" validate -no-color
+          done
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/olympus/coder
+          file: apps/olympus/coder/runtime/Dockerfile
+          build-args: TOOL_REFRESH=${{ github.run_id }}
+          load: true
+          tags: ghcr.io/link2427/olympus-workspace:${{ github.sha }}-${{ github.run_number }}
+          cache-from: type=gha,scope=olympus-workspace
+          cache-to: type=gha,scope=olympus-workspace,mode=max
+      - name: Verify offline startup and service recovery
+        env:
+          WORKSPACE_IMAGE: ghcr.io/link2427/olympus-workspace:${{ github.sha }}-${{ github.run_number }}
+        run: |
+          docker run -d --name coder-check --network none --cap-drop ALL --security-opt no-new-privileges \
+            "$WORKSPACE_IMAGE" bash -c 'python3 /opt/olympus/runtime/configure.py; python3 /opt/olympus/runtime/olympus-runtime.py init; sleep infinity'
+          trap 'docker logs coder-check; docker rm -f coder-check' EXIT
+          docker cp apps/olympus/coder/tests/check_services.py coder-check:/tmp/check_services.py
+          docker exec coder-check python3 /tmp/check_services.py
+          docker exec coder-check python3 /opt/olympus/runtime/configure-canvas.py
+          for service in reasonix deepseek openhands; do
+            docker exec coder-check sh -c 'kill -KILL $(olympus-services pid "$1")' sh "$service"
+            docker exec coder-check python3 /tmp/check_services.py
+          done
+      - name: Publish verified workspace image
+        env:
+          WORKSPACE_IMAGE: ghcr.io/link2427/olympus-workspace:${{ github.sha }}-${{ github.run_number }}
+        run: |
+          docker push "$WORKSPACE_IMAGE"
+          docker inspect --format='{{index .RepoDigests 0}}' "$WORKSPACE_IMAGE" > "$RUNNER_TEMP/workspace-digest"
+      - name: Update workspace pin in the publisher bundle
+        run: |
+          python - "$RUNNER_TEMP/workspace-digest" <<'PY'
+          import json,sys
+          from pathlib import Path
+          path=Path('apps/olympus/coder/publisher/images.json')
+          data=json.loads(path.read_text())
+          data['workspace']=Path(sys.argv[1]).read_text().strip()
+          path.write_text(json.dumps(data,indent=2)+'\n')
+          PY
+      - uses: docker/build-push-action@v6
+        id: publisher
+        with:
+          context: apps/olympus/coder
+          file: apps/olympus/coder/publisher/Dockerfile
+          push: true
+          tags: ghcr.io/link2427/coder-catalog:${{ github.sha }}-${{ github.run_number }}
+      - name: Update Flux publisher image
+        env:
+          PUBLISHER_DIGEST: ${{ steps.publisher.outputs.digest }}
+        run: |
+          python - <<'PY'
+          import os,re
+          from pathlib import Path
+          path=Path('apps/olympus/coder/publisher.yaml')
+          text=path.read_text()
+          text,count=re.subn(r'image: ghcr.io/link2427/coder-catalog@sha256:[a-f0-9]{64}', 'image: ghcr.io/link2427/coder-catalog@'+os.environ['PUBLISHER_DIGEST'],text)
+          assert count==1
+          path.write_text(text)
+          PY
+          git config user.name 'Olympus Coder deployment'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/olympus/coder/publisher/images.json apps/olympus/coder/publisher.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m 'Deploy verified Coder workspace and catalog images'
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1

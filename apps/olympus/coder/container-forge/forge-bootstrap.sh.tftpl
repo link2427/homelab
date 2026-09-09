@@ -1,0 +1,439 @@
+set -eu
+mkdir -p /home/coder/.local/bin /home/coder/exports /home/coder/project /home/coder/.docker
+cat > /home/coder/.local/bin/container-build <<'PY'
+#!/usr/bin/env python3
+"""Build one Docker-compatible linux/amd64 archive in the disposable Kaniko pod."""
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import threading
+import time
+
+
+HOME = Path("/home/coder").resolve()
+EXPORTS = Path(os.environ.get("FORGE_EXPORTS", "/home/coder/exports")).resolve()
+NAMESPACE = os.environ["FORGE_NAMESPACE"]
+BUILDER_POD = os.environ["FORGE_BUILDER_POD"]
+PLATFORM = os.environ.get("FORGE_PLATFORM", "linux/amd64")
+
+
+def fail(message: str) -> "None":
+    print(f"container-build: {message}", file=sys.stderr)
+    raise SystemExit(2)
+
+
+def beneath_home(path: Path, label: str) -> Path:
+    resolved = path.expanduser().resolve()
+    try:
+        resolved.relative_to(HOME)
+    except ValueError:
+        fail(f"{label} must live under {HOME}; the builder only mounts the workspace volume")
+    return resolved
+
+
+def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, text=True, check=True, **kwargs)
+
+
+parser = argparse.ArgumentParser(
+    description="Build a Docker-loadable archive and place its complete offline handoff bundle in Exports.",
+    epilog=(
+        "Example: container-build opencode-scif:1.0 . -f Dockerfile "
+        "--build-arg OPENCODE_VERSION=latest"
+    ),
+)
+parser.add_argument("image", help="Image reference stored inside the archive, such as opencode-scif:1.0")
+parser.add_argument("context", nargs="?", default=".", help="Build context under /home/coder (default: current directory)")
+parser.add_argument("-f", "--file", default="Dockerfile", help="Dockerfile path, absolute or relative to the context")
+parser.add_argument("--build-arg", action="append", default=[], metavar="KEY=VALUE")
+parser.add_argument("--target", help="Optional final Dockerfile stage")
+parser.add_argument("--secret", action="append", default=[], help="Kaniko secret specification; repeat as needed")
+parser.add_argument("--label", action="append", default=[], help="Additional image label; repeat as needed")
+parser.add_argument("--snapshot-mode", choices=("full", "redo"), default="full")
+parser.add_argument("--reproducible", action="store_true", help="Strip timestamps from the produced image")
+parser.add_argument("--no-cache", action="store_true", help="Do not read the warmed base-image cache")
+parser.add_argument("--timeout", type=int, default=21600, help="Maximum build duration in seconds (default: 21600)")
+parser.add_argument("--verbosity", choices=("error", "warn", "info", "debug", "trace"), default="info")
+args = parser.parse_args()
+
+if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/@-]*", args.image):
+    fail("image reference contains unsupported characters")
+if args.timeout < 60 or args.timeout > 86400:
+    fail("--timeout must be between 60 and 86400 seconds")
+
+context = beneath_home(Path(args.context), "build context")
+if not context.is_dir():
+    fail(f"build context is not a directory: {context}")
+
+dockerfile_candidate = Path(args.file)
+if not dockerfile_candidate.is_absolute():
+    dockerfile_candidate = context / dockerfile_candidate
+dockerfile = beneath_home(dockerfile_candidate, "Dockerfile")
+if not dockerfile.is_file():
+    fail(f"Dockerfile does not exist: {dockerfile}")
+
+safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", args.image).strip("._-") or "container"
+stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+export_dir = EXPORTS / f"{safe_name}--{stamp}"
+export_dir.mkdir(mode=0o775, parents=True, exist_ok=False)
+archive = export_dir / f"{safe_name}.docker.tar"
+partial = export_dir / f".{safe_name}.docker.tar.partial"
+log_path = export_dir / "build.log"
+
+kaniko_args = [
+    "/kaniko/executor",
+    f"--dockerfile={dockerfile}",
+    f"--context=dir://{context}",
+    f"--destination={args.image}",
+    f"--custom-platform={PLATFORM}",
+    f"--tar-path={partial}",
+    "--no-push",
+    "--no-push-cache",
+    f"--cache={'false' if args.no_cache else 'true'}",
+    "--cache-dir=/kaniko/cache",
+    "--compressed-caching=false",
+    "--cleanup=true",
+    "--image-download-retry=3",
+    f"--snapshot-mode={args.snapshot_mode}",
+    f"--verbosity={args.verbosity}",
+    "--log-format=text",
+    "--log-timestamp=true",
+]
+if args.target:
+    kaniko_args.append(f"--target={args.target}")
+if args.reproducible:
+    kaniko_args.append("--reproducible=true")
+kaniko_args.extend(f"--build-arg={value}" for value in args.build_arg)
+kaniko_args.extend(f"--secret={value}" for value in args.secret)
+kaniko_args.extend(f"--label={value}" for value in args.label)
+
+kubectl = shutil.which("kubectl") or "/home/coder/.local/bin/kubectl"
+base = [kubectl, "-n", NAMESPACE]
+
+print(f"Waiting for disposable builder pod {BUILDER_POD} ...")
+ready_deadline = time.monotonic() + 180
+while time.monotonic() < ready_deadline:
+    status_result = subprocess.run(
+        base + ["get", f"pod/{BUILDER_POD}", "-o", "json"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    if status_result.returncode == 0:
+        status = json.loads(status_result.stdout)
+        conditions = status.get("status", {}).get("conditions", [])
+        if any(
+            condition.get("type") == "Ready" and condition.get("status") == "True"
+            for condition in conditions
+        ):
+            break
+    time.sleep(2)
+else:
+    fail(f"builder pod did not become ready within 180 seconds: {BUILDER_POD}")
+
+command = base + ["exec", BUILDER_POD, "--"] + kaniko_args
+started = dt.datetime.now(dt.timezone.utc)
+succeeded = False
+process: subprocess.Popen[str] | None = None
+timed_out = threading.Event()
+timer: threading.Timer | None = None
+
+try:
+    with log_path.open("w", encoding="utf-8") as log:
+        print(f"Building {args.image} for {PLATFORM}")
+        print(f"Context: {context}")
+        print(f"Dockerfile: {dockerfile}")
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        def terminate_for_timeout() -> None:
+            if process is not None and process.poll() is None:
+                timed_out.set()
+                process.terminate()
+
+        timer = threading.Timer(args.timeout, terminate_for_timeout)
+        timer.daemon = True
+        timer.start()
+        assert process.stdout is not None
+        for line in process.stdout:
+            sys.stdout.write(line)
+            log.write(line)
+        return_code = process.wait()
+        timer.cancel()
+        if timed_out.is_set():
+            fail(f"build exceeded {args.timeout} seconds")
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, command)
+    succeeded = True
+except subprocess.CalledProcessError as error:
+    print(f"Build failed with exit code {error.returncode}; see {log_path}", file=sys.stderr)
+    raise SystemExit(error.returncode)
+except KeyboardInterrupt:
+    if process and process.poll() is None:
+        process.terminate()
+    print("\nBuild cancelled; recycling builder pod.", file=sys.stderr)
+    raise SystemExit(130)
+finally:
+    if timer is not None:
+        timer.cancel()
+    subprocess.run(
+        base + ["delete", f"pod/{BUILDER_POD}", "--wait=false", "--ignore-not-found=true"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    if not succeeded:
+        partial.unlink(missing_ok=True)
+
+if not partial.is_file() or partial.stat().st_size == 0:
+    fail("builder reported success but did not produce a Docker archive")
+partial.rename(archive)
+
+digest = hashlib.sha256()
+with archive.open("rb") as source:
+    for block in iter(lambda: source.read(8 * 1024 * 1024), b""):
+        digest.update(block)
+sha256 = digest.hexdigest()
+(export_dir / "SHA256SUMS").write_text(f"{sha256}  {archive.name}\n", encoding="utf-8")
+
+finished = dt.datetime.now(dt.timezone.utc)
+source_revision = ""
+try:
+    source_revision = run(
+        ["git", "-C", str(context), "rev-parse", "HEAD"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    ).stdout.strip()
+except (FileNotFoundError, subprocess.CalledProcessError):
+    pass
+
+manifest = {
+    "archive_format": "docker-save",
+    "archive_file": archive.name,
+    "archive_sha256": sha256,
+    "archive_size_bytes": archive.stat().st_size,
+    "builder": os.environ.get("FORGE_KANIKO_IMAGE", "kaniko"),
+    "created_at": finished.isoformat(),
+    "dockerfile": str(dockerfile),
+    "duration_seconds": round((finished - started).total_seconds(), 3),
+    "image": args.image,
+    "platform": PLATFORM,
+    "source_context": str(context),
+    "source_revision": source_revision or None,
+}
+(export_dir / "manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+(export_dir / "LOAD-IN-SCIF.txt").write_text(
+    "Container Forge offline handoff\n"
+    "================================\n\n"
+    f"Image: {args.image}\n"
+    f"Platform: {PLATFORM}\n"
+    f"Archive: {archive.name}\n\n"
+    "1. Copy every file in this directory to the approved destination.\n"
+    "2. Verify the transfer:\n"
+    "   sha256sum -c SHA256SUMS\n\n"
+    "3. Load the image into Docker:\n"
+    f"   docker load --input {archive.name}\n\n"
+    "4. Confirm the tag:\n"
+    f"   docker image inspect {args.image}\n",
+    encoding="utf-8",
+)
+
+print("\nBuild complete.")
+print(f"Offline bundle: {export_dir}")
+print(f"Docker archive: {archive}")
+print(f"SHA-256: {sha256}")
+PY
+chmod +x /home/coder/.local/bin/container-build
+
+cat > /home/coder/.local/bin/container-split <<'SPLIT_HELPER'
+#!/bin/sh
+set -eu
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+  echo "Usage: container-split IMAGE.docker.tar [PART_SIZE]" >&2
+  echo "Example: container-split image.docker.tar 3900M" >&2
+  exit 2
+fi
+archive="$1"
+part_size="$${2:-3900M}"
+if [ ! -f "$archive" ]; then
+  echo "Archive does not exist: $archive" >&2
+  exit 1
+fi
+archive="$(cd "$(dirname "$archive")" && pwd -P)/$(basename "$archive")"
+case "$archive" in
+  /home/coder/exports/*) ;;
+  *) echo "Archive must be under /home/coder/exports." >&2; exit 2 ;;
+esac
+output_dir="$archive.parts"
+if [ -e "$output_dir" ]; then
+  echo "Parts directory already exists: $output_dir" >&2
+  exit 1
+fi
+mkdir -p "$output_dir"
+archive_name="$(basename "$archive")"
+split -b "$part_size" -d -a 3 "$archive" "$output_dir/$archive_name.part-"
+(
+  cd "$output_dir"
+  sha256sum "$archive_name".part-* > SHA256SUMS
+)
+cat > "$output_dir/REASSEMBLE-IN-SCIF.txt" <<EOF
+Container Forge split archive
+=============================
+
+Copy all parts into one directory, then run:
+
+  sha256sum -c SHA256SUMS
+  cat $archive_name.part-* > $archive_name
+  docker load --input $archive_name
+EOF
+printf 'Split archive ready: %s\n' "$output_dir"
+SPLIT_HELPER
+chmod +x /home/coder/.local/bin/container-split
+
+cat > /home/coder/.local/bin/container-registry-login <<'PY'
+#!/usr/bin/env python3
+"""Store a Docker-compatible registry credential for Kaniko base-image pulls."""
+
+import base64
+import getpass
+import json
+from pathlib import Path
+import sys
+
+if len(sys.argv) not in (2, 3):
+    print("Usage: container-registry-login REGISTRY [USERNAME]", file=sys.stderr)
+    raise SystemExit(2)
+
+registry = sys.argv[1].strip()
+username = sys.argv[2].strip() if len(sys.argv) == 3 else input("Username: ").strip()
+if not registry or not username:
+    print("Registry and username cannot be empty.", file=sys.stderr)
+    raise SystemExit(2)
+
+password = getpass.getpass("Password or token: ")
+if not password:
+    print("Password or token cannot be empty.", file=sys.stderr)
+    raise SystemExit(2)
+
+config_path = Path("/home/coder/.docker/config.json")
+config_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+try:
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    config = {}
+except json.JSONDecodeError as error:
+    print(f"Refusing to overwrite invalid {config_path}: {error}", file=sys.stderr)
+    raise SystemExit(1)
+
+auths = config.setdefault("auths", {})
+auths[registry] = {
+    "auth": base64.b64encode(f"{username}:{password}".encode()).decode()
+}
+temporary = config_path.with_suffix(".json.tmp")
+temporary.write_text(json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+temporary.chmod(0o600)
+temporary.replace(config_path)
+config_path.chmod(0o600)
+print(f"Credential stored for {registry}.")
+PY
+chmod +x /home/coder/.local/bin/container-registry-login
+
+cat > /home/coder/.local/bin/olympus-export <<'EXPORT_HELPER'
+#!/bin/sh
+set -eu
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+  echo "Usage: olympus-export SOURCE [DOWNLOAD_NAME]" >&2
+  exit 2
+fi
+source_path="$1"
+download_name="$${2:-$(basename "$source_path")}"
+case "$download_name" in
+  ""|.|..|*/*) echo "DOWNLOAD_NAME must be a single file or directory name." >&2; exit 2 ;;
+esac
+if [ ! -e "$source_path" ]; then
+  echo "Source does not exist: $source_path" >&2
+  exit 1
+fi
+destination="/home/coder/exports/$download_name"
+if [ -e "$destination" ]; then
+  echo "Destination already exists: $destination" >&2
+  exit 1
+fi
+cp -a -- "$source_path" "$destination"
+printf 'Export ready: %s\n' "$destination"
+EXPORT_HELPER
+chmod +x /home/coder/.local/bin/olympus-export
+
+if [ ! -e /home/coder/project/CONTAINER-FORGE.md ]; then
+  cat > /home/coder/project/CONTAINER-FORGE.md <<'FORGE_GUIDE'
+# Container Forge
+
+This workspace builds Docker-compatible Linux/amd64 image archives without
+Docker-in-Docker and without mounting a host Docker socket.
+
+## Normal workflow
+
+1. Create a Dockerfile and its build context under `/home/coder`.
+2. Build and export it:
+
+   ```bash
+   cd /home/coder/project
+   container-build my-image:1.0 . -f Dockerfile
+   ```
+
+3. Open **Exports** in Coder and download the completed bundle directory.
+4. In the offline environment, verify `SHA256SUMS`, then use the exact
+   `docker load` command written to `LOAD-IN-SCIF.txt`.
+
+Common options:
+
+```bash
+container-build pytorch-scif:1.0 . \
+  --build-arg CUDA_VERSION=13.0 \
+  --target runtime
+
+container-build opencode-scif:1.0 . --reproducible
+```
+
+For an archive too large for one approved disc, run:
+
+```bash
+container-split /home/coder/exports/<bundle>/<image>.docker.tar 3900M
+```
+
+Registry credentials for private base images can be stored with:
+
+```bash
+container-registry-login registry.example.mil USERNAME
+```
+
+## Important boundaries
+
+- The target is Linux/amd64, matching the intended offline Docker hosts.
+- This workspace builds images but does not run them. Put validation in a
+  Dockerfile test stage and build that stage with `--target`.
+- Build contexts and Dockerfiles must remain under `/home/coder` because
+  that is the only volume mounted into the disposable builder.
+- The builder is recycled after every build so one Dockerfile cannot leave
+  filesystem state behind for the next one.
+FORGE_GUIDE
+fi
+

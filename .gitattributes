@@ -4,3 +4,5 @@
 *.tftpl text eol=lf
 *.sh text eol=lf
 apps/olympus/coder/skills/*/scripts/* text eol=lf
+apps/olympus/coder/runtime/bin/* text eol=lf
+apps/olympus/coder/**/*.py text eol=lf

@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+exec supervisorctl -c "$HOME/.local/state/olympus/supervisord.conf" "$@"

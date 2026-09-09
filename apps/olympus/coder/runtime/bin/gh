@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+coder_cli="$(find /tmp -maxdepth 2 -type f -path '/tmp/coder.*/coder' -print -quit)"
+if [ -n "$coder_cli" ]; then
+  GH_TOKEN="$($coder_cli external-auth access-token github)"
+  export GH_TOKEN
+  export GITHUB_TOKEN="$GH_TOKEN"
+fi
+exec /usr/bin/gh "$@"

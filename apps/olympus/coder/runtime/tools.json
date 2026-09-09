@@ -1,0 +1,11 @@
+{
+  "codex": {"package": "@openai/codex", "bin": "codex", "config": [".codex"]},
+  "claude": {"package": "@anthropic-ai/claude-code", "bin": "claude", "config": [".claude", ".claude.json"]},
+  "opencode": {"package": "opencode-ai", "bin": "opencode", "config": [".config/opencode", ".local/share/opencode"]},
+  "pi": {"package": "@mariozechner/pi-coding-agent", "bin": "pi", "config": [".pi"]},
+  "prime-agent": {"release": "PrimeIntellect-ai/prime-agent", "bin": "prime-agent", "config": [".prime/agent"]},
+  "reasonix": {"package": "reasonix", "bin": "reasonix", "config": [".reasonix"]},
+  "deepseek": {"package": "@deepseek-ai/dsh", "bin": "dsh", "config": [".dsh"]},
+  "openhands": {"package": "@openhands/agent-canvas", "bin": "agent-canvas", "config": [".openhands"]},
+  "grok": {"channel": "https://x.ai/cli/stable", "bin": "grok", "config": [".grok"]}
+}

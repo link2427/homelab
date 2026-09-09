@@ -39,6 +39,12 @@ variable "image" {
   default     = "codercom/example-base:ubuntu"
 }
 
+variable "recovery_home_pvc" {
+  type        = string
+  description = "Administrator-only recovery canary: mount an already cloned same-namespace home PVC. Leave empty for normal templates."
+  default     = ""
+}
+
 variable "github_repositories_json" {
   type        = string
   description = "JSON repository catalog generated at publish time. Keep private repository names out of Git."
@@ -50,8 +56,8 @@ variable "github_repositories_json" {
       trimspace(repo.name) != "" &&
       can(regex("^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\\.git$", repo.url)) &&
       contains(["private", "public"], repo.visibility)
-    ])) && can(length(jsondecode(var.github_repositories_json)) <= 61)
-    error_message = "github_repositories_json must contain at most 61 GitHub repositories with name, .git URL, and private/public visibility fields."
+    ])) && can(length(jsondecode(var.github_repositories_json)) <= 60)
+    error_message = "github_repositories_json must contain at most 60 GitHub repositories with name, .git URL, and private/public visibility fields."
   }
 }
 
@@ -502,6 +508,13 @@ data "coder_parameter" "git_repo" {
     icon        = "/icon/github.svg"
   }
 
+  option {
+    name        = "Clone a GitHub URL"
+    value       = "__repository_url__"
+    description = "Use any repository you can access, including repositories beyond the suggestions."
+    icon        = "/icon/github.svg"
+  }
+
   dynamic "option" {
     for_each = local.github_repositories
 
@@ -583,7 +596,7 @@ locals {
     "__create_repository__" = "create"
     "__fork_repository__"   = "fork"
   }, data.coder_parameter.git_repo.value, "existing")
-  existing_git_repo_url = local.repository_mode == "existing" ? trimsuffix(trimspace(data.coder_parameter.git_repo.value), "/") : ""
+  existing_git_repo_url = local.repository_mode == "existing" ? trimsuffix(trimspace(data.coder_parameter.git_repo.value == "__repository_url__" ? try(data.coder_parameter.repository_url[0].value, "") : data.coder_parameter.git_repo.value), "/") : ""
   fork_source_web_url = local.repository_mode == "fork" ? trimsuffix(
     trimsuffix(trimspace(try(data.coder_parameter.fork_repo_url[0].value, "")), "/"),
     ".git",
@@ -598,7 +611,7 @@ locals {
   git_repo_url = local.repository_mode == "empty" ? "" : (
     local.repository_mode == "existing" ? local.existing_git_repo_url : "https://github.com/${var.github_owner}/${local.git_repo_name}.git"
   )
-  git_repo_set = local.git_repo_url != "" && local.git_repo_name != ""
+  git_repo_set  = local.git_repo_url != "" && local.git_repo_name != ""
   workspace_dir = local.git_repo_set ? "/home/coder/project/${local.git_repo_name}" : "/home/coder/project"
   github_action_url = local.repository_mode == "create" ? "https://github.com/new?owner=${urlencode(var.github_owner)}&name=${urlencode(local.git_repo_name)}" : (
     local.repository_mode == "fork" && local.fork_source_web_url != "" ? "${local.fork_source_web_url}/fork" : ""
@@ -624,19 +637,23 @@ locals {
   } : {}
   profile_environment = merge(
     {
-      "OLYMPUS_CODER_ACCESS_URL"          = "https://coder.jacob-neel.dev"
-      "OLYMPUS_CODER_WILDCARD_DOMAIN"     = "jacob-neel.dev"
-      "OLYMPUS_CODER_OWNER"               = data.coder_workspace_owner.me.name
-      "OLYMPUS_CODER_WORKSPACE"           = data.coder_workspace.me.name
-      "OLYMPUS_CODER_AGENT"               = "main"
-      "OLYMPUS_WORKSPACE_SKILL_BASE_URL"  = "https://raw.githubusercontent.com/link2427/homelab/main/apps/olympus/coder/skills/olympus-workspace"
+      "OLYMPUS_CODER_ACCESS_URL"         = "https://coder.jacob-neel.dev"
+      "OLYMPUS_CODER_WILDCARD_DOMAIN"    = "jacob-neel.dev"
+      "OLYMPUS_CODER_OWNER"              = data.coder_workspace_owner.me.name
+      "OLYMPUS_CODER_WORKSPACE"          = data.coder_workspace.me.name
+      "OLYMPUS_CODER_AGENT"              = "main"
+      "OLYMPUS_WORKSPACE_SKILL_BASE_URL" = "https://raw.githubusercontent.com/link2427/homelab/main/apps/olympus/coder/skills/olympus-workspace"
       # Normal agent workspaces deliberately have no Docker socket. Coder 2.24+
       # otherwise enables Dev Container discovery by default and continuously
       # reports a misleading 500 when it cannot reach Docker.
-      "CODER_AGENT_DEVCONTAINERS_ENABLE"   = "false"
+      "CODER_AGENT_DEVCONTAINERS_ENABLE" = "false"
     },
     var.profile == "agent" ? {
-      "PATH" = "/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      "OLYMPUS_WORKSPACE_DIR"       = local.workspace_dir
+      "OLYMPUS_EXPORTS_BASE_PATH"   = local.exports_base_path
+      "DISABLE_AUTOUPDATER"         = "1"
+      "OPENCODE_DISABLE_AUTOUPDATE" = "true"
+      "PATH"                        = "/opt/olympus/bin:/usr/local/bin:/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     } : {},
     var.profile == "gpu" ? {
       "HF_HOME"                   = "/home/coder/.cache/huggingface"
@@ -673,7 +690,8 @@ resource "coder_agent" "main" {
   os   = "linux"
   arch = "amd64"
 
-  startup_script = <<-EOT
+  startup_script_behavior = "non-blocking"
+  startup_script          = var.profile == "agent" ? "" : <<-EOT
     set -eu
     mkdir -p /home/coder/project /home/coder/.local/bin
     olympus_context_installer="$(mktemp /tmp/olympus-context.XXXXXX)"
@@ -693,319 +711,7 @@ resource "coder_agent" "main" {
       git config --global push.autoSetupRemote true
     fi
     printf '%s\n' '${var.profile}' > /home/coder/.olympus-profile
-    %{if var.profile == "agent"~}
-    mkdir -p /home/coder/.local/bin \
-      /home/coder/.local/lib \
-      /home/coder/.local/share/filebrowser \
-      /home/coder/exports
-    zellij_version="0.44.3"
-    zellij_checksum="a675b0106263113b9cb8f028649bad05c5d2283331fa62b2b36dd275aeaaa4d3"
-    if ! /home/coder/.local/bin/zellij --version 2>/dev/null | grep -Fqx "zellij $${zellij_version}"; then
-      zellij_dir="$(mktemp -d /tmp/olympus-zellij.XXXXXX)"
-      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
-        -o "$${zellij_dir}/zellij.tar.gz" \
-        "https://github.com/zellij-org/zellij/releases/download/v$${zellij_version}/zellij-no-web-x86_64-unknown-linux-musl.tar.gz"
-      tar -xzf "$${zellij_dir}/zellij.tar.gz" -C "$${zellij_dir}" zellij
-      printf '%s  %s\n' "$${zellij_checksum}" "$${zellij_dir}/zellij" | sha256sum -c -
-      install -m 0755 "$${zellij_dir}/zellij" /home/coder/.local/bin/zellij
-      rm -rf "$${zellij_dir}"
-    fi
-    cat > /home/coder/.local/bin/olympus-session <<'SESSION_HELPER'
-    #!/bin/bash
-    set -euo pipefail
-    if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-      echo "Usage: olympus-session SESSION WORKDIR [COMMAND]" >&2
-      exit 2
-    fi
-    session="$1"
-    workdir="$2"
-    shift 2
-    if zellij list-sessions --no-formatting --short 2>/dev/null | grep -Fqx "$session"; then
-      exec zellij attach "$session"
-    fi
-    if [ "$#" -eq 0 ]; then
-      command="/bin/bash"
-    else
-      command="$(command -v "$1")"
-    fi
-    exec zellij --session "$session" options \
-      --default-cwd "$workdir" \
-      --default-shell "$command" \
-      --show-startup-tips false
-    SESSION_HELPER
-    chmod +x /home/coder/.local/bin/olympus-session
-    filebrowser_version="v2.63.5"
-    filebrowser_checksum="b36ad6296db0a749a5adbc792ab5321d11b307106123d44e171b7c158fcca2d9"
-    filebrowser_marker="/home/coder/.local/share/filebrowser/version"
-    installed_filebrowser_version="$(cat "$${filebrowser_marker}" 2>/dev/null || true)"
-    if [ ! -x /home/coder/.local/bin/filebrowser ] || [ "$${installed_filebrowser_version}" != "$${filebrowser_version}" ]; then
-      filebrowser_archive="/tmp/olympus-filebrowser-$${filebrowser_version}.tar.gz"
-      filebrowser_extract_dir="$(mktemp -d /tmp/olympus-filebrowser.XXXXXX)"
-      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
-        -o "$${filebrowser_archive}" \
-        "https://github.com/filebrowser/filebrowser/releases/download/$${filebrowser_version}/linux-amd64-filebrowser.tar.gz"
-      printf '%s  %s\n' "$${filebrowser_checksum}" "$${filebrowser_archive}" | sha256sum -c -
-      tar -xzf "$${filebrowser_archive}" -C "$${filebrowser_extract_dir}" filebrowser
-      install -m 0755 "$${filebrowser_extract_dir}/filebrowser" /home/coder/.local/bin/filebrowser
-      printf '%s\n' "$${filebrowser_version}" > "$${filebrowser_marker}"
-      rm -f "$${filebrowser_extract_dir}/filebrowser" "$${filebrowser_archive}"
-      rmdir "$${filebrowser_extract_dir}"
-    fi
-    cat > /home/coder/.local/bin/olympus-export <<'EXPORT_HELPER'
-    #!/bin/sh
-    set -eu
-    if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-      echo "Usage: olympus-export SOURCE [DOWNLOAD_NAME]" >&2
-      exit 2
-    fi
-    source_path="$1"
-    download_name="$${2:-$(basename "$${source_path}")}"
-    case "$${download_name}" in
-      ""|.|..|*/*) echo "DOWNLOAD_NAME must be a single file or directory name." >&2; exit 2 ;;
-    esac
-    if [ ! -e "$${source_path}" ]; then
-      echo "Source does not exist: $${source_path}" >&2
-      exit 1
-    fi
-    mkdir -p /home/coder/exports
-    rm -rf -- "/home/coder/exports/$${download_name}"
-    cp -a -- "$${source_path}" "/home/coder/exports/$${download_name}"
-    printf 'Export ready: /home/coder/exports/%s\n' "$${download_name}"
-    EXPORT_HELPER
-    chmod +x /home/coder/.local/bin/olympus-export
-    if ! command -v npm >/dev/null 2>&1 || \
-      ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major > 20 || (major === 20 && minor >= 6) ? 0 : 1)' >/dev/null 2>&1; then
-      node_version="v24.18.1"
-      node_dir="/home/coder/.local/lib/node-$${node_version}-linux-x64"
-      if [ ! -x "$${node_dir}/bin/node" ]; then
-        mkdir -p "$${node_dir}"
-        curl -fsSL "https://nodejs.org/dist/$${node_version}/node-$${node_version}-linux-x64.tar.xz" \
-          -o /tmp/olympus-node.tar.xz
-        tar -xJf /tmp/olympus-node.tar.xz -C "$${node_dir}" --strip-components=1
-        rm -f /tmp/olympus-node.tar.xz
-      fi
-      ln -sfn "$${node_dir}/bin/node" /home/coder/.local/bin/node
-      ln -sfn "$${node_dir}/bin/npm" /home/coder/.local/bin/npm
-      ln -sfn "$${node_dir}/bin/npx" /home/coder/.local/bin/npx
-    fi
-    uv_version="0.12.2"
-    uv_checksum="d66e96b5f1ca3b99806eee283a8125d33a0bd669e6e6d9bc4ab7ffda63c41bf4"
-    if ! /home/coder/.local/bin/uv --version 2>/dev/null | grep -Fq "uv $${uv_version}"; then
-      uv_dir="$(mktemp -d /tmp/olympus-uv.XXXXXX)"
-      uv_archive="$${uv_dir}/uv-x86_64-unknown-linux-gnu.tar.gz"
-      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
-        -o "$${uv_archive}" \
-        "https://github.com/astral-sh/uv/releases/download/$${uv_version}/uv-x86_64-unknown-linux-gnu.tar.gz"
-      printf '%s  %s\n' "$${uv_checksum}" "$${uv_archive}" | sha256sum -c -
-      tar -xzf "$${uv_archive}" -C "$${uv_dir}"
-      install -m 0755 "$${uv_dir}/uv-x86_64-unknown-linux-gnu/uv" /home/coder/.local/bin/uv
-      install -m 0755 "$${uv_dir}/uv-x86_64-unknown-linux-gnu/uvx" /home/coder/.local/bin/uvx
-      rm -rf "$${uv_dir}"
-    fi
-    opencode_version="1.18.14"
-    if ! /home/coder/.opencode/bin/opencode --version 2>/dev/null | grep -Fq "$${opencode_version}"; then
-      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -fsSL https://opencode.ai/install | \
-        VERSION="$${opencode_version}" bash
-    fi
-    prime_agent_version="0.7.0"
-    prime_agent_checksum="88b6578518c72cd51a825bc80f28e0fef9a64c67de4a7d6fd7afd7ca1b34da0b"
-    if ! /home/coder/.local/bin/prime-agent --version 2>/dev/null | grep -Fq "$${prime_agent_version}"; then
-      prime_agent_dir="$(mktemp -d /tmp/olympus-prime-agent.XXXXXX)"
-      prime_agent_archive="$${prime_agent_dir}/prime-agent-$${prime_agent_version}.tgz"
-      curl --retry 5 --retry-delay 3 --fail --retry-all-errors -L \
-        -o "$${prime_agent_archive}" \
-        "https://github.com/PrimeIntellect-ai/prime-agent/releases/download/v$${prime_agent_version}/prime-agent-$${prime_agent_version}.tgz"
-      printf '%s  %s\n' "$${prime_agent_checksum}" "$${prime_agent_archive}" | sha256sum -c -
-      npm install --global --prefix /home/coder/.local \
-        --no-fund --no-audit --loglevel=error --progress=false \
-        "$${prime_agent_archive}"
-      rm -rf "$${prime_agent_dir}"
-    fi
-    if ! /home/coder/.local/bin/reasonix --version >/dev/null 2>&1; then
-      npm install --global --prefix /home/coder/.local \
-        --no-fund --no-audit --loglevel=error --progress=false \
-        reasonix@latest
-    fi
-    if ! /home/coder/.local/bin/pi --version >/dev/null 2>&1; then
-      npm install --global --prefix /home/coder/.local \
-        --no-fund --no-audit --loglevel=error --progress=false \
-        @mariozechner/pi-coding-agent@latest
-    fi
-    cat > /home/coder/.local/bin/olympus-agent-update <<'AGENT_UPDATE'
-    #!/bin/bash
-    # Refresh user-space agent CLIs without ever making workspace startup fatal.
-    # Codex and Claude Code are managed separately by their official Coder
-    # modules, both configured for latest releases below.
-    set -u
-    export PATH="/home/coder/.local/bin:/home/coder/.opencode/bin:$PATH"
-    state_dir="/home/coder/.local/state/agent-updates"
-    lock_dir="$${state_dir}/lock"
-    mkdir -p "$${state_dir}"
-    if ! mkdir "$${lock_dir}" 2>/dev/null; then
-      echo "Agent update already running; skipping."
-      exit 0
-    fi
-    trap 'rmdir "$${lock_dir}" 2>/dev/null || true' EXIT
 
-    update_npm_agent() {
-      label="$1"
-      package="$2"
-      binary="$3"
-      latest="$(npm view "$${package}" version 2>/dev/null || true)"
-      installed="$(npm list --global --prefix /home/coder/.local --depth=0 --json "$${package}" 2>/dev/null | \
-        node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{let j=JSON.parse(s);let n=process.argv[1];process.stdout.write(j.dependencies?.[n]?.version||"")}catch{}})' "$${package}" || true)"
-      if [ -z "$${latest}" ]; then
-        echo "$${label}: registry unavailable; retaining $${installed:-installed version}."
-        return 0
-      fi
-      if [ "$${installed}" = "$${latest}" ] && command -v "$${binary}" >/dev/null 2>&1; then
-        echo "$${label}: current ($${installed})."
-        return 0
-      fi
-      echo "$${label}: updating $${installed:-not installed} -> $${latest}."
-      if npm install --global --prefix /home/coder/.local \
-        --no-fund --no-audit --loglevel=error --progress=false \
-        "$${package}@$${latest}" && command -v "$${binary}" >/dev/null 2>&1; then
-        "$${binary}" --version 2>/dev/null | head -n 1 || true
-      else
-        echo "$${label}: update failed; workspace will continue." >&2
-      fi
-    }
-
-    update_npm_agent "Pi" "@mariozechner/pi-coding-agent" "pi"
-    update_npm_agent "Reasonix" "reasonix" "reasonix"
-
-    if command -v opencode >/dev/null 2>&1; then
-      opencode upgrade --method curl >/dev/null 2>&1 || \
-        echo "OpenCode: update check failed; retaining installed version." >&2
-    fi
-    if command -v prime-agent >/dev/null 2>&1; then
-      PRIME_AGENT_INSTALL_UV=1 prime-agent update >/dev/null 2>&1 || \
-        echo "Prime Agent: update check failed; retaining installed version." >&2
-    fi
-    date -u +%FT%TZ > "$${state_dir}/last-attempt"
-    AGENT_UPDATE
-    chmod +x /home/coder/.local/bin/olympus-agent-update
-    /home/coder/.local/bin/olympus-agent-update || \
-      echo "Agent updates encountered an unexpected error; workspace startup will continue." >&2
-    python3 - <<'PY'
-    import json
-    import os
-    import re
-    from pathlib import Path
-
-    reasonix_home = Path("/home/coder/.reasonix")
-    reasonix_home.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(reasonix_home, 0o700)
-
-    # Talos keeps unprivileged user namespaces disabled and the Coder namespace
-    # enforces the Kubernetes Baseline policy, so Bubblewrap cannot create its
-    # nested namespace. Keep Reasonix's Bash tool usable while the outer Coder
-    # pod remains non-root, capability-free, and protected by RuntimeDefault
-    # seccomp. File writer tools still honor Reasonix's workspace-root policy.
-    config = reasonix_home / "config.toml"
-    if config.exists():
-        content = config.read_text(encoding="utf-8")
-        section = re.search(r"(?ms)^\[sandbox\]\s*\n(?P<body>.*?)(?=^\[|\Z)", content)
-        if section:
-            body = section.group("body")
-            if re.search(r"(?m)^\s*bash\s*=", body):
-                updated_body = re.sub(
-                    r'(?m)^\s*bash\s*=.*$',
-                    'bash = "off"',
-                    body,
-                    count=1,
-                )
-            else:
-                updated_body = body + 'bash = "off"\n'
-            content = content[:section.start("body")] + updated_body + content[section.end("body"):]
-        else:
-            content = content.rstrip() + '\n\n[sandbox]\nbash = "off"\nnetwork = true\n'
-    else:
-        content = '[sandbox]\nbash = "off"\nnetwork = true\n'
-
-    config_tmp = reasonix_home / "config.toml.coder.tmp"
-    config_tmp.write_text(content, encoding="utf-8")
-    os.chmod(config_tmp, 0o600)
-    os.replace(config_tmp, config)
-
-    key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
-    if key:
-        credentials = reasonix_home / ".env"
-        retained = []
-        if credentials.exists():
-            for line in credentials.read_text(encoding="utf-8").splitlines():
-                normalized = line.strip()
-                if normalized.startswith("DEEPSEEK_API_KEY="):
-                    continue
-                if normalized.startswith("export DEEPSEEK_API_KEY="):
-                    continue
-                retained.append(line)
-
-        retained.append(f"DEEPSEEK_API_KEY={key}")
-        temporary = reasonix_home / ".env.coder.tmp"
-        temporary.write_text("\n".join(retained) + "\n", encoding="utf-8")
-        os.chmod(temporary, 0o600)
-        os.replace(temporary, credentials)
-
-        prime_home = Path("/home/coder/.prime/agent")
-        prime_home.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(prime_home, 0o700)
-        prime_auth = prime_home / "auth.json"
-        try:
-            auth = json.loads(prime_auth.read_text(encoding="utf-8")) if prime_auth.exists() else {}
-        except (json.JSONDecodeError, OSError):
-            auth = {}
-        if not isinstance(auth, dict):
-            auth = {}
-        auth["deepseek"] = {"type": "api_key", "key": "DEEPSEEK_API_KEY"}
-        prime_auth_tmp = prime_home / "auth.json.coder.tmp"
-        prime_auth_tmp.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
-        os.chmod(prime_auth_tmp, 0o600)
-        os.replace(prime_auth_tmp, prime_auth)
-    PY
-    touch /home/coder/.profile
-    grep -Fqx 'export PATH="/home/coder/.local/bin:$PATH"' /home/coder/.profile || \
-      printf '%s\n' 'export PATH="/home/coder/.local/bin:$PATH"' >> /home/coder/.profile
-    if [ -x /usr/bin/gh ]; then
-      cat > /home/coder/.local/bin/gh <<'GH_WRAPPER'
-    #!/bin/sh
-    set -eu
-    coder_cli="$(find /tmp -maxdepth 2 -type f -path '/tmp/coder.*/coder' -print -quit)"
-    if [ -n "$coder_cli" ]; then
-      GH_TOKEN="$($coder_cli external-auth access-token github)"
-      export GH_TOKEN
-      export GITHUB_TOKEN="$GH_TOKEN"
-    fi
-    exec /usr/bin/gh "$@"
-    GH_WRAPPER
-      chmod +x /home/coder/.local/bin/gh
-    fi
-    if ! curl -fsS "http://127.0.0.1:13339${local.exports_base_path}/" >/dev/null 2>&1; then
-      nohup /home/coder/.local/bin/filebrowser \
-        --address 127.0.0.1 \
-        --port 13339 \
-        --root /home/coder/exports \
-        --database /home/coder/.local/share/filebrowser/filebrowser.db \
-        --baseURL '${local.exports_base_path}' \
-        --noauth \
-        > /home/coder/.local/share/filebrowser/server.log 2>&1 &
-    fi
-    mkdir -p /home/coder/.local/state/reasonix
-    if ! curl -fsS http://127.0.0.1:8787/ >/dev/null 2>&1; then
-      rm -f /home/coder/.local/state/reasonix/serve.pid \
-        /home/coder/.local/state/reasonix/serve.addr
-      (
-        cd '${local.workspace_dir}'
-        nohup /home/coder/.local/bin/reasonix serve \
-          --addr 127.0.0.1:8787 \
-          --auth none \
-          --pid-file /home/coder/.local/state/reasonix/serve.pid \
-          --port-file /home/coder/.local/state/reasonix/serve.addr \
-          > /home/coder/.local/state/reasonix/serve.log 2>&1 &
-      )
-    fi
-    %{endif~}
     %{if var.profile == "gpu"~}
     mkdir -p /home/coder/.cache/huggingface \
       /home/coder/.cache/matplotlib \
@@ -1084,7 +790,7 @@ resource "coder_script" "browser_assisted_repository" {
 }
 
 module "code_server" {
-  count      = data.coder_workspace.me.start_count
+  count      = var.profile != "agent" ? data.coder_workspace.me.start_count : 0
   source     = "registry.coder.com/coder/code-server/coder"
   version    = "1.5.2"
   agent_id   = coder_agent.main.id
@@ -1097,25 +803,6 @@ module "jupyterlab" {
   source   = "registry.coder.com/coder/jupyterlab/coder"
   version  = "1.2.2"
   agent_id = coder_agent.main.id
-}
-
-module "codex" {
-  count         = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  source        = "registry.coder.com/coder-labs/codex/coder"
-  version       = "5.3.0"
-  agent_id      = coder_agent.main.id
-  workdir       = local.workspace_dir
-  codex_version = "latest"
-}
-
-module "claude_code" {
-  count               = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  source              = "registry.coder.com/coder/claude-code/coder"
-  version             = "5.4.0"
-  agent_id            = coder_agent.main.id
-  workdir             = local.workspace_dir
-  claude_code_version = "latest"
-  disable_autoupdater = false
 }
 
 resource "coder_app" "web_preview" {
@@ -1148,128 +835,6 @@ resource "coder_app" "exports" {
     interval  = 5
     threshold = 12
   }
-}
-
-resource "coder_app" "codex" {
-  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  agent_id     = coder_agent.main.id
-  slug         = "codex"
-  display_name = "Codex"
-  icon         = "/icon/openai.svg"
-  group        = "AI Agents"
-  order        = 10
-  open_in      = "slim-window"
-  command      = <<-EOT
-    #!/bin/bash
-    set -e
-    export PATH="/home/coder/.local/bin:$PATH"
-    exec olympus-session codex '${local.workspace_dir}' codex
-  EOT
-}
-
-resource "coder_app" "claude_code" {
-  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  agent_id     = coder_agent.main.id
-  slug         = "claude-code"
-  display_name = "Claude Code"
-  icon         = "/icon/claude.svg"
-  group        = "AI Agents"
-  order        = 20
-  open_in      = "slim-window"
-  command      = <<-EOT
-    #!/bin/bash
-    set -e
-    export PATH="/home/coder/.local/bin:$PATH"
-    exec olympus-session claude-code '${local.workspace_dir}' claude
-  EOT
-}
-
-resource "coder_app" "opencode_cli" {
-  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  agent_id     = coder_agent.main.id
-  slug         = "opencode-cli"
-  display_name = "OpenCode CLI"
-  icon         = "/icon/opencode.svg"
-  group        = "AI Agents"
-  order        = 30
-  open_in      = "slim-window"
-  command      = <<-EOT
-    #!/bin/bash
-    set -e
-    export PATH="/home/coder/.local/bin:/home/coder/.opencode/bin:$PATH"
-    exec olympus-session opencode '${local.workspace_dir}' opencode
-  EOT
-}
-
-resource "coder_app" "pi" {
-  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  agent_id     = coder_agent.main.id
-  slug         = "pi"
-  display_name = "Pi"
-  icon         = "/icon/terminal.svg"
-  group        = "AI Agents"
-  order        = 40
-  open_in      = "slim-window"
-  command      = <<-EOT
-    #!/bin/bash
-    set -e
-    export PATH="/home/coder/.local/bin:$PATH"
-    exec olympus-session pi '${local.workspace_dir}' pi
-  EOT
-}
-
-resource "coder_app" "prime_agent" {
-  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  agent_id     = coder_agent.main.id
-  slug         = "prime-agent"
-  display_name = "Prime Agent"
-  icon         = "https://www.primeintellect.ai/favicon.ico"
-  group        = "AI Agents"
-  order        = 50
-  open_in      = "slim-window"
-  command      = <<-EOT
-    #!/bin/bash
-    set -e
-    export PATH="/home/coder/.local/bin:$PATH"
-    export PRIME_AGENT_INSTALL_UV=1
-    exec olympus-session prime-agent '${local.workspace_dir}' prime-agent
-  EOT
-}
-
-resource "coder_app" "reasonix_desktop" {
-  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  agent_id     = coder_agent.main.id
-  slug         = "reasonix-desktop"
-  display_name = "Reasonix Desktop"
-  icon         = "/icon/code.svg"
-  group        = "AI Agents"
-  order        = 60
-  url          = "http://localhost:8787"
-  subdomain    = true
-  share        = "owner"
-
-  healthcheck {
-    url       = "http://localhost:8787/"
-    interval  = 5
-    threshold = 24
-  }
-}
-
-resource "coder_app" "reasonix" {
-  count        = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
-  agent_id     = coder_agent.main.id
-  slug         = "reasonix"
-  display_name = "Reasonix CLI"
-  icon         = "/icon/terminal.svg"
-  group        = "AI Agents"
-  order        = 70
-  open_in      = "slim-window"
-  command      = <<-EOT
-    #!/bin/bash
-    set -e
-    export PATH="/home/coder/.local/bin:$PATH"
-    exec olympus-session reasonix '${local.workspace_dir}' reasonix
-  EOT
 }
 
 resource "coder_app" "github_repository" {
@@ -1448,7 +1013,7 @@ resource "kubernetes_deployment_v1" "main" {
         volume {
           name = "home"
           persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim_v1.home.metadata[0].name
+            claim_name = var.recovery_home_pvc != "" ? var.recovery_home_pvc : kubernetes_persistent_volume_claim_v1.home.metadata[0].name
             read_only  = false
           }
         }
@@ -1507,5 +1072,29 @@ resource "coder_metadata" "workspace" {
   item {
     key   = "Working directory"
     value = local.workspace_dir
+  }
+}
+
+# Shared runtime is bundled by the publisher; only Agent and Forge instantiate it.
+module "runtime" {
+  source        = "./runtime"
+  count         = var.profile == "agent" ? data.coder_workspace.me.start_count : 0
+  agent_id      = coder_agent.main.id
+  workspace_dir = local.workspace_dir
+}
+
+data "coder_parameter" "repository_url" {
+  count        = data.coder_parameter.git_repo.value == "__repository_url__" ? 1 : 0
+  name         = "repository_url"
+  display_name = "GitHub repository URL"
+  description  = "Clone a repository without changing any existing checkout."
+  type         = "string"
+  form_type    = "input"
+  default      = ""
+  mutable      = true
+  order        = 11
+  validation {
+    regex = "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(\\.git)?/?$"
+    error = "Enter https://github.com/OWNER/REPOSITORY."
   }
 }

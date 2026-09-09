@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+[ "$#" -ge 1 ] && [ "$#" -le 2 ] || { echo 'Usage: olympus-export SOURCE [DOWNLOAD_NAME]' >&2; exit 2; }
+source_path="$1"
+name="${2:-$(basename "$source_path")}"
+case "$name" in ''|.|..|*/*) echo 'Choose a single file or directory name.' >&2; exit 2;; esac
+destination="$HOME/exports/$name"
+mkdir -p "$HOME/exports"
+if [ -e "$destination" ]; then echo "Already exists: $destination" >&2; exit 1; fi
+cp -a -- "$source_path" "$destination"
+printf 'Export ready: %s\n' "$destination"

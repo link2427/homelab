@@ -1,0 +1,15 @@
+#!/bin/bash
+set -euo pipefail
+export PATH="/opt/olympus/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  echo 'Usage: olympus-session SESSION WORKDIR [COMMAND]' >&2
+  exit 2
+fi
+session="$1"
+workdir="$2"
+if zellij list-sessions --no-formatting --short 2>/dev/null | grep -Fqx "$session"; then
+  exec zellij attach "$session"
+fi
+command="$(command -v "${3:-bash}")" || { olympus-doctor; exit 1; }
+mkdir -p "$workdir"
+exec zellij --session "$session" options --default-cwd "$workdir" --default-shell "$command" --show-startup-tips false

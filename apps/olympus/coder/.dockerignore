@@ -1,0 +1,7 @@
+**/.terraform
+**/*.tfstate*
+**/__pycache__
+**/*.pyc
+**/*.secret.yaml
+**/*credentials*.yaml
+tests
