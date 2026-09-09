@@ -8,12 +8,14 @@ import {createInterface} from 'node:readline';
 const port = Number(process.env.OLYMPUS_DSH_PORT || 13340);
 const upstreamPort = Number(process.env.OLYMPUS_DSH_BACKEND_PORT || 13346);
 const e = process.env;
-const publicHost = e.OLYMPUS_CODER_WORKSPACE &&
-  `deepseek--${e.OLYMPUS_CODER_AGENT}--${e.OLYMPUS_CODER_WORKSPACE}--${e.OLYMPUS_CODER_OWNER}.${e.OLYMPUS_CODER_WILDCARD_DOMAIN}`;
-const hosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`, ...(publicHost ? [publicHost] : [])]);
+const publicHosts = e.OLYMPUS_CODER_WORKSPACE ? [
+  `deepseek--${e.OLYMPUS_CODER_WORKSPACE}--${e.OLYMPUS_CODER_OWNER}.${e.OLYMPUS_CODER_WILDCARD_DOMAIN}`,
+  `deepseek--${e.OLYMPUS_CODER_AGENT}--${e.OLYMPUS_CODER_WORKSPACE}--${e.OLYMPUS_CODER_OWNER}.${e.OLYMPUS_CODER_WILDCARD_DOMAIN}`,
+] : [];
+const hosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`, ...publicHosts]);
 let token;
 const child = spawn('/opt/olympus/bin/dsh', ['web', '--no-open', '--host', '127.0.0.1',
-  '--port', String(upstreamPort), ...(publicHost ? ['--trusted-host', publicHost] : [])],
+  '--port', String(upstreamPort), ...publicHosts.flatMap(host => ['--trusted-host', host])],
   {stdio: ['ignore', 'pipe', 'pipe']});
 for (const stream of [child.stdout, child.stderr]) {
   createInterface({input: stream}).on('line', line => {
