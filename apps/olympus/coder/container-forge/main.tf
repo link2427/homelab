@@ -471,7 +471,7 @@ locals {
     "OLYMPUS_EXPORTS_BASE_PATH"        = local.exports_base_path
     "DISABLE_AUTOUPDATER"              = "1"
     "OPENCODE_DISABLE_AUTOUPDATE"      = "true"
-    "GROK_DISABLE_AUTOUPDATER"          = "1"
+    "GROK_DISABLE_AUTOUPDATER"         = "1"
     "PATH"                             = "/opt/olympus/bin:/usr/local/bin:/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     "FORGE_NAMESPACE"                  = var.namespace
     "FORGE_BUILDER_POD"                = local.builder_pod
@@ -798,10 +798,11 @@ resource "kubernetes_deployment_v1" "main" {
         service_account_name = kubernetes_service_account_v1.workspace.metadata[0].name
 
         security_context {
-          run_as_non_root = true
-          run_as_user     = 1000
-          run_as_group    = 1000
-          fs_group        = 1000
+          run_as_non_root        = true
+          run_as_user            = 1000
+          run_as_group           = 1000
+          fs_group               = 1000
+          fs_group_change_policy = "OnRootMismatch"
           seccomp_profile {
             type = "RuntimeDefault"
           }

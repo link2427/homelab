@@ -653,7 +653,7 @@ locals {
       "OLYMPUS_EXPORTS_BASE_PATH"   = local.exports_base_path
       "DISABLE_AUTOUPDATER"         = "1"
       "OPENCODE_DISABLE_AUTOUPDATE" = "true"
-      "GROK_DISABLE_AUTOUPDATER"     = "1"
+      "GROK_DISABLE_AUTOUPDATER"    = "1"
       "PATH"                        = "/opt/olympus/bin:/usr/local/bin:/home/coder/.local/bin:/home/coder/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     } : {},
     var.profile == "gpu" ? {
@@ -956,10 +956,11 @@ resource "kubernetes_deployment_v1" "main" {
         runtime_class_name = data.coder_parameter.gpu.value != "none" ? "nvidia" : null
 
         security_context {
-          run_as_non_root = true
-          run_as_user     = 1000
-          run_as_group    = 1000
-          fs_group        = 1000
+          run_as_non_root        = true
+          run_as_user            = 1000
+          run_as_group           = 1000
+          fs_group               = 1000
+          fs_group_change_policy = "OnRootMismatch"
           seccomp_profile {
             type = "RuntimeDefault"
           }
