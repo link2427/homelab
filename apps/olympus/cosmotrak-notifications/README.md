@@ -46,10 +46,22 @@ subject configuration fails closed. Shared Authentik scope mappings stay intact.
 Untrusted identity headers do not grant access. The public API hostname refuses
 management routes, while management refuses installation API and metrics paths.
 
-**Sends are disabled.** No APNs key was found in the approved secret inventory.
-Missing fields are `APNS_TEAM_ID`, `APNS_KEY_ID`, and `APNS_PRIVATE_KEY`. Keep
-`DELIVERY_ENABLED=false` until those keys are configured and the approved physical
-iOS/Mac test phase begins. The native
+**General and test sends are disabled.** APNs credentials belong in the existing
+application Secret: shared `APNS_TEAM_ID`, plus `APNS_SANDBOX_KEY_ID`,
+`APNS_SANDBOX_PRIVATE_KEY`, `APNS_PRODUCTION_KEY_ID` and
+`APNS_PRODUCTION_PRIVATE_KEY`. Each environment uses a distinct topic-specific
+key, JWT cache and HTTP/2 connection pool. Never use a key from the other
+environment as a fallback. The published native project uses team `4H3J77P7TR`;
+confirm it in Apple Developer before key creation. The approved store had no APNs
+keys during the September 10 starting inventory; current import status belongs in
+the private operational handoff, not a plaintext manifest.
+
+Keep `DELIVERY_ENABLED=false` throughout physical verification. Enable only
+`TEST_DELIVERY_ENABLED` for the controlled test window: that gate permits only
+campaigns explicitly targeting one currently designated test installation, with
+all consent and frequency checks retained. Set both flags false to pause all
+sends. The app repo's `docs/device-verification.md` gives the exact test sequence.
+The native
 `COSMOTRAK_REMOTE_NOTIFICATIONS_ENABLED` release flag stays **NO** until deployed
 contract checks and physical-device tests pass. The API topic for both native
 platforms is `neel-industries.Cosmotrak`; widgets never register.

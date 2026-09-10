@@ -58,7 +58,7 @@ spec:
       - name: registry
       initContainers:
       - name: migrate
-        image: ghcr.io/link2427/cosmotrak-notifications@sha256:2c8a329361654c4d6de9c60708ffd675ad698f28800307443cd8caecd47c283b
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:bdfa6f89606fc6f6ee9d4e8509a1d23ebbf14beb73e16c16e04df73ac5c7b722
         command:
         - alembic
         - upgrade
@@ -86,7 +86,7 @@ spec:
           mountPath: /tmp
       containers:
       - name: api
-        image: ghcr.io/link2427/cosmotrak-notifications@sha256:2c8a329361654c4d6de9c60708ffd675ad698f28800307443cd8caecd47c283b
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:bdfa6f89606fc6f6ee9d4e8509a1d23ebbf14beb73e16c16e04df73ac5c7b722
         securityContext: *id001
         envFrom: *id002
         resources:
@@ -182,7 +182,7 @@ spec:
       - name: registry
       initContainers:
       - name: migrate
-        image: ghcr.io/link2427/cosmotrak-notifications@sha256:2c8a329361654c4d6de9c60708ffd675ad698f28800307443cd8caecd47c283b
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:bdfa6f89606fc6f6ee9d4e8509a1d23ebbf14beb73e16c16e04df73ac5c7b722
         command:
         - alembic
         - upgrade
@@ -210,7 +210,7 @@ spec:
           mountPath: /tmp
       containers:
       - name: worker
-        image: ghcr.io/link2427/cosmotrak-notifications@sha256:2c8a329361654c4d6de9c60708ffd675ad698f28800307443cd8caecd47c283b
+        image: ghcr.io/link2427/cosmotrak-notifications@sha256:bdfa6f89606fc6f6ee9d4e8509a1d23ebbf14beb73e16c16e04df73ac5c7b722
         securityContext: *id001
         envFrom: *id002
         resources:

@@ -10,5 +10,6 @@ data:
   OIDC_ISSUER: https://auth.jacob-neel.dev/application/o/cosmotrak-notifications/
   APNS_TOPIC: neel-industries.Cosmotrak
   DELIVERY_ENABLED: "false"
+  TEST_DELIVERY_ENABLED: "false"
   DEVELOPMENT: "false"
   WORKER_POLL_SECONDS: "15"
