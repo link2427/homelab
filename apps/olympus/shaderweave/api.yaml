@@ -34,7 +34,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: ghcr.io/link2427/shaderweave-api@sha256:b4d9844a1ebb0fe320c749cbe6d99769665d0bd7e2ea1fd0b5e24050ee36a262
+          image: ghcr.io/link2427/shaderweave-api@sha256:895240dee31f5f52fa414a85e3265ab280627627fde1e735e5ee397fa41621be
           ports:
             - name: http
               containerPort: 3001
