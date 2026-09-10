@@ -1,0 +1,95 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: satellite-dev-r2-20260910
+  namespace: satellite-data-dev
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 6000
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: satellite-data-publisher
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      imagePullSecrets:
+      - name: satellite-data-registry
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: satellite-data-status
+                app.kubernetes.io/part-of: satellite-data
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: publisher
+        image: ghcr.io/link2427/satellite-data-api@sha256:e8f8b811c9d85794c5cad946af5ff443cda664f1f5d0779c44b53d0dc4330fab
+        args:
+        - 'python3 /app/scripts/local_publisher.py /config/publisher.json --migrate-dev-storage-from
+          /config/s3-rollback.json
+
+          python3 /config/import-catalog.py /tmp/verified-source-catalog.db /config/source-catalog.json
+
+          python3 /app/scripts/local_publisher.py /config/publisher.json --refresh-horizons
+
+          python3 /app/scripts/local_publisher.py /config/publisher.json --reuse-snapshot
+          --publish'
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: '2'
+            memory: 2Gi
+            ephemeral-storage: 512Mi
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: config
+          mountPath: /config
+          readOnly: true
+        - name: credentials
+          mountPath: /run/secrets/r2
+          readOnly: true
+        - name: temporary
+          mountPath: /tmp
+        command:
+        - /usr/bin/tini
+        - -g
+        - --
+        - /bin/sh
+        - -ec
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: satellite-data
+      - name: config
+        configMap:
+          name: satellite-data-publisher
+      - name: credentials
+        secret:
+          secretName: satellite-data-r2
+          defaultMode: 288
+      - name: temporary
+        emptyDir:
+          sizeLimit: 256Mi
