@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: satellite-dev-r2-20260910
+  name: satellite-dev-r2-retry-20260910
   namespace: satellite-data-dev
 spec:
   backoffLimit: 0
@@ -36,14 +36,9 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: publisher
-        image: ghcr.io/link2427/satellite-data-api@sha256:e8f8b811c9d85794c5cad946af5ff443cda664f1f5d0779c44b53d0dc4330fab
+        image: ghcr.io/link2427/satellite-data-api@sha256:fa1d7dea2f700ad77768ab2399b86055f703a2518d44c44cb1c1451a9d9dcb3e
         args:
-        - 'python3 /app/scripts/local_publisher.py /config/publisher.json --migrate-dev-storage-from
-          /config/s3-rollback.json
-
-          python3 /config/import-catalog.py /tmp/verified-source-catalog.db /config/source-catalog.json
-
-          python3 /app/scripts/local_publisher.py /config/publisher.json --refresh-horizons
+        - 'python3 /app/scripts/local_publisher.py /config/publisher.json --refresh-horizons
 
           python3 /app/scripts/local_publisher.py /config/publisher.json --reuse-snapshot
           --publish'
