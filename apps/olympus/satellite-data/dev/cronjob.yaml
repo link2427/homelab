@@ -45,7 +45,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
           containers:
           - name: publisher
-            image: ghcr.io/link2427/satellite-data-api@sha256:f2748e998997c430e529311af2c0a78bd0979fc40a881b01c7e4c909cd3f2512
+            image: ghcr.io/link2427/satellite-data-api@sha256:e8f8b811c9d85794c5cad946af5ff443cda664f1f5d0779c44b53d0dc4330fab
             args:
             - /config/publisher.json
             securityContext:
@@ -70,7 +70,7 @@ spec:
               mountPath: /config
               readOnly: true
             - name: credentials
-              mountPath: /run/secrets/s3
+              mountPath: /run/secrets/r2
               readOnly: true
             - name: temporary
               mountPath: /tmp
@@ -83,7 +83,7 @@ spec:
               name: satellite-data-publisher
           - name: credentials
             secret:
-              secretName: satellite-data-s3
+              secretName: satellite-data-r2
               defaultMode: 288
           - name: temporary
             emptyDir:

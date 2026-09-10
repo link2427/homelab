@@ -6,7 +6,70 @@ metadata:
 data:
   publisher.json: "{\n  \"environment\": \"dev\",\n  \"root\": \"/data/dev\",\n  \"\
     app\": \"/app/SatelliteDataApi.dll\",\n  \"dotnet\": \"/usr/share/dotnet/dotnet\"\
+    ,\n  \"credentials\": \"/run/secrets/r2/credentials.json\",\n  \"allow_production_publish\"\
+    : false,\n  \"storage\": {\n    \"provider\": \"r2\",\n    \"account_id\": \"\
+    52018eaf0359596038f45ce3b2443891\",\n    \"bucket\": \"cosmotrak-data-dev\",\n\
+    \    \"region\": \"auto\",\n    \"prefix\": \"Satellite_Database/\"\n  }\n}"
+  s3-rollback.json: "{\n  \"environment\": \"dev\",\n  \"root\": \"/data/dev\",\n\
+    \  \"app\": \"/app/SatelliteDataApi.dll\",\n  \"dotnet\": \"/usr/share/dotnet/dotnet\"\
     ,\n  \"credentials\": \"/run/secrets/s3/credentials.json\",\n  \"bootstrap_database\"\
     : \"/data/dev/bootstrap/baseline.db\",\n  \"allow_production_publish\": false,\n\
     \  \"storage\": {\n    \"bucket\": \"cosmotrak-data-dev\",\n    \"region\": \"\
     us-east-1\",\n    \"prefix\": \"Satellite_Database/\"\n  }\n}"
+  import-catalog.py: "\"\"\"One-time dev catalog reuse during a shared CelesTrak cooldown.\n\
+    \nInput is the checksum-verified, still-fresh published S3 database. Only Satellites\n\
+    and LastUpdates are refreshed; all launch/history/cursor/cache data stays local.\n\
+    This is NOT a Horizons regeneration or publication success marker.\n\"\"\"\nimport\
+    \ datetime as dt\nimport fcntl\nimport hashlib\nimport json\nfrom pathlib import\
+    \ Path\nimport sqlite3\nimport sys\nimport time\n\nroot = Path('/data/dev')\n\
+    source = Path(sys.argv[1])\nprovenance = json.loads(Path(sys.argv[2]).read_text())\n\
+    deadline = time.monotonic() + 300\nwhile not source.with_suffix('.ready').exists():\n\
+    \    if time.monotonic() > deadline:\n        raise TimeoutError('Verified input\
+    \ was not supplied; dev state left unchanged')\n    time.sleep(1)\nassert hashlib.sha256(source.read_bytes()).hexdigest()\
+    \ == provenance['sha256']\nwith (root/'publisher.lock').open('a') as lock:\n \
+    \   fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\n    target = json.loads((root/'publisher-target.json').read_text())\n\
+    \    assert target['environment'] == 'dev' and target['provider'] == 'r2'\n  \
+    \  status = json.loads((root/'status.json').read_text())\n    backup = Path(status['migration_backup'])\n\
+    \    assert (backup/'manifest.json').is_file() and (backup/'working.db').is_file()\n\
+    \    with sqlite3.connect((root/'working.db').as_uri(), uri=True) as db:\n   \
+    \     # This is a closed, checksummed export, not a live WAL database.\n     \
+    \   db.execute('ATTACH DATABASE ? AS incoming', (source.as_uri()+'?mode=ro&immutable=1',))\n\
+    \        assert db.execute('PRAGMA incoming.integrity_check').fetchone()[0] ==\
+    \ 'ok'\n        updated = db.execute('SELECT MAX(LastUpdated) FROM incoming.LastUpdates').fetchone()[0]\n\
+    \        age = dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(updated).replace(tzinfo=dt.timezone.utc)\n\
+    \        assert dt.timedelta() <= age < dt.timedelta(hours=26), 'Source catalog\
+    \ no longer meets freshness gate'\n        count = db.execute('SELECT COUNT(*)\
+    \ FROM incoming.Satellites').fetchone()[0]\n        assert count >= db.execute('SELECT\
+    \ COUNT(*) FROM Satellites').fetchone()[0] * .8\n        tables = [r[0] for r\
+    \ in db.execute(\"SELECT name FROM sqlite_master WHERE type='table'\")\n     \
+    \             if r[0] not in ('Satellites', 'LastUpdates', 'sqlite_sequence')]\n\
+    \        def protected():\n            return {table: hashlib.sha256(json.dumps(db.execute('SELECT\
+    \ * FROM \"'+table+'\" ORDER BY rowid').fetchall()).encode()).hexdigest()\n  \
+    \                  for table in tables}\n        before = protected()\n      \
+    \  db.execute('BEGIN IMMEDIATE')\n        for table in ('Satellites', 'LastUpdates'):\n\
+    \            assert db.execute(f'PRAGMA table_info({table})').fetchall() == db.execute(f'PRAGMA\
+    \ incoming.table_info({table})').fetchall()\n            db.execute(f'DELETE FROM\
+    \ {table}')\n            db.execute(f'INSERT INTO {table} SELECT * FROM incoming.{table}')\n\
+    \        assert before == protected(), 'An unrelated table changed'\n        assert\
+    \ db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'\n        assert not\
+    \ db.execute('PRAGMA foreign_key_check').fetchall()\n    report = {'source_sha256':\
+    \ provenance['sha256'], 'source_url': provenance['url'],\n              'satellites_updated_at':\
+    \ updated, 'satellite_count': count,\n              'protected_tables_unchanged':\
+    \ before,\n              'state_files_unchanged': {str(p.relative_to(root/'state')):\
+    \ hashlib.sha256(p.read_bytes()).hexdigest()\n                               \
+    \         for p in (root/'state').rglob('*') if p.is_file()}}\n    (root/'catalog-reuse.json').write_text(json.dumps(report,\
+    \ indent=2))\n    print(json.dumps(report, indent=2), flush=True)\n"
+  source-catalog.json: "{\n  \"published_key\": \"Satellite_Database/satellite-database-2026-09-09.db\"\
+    ,\n  \"sha256\": \"0e9325b2c87ac5598b3562aeff1fba954e1ea3aca5b20d0c1d163e54ae89f31d\"\
+    ,\n  \"published_validation\": {\n    \"counts\": {\n      \"Satellites\": 14622,\n\
+    \      \"Launches\": 8001,\n      \"Agencies\": 350,\n      \"LauncherConfigurations\"\
+    : 532,\n      \"CelestialEphemerisSamples\": 2123,\n      \"CelestialOrbitEphemerisSamples\"\
+    : 12010,\n      \"CelestialBodyMetadata\": 11,\n      \"SpacecraftEphemerisSamples\"\
+    : 2895,\n      \"SpacecraftMetadata\": 15,\n      \"CelestialObjectMedia\": 30,\n\
+    \      \"CelestialObjectFacts\": 11,\n      \"SpaceflightNewsItems\": 396\n  \
+    \  },\n    \"satellites_updated_at\": \"2026-09-09T04:53:29.515589+00:00\",\n\
+    \    \"median_tle_epoch\": \"2026-09-08T15:58:08.145120+00:00\",\n    \"source_verified_future_epochs\"\
+    : []\n  },\n  \"last_published\": \"2026-09-09T04:54:53.990764+00:00\",\n  \"\
+    url\": \"https://cosmotrak-data.s3.us-east-1.amazonaws.com/Satellite_Database/satellite-database-2026-09-09.db\"\
+    ,\n  \"satellite_count\": 14622,\n  \"satellites_updated_at\": \"2026-09-09 04:53:29.5155894\"\
+    \n}"
