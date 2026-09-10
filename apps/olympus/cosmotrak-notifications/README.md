@@ -37,8 +37,13 @@ local PostgreSQL test database; a full R2 volume restore has not been exercised.
 the namespace's encrypted authentication for the private GHCR image. Credentials
 must never be printed or committed in plaintext. OIDC client fields also live in
 Authentik's encrypted secret; its Flux-managed Cosmotrak blueprint permits only
-the existing administrator account. Management sessions are verified by the app;
-untrusted identity headers do not grant access. The public API hostname refuses
+the existing administrator account. Management sessions are verified by the app.
+`OIDC_ADMIN_SUBJECT` in the application Secret pins that administrator's Authentik
+user UUID, matching this provider's `user_uuid` subject mode. Both subject and
+administrator email must match a valid signed identity; the provider's default
+false email-verification claim does not grant or deny account ownership. Missing
+subject configuration fails closed. Shared Authentik scope mappings stay intact.
+Untrusted identity headers do not grant access. The public API hostname refuses
 management routes, while management refuses installation API and metrics paths.
 
 **Sends are disabled.** No APNs key was found in the approved secret inventory.
