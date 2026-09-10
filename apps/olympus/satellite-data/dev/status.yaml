@@ -31,7 +31,7 @@ spec:
       - name: satellite-data-registry
       containers:
       - name: status
-        image: ghcr.io/link2427/satellite-data-api@sha256:e8f8b811c9d85794c5cad946af5ff443cda664f1f5d0779c44b53d0dc4330fab
+        image: ghcr.io/link2427/satellite-data-api@sha256:fa1d7dea2f700ad77768ab2399b86055f703a2518d44c44cb1c1451a9d9dcb3e
         command:
         - /usr/bin/tini
         - -g
