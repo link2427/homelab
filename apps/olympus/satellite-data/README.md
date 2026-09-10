@@ -1,9 +1,16 @@
 # SatelliteDataApi on Olympus
 
-The release is built from `link2427/SatelliteDataApi` commit
+Development now uses a freshly built `SatelliteDataApi/dev` image and private
+Cloudflare R2. See the [current development runbook](dev/README.md) for the verified
+September 10 release, controlled refresh procedure and preserved recovery data.
+Routine dev ingestion remains suspended. Production retains its original release
+and S3 delivery path; no production promotion occurred.
+
+The original production release was built from `link2427/SatelliteDataApi` commit
 `b0f099529469f38da5b545d143a669c2c59fb48b` on `codex/cluster-migration`.
-The build workflow lives on `codex/olympus-deployment`; its checkout is pinned to
-that exact application revision. No legacy continuous .NET worker is deployed.
+Its original build workflow lives on `codex/olympus-deployment`; that checkout is
+pinned to the original revision. The current development workflow builds and
+tests its actual `dev` commit on Linux. No legacy continuous .NET worker is deployed.
 
 ## Environments and ownership
 
@@ -12,16 +19,16 @@ that exact application revision. No legacy continuous .NET worker is deployed.
 | Namespace / Flux Kustomization | satellite-data-dev | satellite-data-prod |
 | Writable root | /data/dev | /data/prod |
 | PVC | satellite-data, 2Gi longhorn-fast | satellite-data, 5Gi longhorn-resilient |
-| S3 bucket | cosmotrak-data-dev | cosmotrak-data |
-| IAM user | olympus-satellite-dev | olympus-satellite-prod |
+| Delivery bucket | private R2 cosmotrak-data-dev | AWS S3 cosmotrak-data |
+| Publishing identity | bucket-scoped R2 token | olympus-satellite-prod |
 | Routine schedule | suspended | enabled, minutes 7/22/37/52 UTC |
 
-Both S3 targets are in `us-east-1`. **Released clients require production keys
+Production and the retained rollback-only dev S3 bucket are in `us-east-1`.
+**Released clients require production keys
 `Satellite_Database/satellite-database-YYYY-MM-DD.db`. Keep that contract.**
-The new dev bucket blocks all public access, uses AES256 encryption, and has
-versioning enabled. Each identity can list its prefix and get/put its objects;
-each explicitly denies access to the other environment. Production bucket
-policy, encryption and existing client download permissions are preserved.
+The dev R2 bucket has no public domain and uses a dedicated bucket-scoped token.
+The original dev S3 data and encrypted credentials remain available for rollback.
+Production bucket policy, encryption and client download permissions are preserved.
 Runtime and registry credentials are SOPS encrypted. The dedicated GHCR
 read:packages token expires September 5, 2027; rotate it before then.
 
@@ -125,7 +132,7 @@ that version's upstream CRD and matching resource permissions, and pins the
 operator to its already-running digest. The operator and new status proxy are
 healthy. Other offline-node proxy recovery is outside this migration.
 
-## R2 dual publication next
+## Future production R2 dual publication
 
 Keep S3 enabled permanently as the compatibility mirror for released clients.
 Build one validated SQLite candidate with a SHA-256 content identity. Record
@@ -143,7 +150,8 @@ After dual delivery is proven, publish an atomic manifest through
 SHA-256. New apps can consume that stable endpoint; old apps continue to use S3.
 Authorize the public hostname separately and use a production custom domain,
 not the R2 development URL. No R2 data destination or client switch is enabled
-by this deployment. Longhorn's R2 backups are a separate recovery mechanism.
+for production by this deployment. Development uses only its private R2 destination.
+Longhorn's R2 backups are a separate recovery mechanism.
 
 References: [migration guide](https://github.com/link2427/SatelliteDataApi/blob/b0f099529469f38da5b545d143a669c2c59fb48b/docs/cluster-migration.md),
 [CelesTrak GP queries](https://celestrak.org/NORAD/documentation/gp-data-formats.php),
