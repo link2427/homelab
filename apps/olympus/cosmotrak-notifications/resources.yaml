@@ -21,6 +21,7 @@ spec:
         app.kubernetes.io/name: api
         app.kubernetes.io/part-of: cosmotrak-notifications
       annotations:
+        cosmotrak.com/apns-credentials-revision: '2026-09-10-initial'
         prometheus.io/scrape: 'true'
         prometheus.io/path: /metrics
         prometheus.io/port: '8080'
@@ -148,6 +149,8 @@ spec:
       labels:
         app.kubernetes.io/name: worker
         app.kubernetes.io/part-of: cosmotrak-notifications
+      annotations:
+        cosmotrak.com/apns-credentials-revision: '2026-09-10-initial'
     spec:
       automountServiceAccountToken: false
       nodeSelector:

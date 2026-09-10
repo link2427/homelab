@@ -46,18 +46,21 @@ subject configuration fails closed. Shared Authentik scope mappings stay intact.
 Untrusted identity headers do not grant access. The public API hostname refuses
 management routes, while management refuses installation API and metrics paths.
 
-**General and test sends are disabled.** APNs credentials belong in the existing
+**General sends are disabled; explicitly targeted test campaigns are enabled.**
+Separate Sandbox and Production APNs credentials are configured in the existing
 application Secret: shared `APNS_TEAM_ID`, plus `APNS_SANDBOX_KEY_ID`,
 `APNS_SANDBOX_PRIVATE_KEY`, `APNS_PRODUCTION_KEY_ID` and
 `APNS_PRODUCTION_PRIVATE_KEY`. Each environment uses a distinct topic-specific
 key, JWT cache and HTTP/2 connection pool. Never use a key from the other
-environment as a fallback. The published native project uses team `4H3J77P7TR`;
-confirm it in Apple Developer before key creation. The approved store had no APNs
-keys during the September 10 starting inventory; current import status belongs in
-the private operational handoff, not a plaintext manifest.
+environment as a fallback. Apple Developer ownership under team `4H3J77P7TR`
+and Push Notifications for the existing identifier were verified September 10,
+2026. Both new keys are restricted to their environment and the Cosmotrak topic.
+Key metadata and verification evidence belong in the private operational handoff;
+private key material belongs only in the encrypted Secret. Loaded credentials and
+healthy deployments do not establish APNs acceptance or physical delivery.
 
-Keep `DELIVERY_ENABLED=false` throughout physical verification. Enable only
-`TEST_DELIVERY_ENABLED` for the controlled test window: that gate permits only
+Keep `DELIVERY_ENABLED=false` throughout physical verification. Only
+`TEST_DELIVERY_ENABLED` is enabled for the controlled test window: that gate permits only
 campaigns explicitly targeting one currently designated test installation, with
 all consent and frequency checks retained. Set both flags false to pause all
 sends. The app repo's `docs/device-verification.md` gives the exact test sequence.
