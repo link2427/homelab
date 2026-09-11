@@ -1,16 +1,49 @@
 # SatelliteDataApi on Olympus
 
-Development now uses a freshly built `SatelliteDataApi/dev` image and private
-Cloudflare R2. See the [current development runbook](dev/README.md) for the verified
-September 10 release, controlled refresh procedure and preserved recovery data.
-Routine dev ingestion remains suspended. Production retains its original release
-and S3 delivery path; no production promotion occurred.
+Production builds from `SatelliteDataApi/main`; development builds from `dev`.
+Both use the September 11 recovery changes described in the
+[publisher recovery runbook](https://github.com/link2427/SatelliteDataApi/blob/main/docs/publisher-recovery.md).
+Production preserves its released SQLite format and S3 delivery path. Development
+retains private R2 and Horizons v2; its routine CronJob remains suspended and
+CelesTrak network access defaults to disabled. See the [development runbook](dev/README.md).
+The EC2 workflow stays disabled and no legacy continuous worker is deployed.
 
-The original production release was built from `link2427/SatelliteDataApi` commit
-`b0f099529469f38da5b545d143a669c2c59fb48b` on `codex/cluster-migration`.
-Its original build workflow lives on `codex/olympus-deployment`; that checkout is
-pinned to the original revision. The current development workflow builds and
-tests its actual `dev` commit on Linux. No legacy continuous .NET worker is deployed.
+## Recovery and monitoring
+
+The September 10 failure was a 20-second CelesTrak response timeout. The outer
+publisher incorrectly deferred retry for a full day even though the provider
+cooldown was two hours. Timeout is now 60 seconds with a 10-second connect limit.
+Transient failures persist a two-hour minimum wait plus jitter, with exponential
+backoff capped at 12 hours; longer Retry-After values win. There are no immediate
+HTTP or Kubernetes retries. Partial responses stay cached, permanent errors hold
+all automatic requests for review, and storage retries reuse a validated candidate.
+
+The reviewed legacy attempt was September 10 at 05:07:01.225776 UTC. A one-time
+GitOps Job backed up status and all 40 provider state/cache files to
+`/data/prod/backups/before-recovery-20260911T030343Z`, then set eligibility to
+September 11 at 04:36:38 UTC. It made zero upstream requests, preserved cache
+hashes and publication timestamps, and was retired after verification. The floor
+includes the single 02:31:38 diagnostic request. Do not run that review again.
+
+Prometheus scrapes `/metrics` every 30 seconds and has alerts for a failed update,
+operator hold, missing status, heartbeat over 45 minutes, retry over 30 minutes
+late, and catalog age over 30/36 hours. A healthy CronJob exit alone is insufficient.
+The public [status page](https://cosmotrak.com/status) explains failures and retry
+eligibility; its Refresh button never starts ingestion.
+
+`scripts/check-satellite-data.py` runs outside Olympus. It checks the public API,
+validates the allowlisted public object identity, HEADs the existing S3 download,
+and verifies its full SHA-256 once per new hash or day. It never contacts CelesTrak.
+The Codex heartbeat runs every 15 minutes and emails the owner's connected Gmail
+account on failure/recovery changes only. It acknowledges an event only after
+successful delivery, so a send failure is retried. Its local state is
+`.ai-context/satellite-email-monitor.json`. The workstation and Codex must be
+available for that external email monitor; cluster alert rules remain active
+independently. No email credentials are stored in Git.
+
+Source branches are `main` and `dev`; use one short-lived branch per actual PR,
+delete it after merge, and prune stale remote references. Auto-delete after merge
+is enabled. Old branches were archived in verified local Git bundles before removal.
 
 ## Environments and ownership
 
@@ -41,7 +74,7 @@ daily `olympus-app-backup` R2 backup label (seven retained backups).
 
 There is one CronJob per environment: every 15 minutes UTC, Forbid concurrency,
 no job retries, 6000-second deadline, and the publisher's volume-wide POSIX lock.
-The persisted `next_attempt` gates daily ingestion. An early check makes no
+The persisted `next_attempt` and recovery deadline gate ingestion. An early check makes no
 upstream requests and is not proof of successful publication.
 Production checks at minutes 7/22/37/52. This retains the recovered Mac deadline
 without firing just before its satellite refresh becomes 24 hours old: the
@@ -88,9 +121,9 @@ acceptance also tested fresh, stale, failed, missing and malformed status:
 data health returns 503 for bad data while liveness and summary remain 200.
 Use `/health/live` for pod probes. Never restart ingestion in response to
 `/health/data`; an upstream outage or stale database requires investigation.
-Future monitoring should run outside Olympus, alert only on failure/recovery
-transitions, and independently download the actual S3 object. A future website
-route can proxy the sanitized production summary on the same origin.
+Monitoring runs outside Olympus as described above; the website proxies a
+sanitized production summary. Private exception text, paths and credentials are
+excluded from the public contract.
 
 ## Cutover and rollback
 

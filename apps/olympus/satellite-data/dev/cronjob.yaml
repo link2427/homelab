@@ -45,7 +45,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
           containers:
           - name: publisher
-            image: ghcr.io/link2427/satellite-data-api@sha256:fa1d7dea2f700ad77768ab2399b86055f703a2518d44c44cb1c1451a9d9dcb3e
+            image: ghcr.io/link2427/satellite-data-api@sha256:28ae551b303435aedb95c304606e5e9ab748c504d1553baa8d9e3ac642b26464
             args:
             - /config/publisher.json
             securityContext:

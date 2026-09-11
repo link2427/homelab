@@ -14,7 +14,6 @@ import urllib.error
 import urllib.request
 
 STATUS_URL = 'https://cosmotrak.com/api/status'
-PUBLISHER_URL = 'http://olympus-satellite-data.taild90e78.ts.net/status'
 
 
 def request(url, method='GET'):
@@ -42,6 +41,7 @@ def evaluate(data, now):
     catalog_age=max(age(p.get('lastPublished')),age(p.get('satellitesUpdatedAt')))
     if catalog_age > 36*3600: problems.append('catalog_stale_critical')
     elif catalog_age > 30*3600: problems.append('catalog_stale_warning')
+    if not p.get('healthy') and not problems: problems.append('data_unhealthy')
     if p.get('retryNotBefore') and p.get('failureCode') and age(p['retryNotBefore']) > 1800: problems.append('retry_overdue')
     return problems
 
@@ -57,10 +57,10 @@ def observe(previous):
         result['problems'].append('status_unavailable')
         result['statusError']=type(error).__name__
     try:
-        with request(PUBLISHER_URL) as response: publisher=json.loads(response.read(65537))
-        key=publisher.get('publishedKey','')
-        expected=publisher.get('sha256','')
-        if publisher.get('environment')!='prod' or not re.fullmatch(r'Satellite_Database/satellite-database-\d{4}-\d{2}-\d{2}\.db',key):
+        download=(result.get('publication') or {}).get('download') or {}
+        key=download.get('key','')
+        expected=download.get('sha256','')
+        if not re.fullmatch(r'Satellite_Database/satellite-database-\d{4}-\d{2}-\d{2}\.db',key):
             raise ValueError('Invalid production download identity')
         if not re.fullmatch('[a-f0-9]{64}',expected): raise ValueError('Missing verified content hash')
         url='https://cosmotrak-data.s3.us-east-1.amazonaws.com/'+key

@@ -1,7 +1,11 @@
 import datetime as dt
 import importlib.util
+import hashlib
+import io
+import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('monitor',Path(__file__).with_name('check-satellite-data.py'))
 monitor=importlib.util.module_from_spec(spec)
@@ -30,7 +34,32 @@ class MonitorTests(unittest.TestCase):
 
     def test_monitor_never_targets_upstream_provider(self):
         self.assertNotIn('celestrak',monitor.STATUS_URL.lower())
-        self.assertNotIn('celestrak',monitor.PUBLISHER_URL.lower())
+
+    def test_public_download_is_hashed_once_then_only_checked_for_availability(self):
+        now=dt.datetime.now(dt.timezone.utc).isoformat()
+        content=b'verified catalog fixture'
+        key='Satellite_Database/satellite-database-2026-09-11.db'
+        digest=hashlib.sha256(content).hexdigest()
+        publication={'healthy':True,'state':'published','lastPublished':now,'satellitesUpdatedAt':now,'lastChecked':now,
+                     'download':{'key':key,'sha256':digest}}
+        calls=[]
+        def response(url,method='GET'):
+            calls.append((url,method))
+            body=json.dumps({'live':True,'checkedAt':now,'publication':publication}).encode() if url==monitor.STATUS_URL else content
+            result=io.BytesIO(body)
+            result.headers={'Content-Length':str(len(content))}
+            return result
+        with patch.object(monitor,'request',side_effect=response):
+            first=monitor.observe({})
+            self.assertEqual([],first['problems'])
+            self.assertEqual(digest,first['download']['sha256'])
+            self.assertEqual(['GET','HEAD','GET'],[method for _,method in calls])
+            calls.clear()
+            second=monitor.observe(first)
+            self.assertEqual([],second['problems'])
+            self.assertEqual(['GET','HEAD'],[method for _,method in calls])
+            publication['download']['sha256']='0'*64
+            self.assertIn('download_check_failed',monitor.observe(first)['problems'])
 
 
 if __name__=='__main__': unittest.main()
