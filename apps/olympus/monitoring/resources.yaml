@@ -379,6 +379,11 @@ data:
       static_configs:
       - targets:
         - localhost:9090
+    - job_name: satellite-data
+      scrape_interval: 30s
+      static_configs:
+      - targets:
+        - satellite-data-status.satellite-data-prod.svc.cluster.local:80
     - job_name: node-exporter
       static_configs:
       - targets:
@@ -413,6 +418,57 @@ data:
         target_label: __address__
   cosmotrak.rules.yml: |
     groups:
+      - name: satellite-data
+        rules:
+          - alert: SatelliteStatusUnavailable
+            expr: up{job="satellite-data"} == 0 or absent(up{job="satellite-data"})
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: Satellite status metrics are unavailable
+          - alert: SatelliteUpdateFailed
+            expr: satdata_publisher_failed{environment="prod"} == 1
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: Satellite catalog update failed; check the recorded recovery deadline
+          - alert: SatelliteOperatorReviewRequired
+            expr: satdata_operator_required{environment="prod"} == 1
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: Satellite publisher has stopped automatic requests pending review
+          - alert: SatellitePublisherHeartbeatMissing
+            expr: satdata_heartbeat_age_seconds{environment="prod"} > 2700
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: Satellite publisher missed three expected checks
+          - alert: SatelliteRetryOverdue
+            expr: satdata_retry_overdue_seconds{environment="prod"} > 1800
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: Satellite recovery is overdue by more than two check intervals
+          - alert: SatelliteCatalogAging
+            expr: satdata_satellite_age_seconds{environment="prod"} > 108000 or satdata_publication_age_seconds{environment="prod"} > 108000
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: Satellite catalog is over 30 hours old
+          - alert: SatelliteCatalogStale
+            expr: satdata_satellite_age_seconds{environment="prod"} > 129600 or satdata_publication_age_seconds{environment="prod"} > 129600
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: Satellite catalog is over 36 hours old
       - name: cosmotrak-notifications
         rules:
           - alert: CosmotrakNotificationsUnavailable

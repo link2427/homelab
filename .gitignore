@@ -21,3 +21,4 @@ tmp/
 
 # Private AI operational notes
 /.ai-context/
+__pycache__/
