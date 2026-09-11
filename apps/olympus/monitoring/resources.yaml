@@ -123,6 +123,8 @@ spec:
     type: Recreate
   template:
     metadata:
+      annotations:
+        cosmotrak.com/monitoring-config-sha256: 10dfeac5143229d61cce715964905b3727b72b278f8870bb1e93c32d08edaacc
       labels:
         app: prometheus
     spec:
