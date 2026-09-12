@@ -45,7 +45,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
           containers:
           - name: publisher
-            image: ghcr.io/link2427/satellite-data-api@sha256:20647983a002f00898491791296be5ee000078c4bc3de7d9be7b930f40f259a7
+            image: ghcr.io/link2427/satellite-data-api@sha256:8c0de5cd469ded4dbaccd551e4dce5d5a69c083efe063484f4e207334a535182
             args:
             - /config/publisher.json
             - --publish
@@ -75,6 +75,9 @@ spec:
               readOnly: true
             - name: temporary
               mountPath: /tmp
+            - name: modern-credentials
+              mountPath: /run/secrets/r2
+              readOnly: true
           volumes:
           - name: data
             persistentVolumeClaim:
@@ -89,3 +92,7 @@ spec:
           - name: temporary
             emptyDir:
               sizeLimit: 256Mi
+          - name: modern-credentials
+            secret:
+              secretName: satellite-data-r2
+              defaultMode: 288

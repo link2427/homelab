@@ -9,3 +9,4 @@ resources:
 - service.yaml
 - s3.secret.yaml
 - registry.secret.yaml
+- r2.secret.yaml

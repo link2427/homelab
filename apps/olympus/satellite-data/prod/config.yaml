@@ -8,4 +8,9 @@ data:
     \  \"app\": \"/app/SatelliteDataApi.dll\",\n  \"dotnet\": \"/usr/share/dotnet/dotnet\"\
     ,\n  \"credentials\": \"/run/secrets/s3/credentials.json\",\n  \"allow_production_publish\"\
     : true,\n  \"storage\": {\n    \"bucket\": \"cosmotrak-data\",\n    \"region\"\
-    : \"us-east-1\",\n    \"prefix\": \"Satellite_Database/\"\n  }\n}"
+    : \"us-east-1\",\n    \"prefix\": \"Satellite_Database/\"\n  },\n  \"backend_commit\"\
+    : \"218cfc820b6f4480da41bceb3162784906b29441\",\n  \"modern\": {\n    \"storage\"\
+    : {\n      \"provider\": \"r2\",\n      \"account_id\": \"52018eaf0359596038f45ce3b2443891\"\
+    ,\n      \"bucket\": \"cosmotrak-data-prod\",\n      \"region\": \"auto\",\n \
+    \     \"prefix\": \"Satellite_Database/\"\n    },\n    \"credentials\": \"/run/secrets/r2/credentials.json\"\
+    ,\n    \"public_base_url\": \"https://data.cosmotrak.com\"\n  }\n}"
