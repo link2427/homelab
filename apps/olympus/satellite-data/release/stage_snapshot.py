@@ -13,6 +13,7 @@ import shutil
 import sqlite3
 import sys
 import tempfile
+import urllib.error
 
 sys.path.insert(0, '/app/scripts')
 import local_publisher as publisher
@@ -42,7 +43,7 @@ def state_hashes(root):
     return {str(p.relative_to(root)): digest(p) for p in sorted((root / 'state').rglob('*')) if p.is_file()}
 
 
-def stage(config, source, metadata, integrate_horizons=False):
+def stage(config, source, metadata, integrate_horizons=False, backup_s3=False):
     root = Path(config['root']).resolve()
     expected_root = Path('/data') / config['environment']
     if root != expected_root or not (root / 'publisher.lock').is_file():
@@ -87,6 +88,27 @@ def stage(config, source, metadata, integrate_horizons=False):
                     raise ValueError('Backup hash verification failed: ' + path.name)
         hashes = {str(p.relative_to(backup)): digest(p) for p in backup.rglob('*') if p.is_file()}
         publisher.write_json(backup / 'manifest.json', {'files': hashes, 'state_hashes': states, 'working_tables': before})
+        rollback_receipt = None
+        if backup_s3:
+            if config['environment'] != 'prod' or config['storage']['bucket'] != 'cosmotrak-data':
+                raise ValueError('Legacy backup is production S3 only')
+            legacy = publisher.S3(config)
+            old_key = status['published_key']
+            old_data = legacy.request(key=old_key)
+            old_sha = hashlib.sha256(old_data).hexdigest()
+            if old_sha != status['sha256']:
+                raise ValueError('Current S3 bytes differ from the production receipt')
+            backup_key = old_key[:-3] + '-before-' + old_sha + '.db'
+            try:
+                legacy.request('PUT', backup_key, data=old_data, extra={'if-none-match': '*', 'content-type': 'application/vnd.sqlite3'})
+            except urllib.error.HTTPError as error:
+                if error.code != 412:
+                    raise
+            if hashlib.sha256(legacy.request(key=backup_key)).hexdigest() != old_sha:
+                raise ValueError('Legacy S3 rollback checksum mismatch')
+            rollback_receipt = {'bucket': 'cosmotrak-data', 'original_key': old_key, 'backup_key': backup_key,
+                                'sha256': old_sha, 'size_bytes': len(old_data), 'download_verified': True}
+            publisher.write_json(backup / 'legacy-s3-rollback.json', rollback_receipt)
         if integrate_horizons:
             with closing(sqlite3.connect(root / 'working.db')) as db:
                 db.execute('PRAGMA foreign_keys=ON')
@@ -116,7 +138,7 @@ def stage(config, source, metadata, integrate_horizons=False):
                   'working_sha256_before': working_sha, 'working_tables_before': before,
                   'working_tables_after': inventory(root / 'working.db'), 'horizons_integrated': integrate_horizons,
                   'protected_status': {k: status.get(k) for k in ('last_attempt','last_ingested','next_attempt','next_ingestion_due','retry_not_before')},
-                  'validation': validation, 'ingestion_requests': 0}
+                  'legacy_s3_rollback': rollback_receipt, 'validation': validation, 'ingestion_requests': 0}
         publisher.write_json(root / 'release-staging.json', report)
         print(json.dumps({'status': 'STAGED', 'backup': str(backup), 'backup_files': len(hashes),
                           'sha256': metadata['sha256'], 'horizons_integrated': integrate_horizons, 'ingestion_requests': 0}), flush=True)
@@ -130,4 +152,4 @@ if __name__ == '__main__':
         source = Path(temporary) / 'qualified.db'
         storage_config = config if config['environment'] == 'dev' else config['modern']
         source.write_bytes(publisher.S3(storage_config).request(key=release['source_key']))
-        stage(config, source, release['metadata'], release.get('integrate_horizons', False))
+        stage(config, source, release['metadata'], release.get('integrate_horizons', False), release.get('backup_s3', False))

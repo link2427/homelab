@@ -1,0 +1,13 @@
+{
+  "name": "Cosmotrak database API configuration",
+  "kind": "zone",
+  "phase": "http_config_settings",
+  "rules": [{
+    "ref": "cosmotrak_native_database_reads",
+    "description": "Permit non-browser database clients and publisher checksum verification",
+    "expression": "(http.host eq \"data.cosmotrak.com\" and http.request.method in {\"GET\" \"HEAD\"} and (http.request.uri.path eq \"/v1/manifest.json\" or starts_with(http.request.uri.path, \"/v1/databases/\")))",
+    "action": "set_config",
+    "action_parameters": {"bic": false},
+    "enabled": true
+  }]
+}
