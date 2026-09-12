@@ -98,7 +98,10 @@ def stage(config, source, metadata, integrate_horizons=False, backup_s3=False):
             old_sha = hashlib.sha256(old_data).hexdigest()
             if old_sha != status['sha256']:
                 raise ValueError('Current S3 bytes differ from the production receipt')
-            backup_key = old_key[:-3] + '-before-' + old_sha + '.db'
+            release_date = Path(old_key).stem.removeprefix('satellite-database-')
+            dt.date.fromisoformat(release_date)
+            # Shipped clients accept any .db within the discovery prefix.
+            backup_key = config['storage']['prefix'] + 'Release_Backups/' + release_date + '/' + old_sha + '.db'
             try:
                 legacy.request('PUT', backup_key, data=old_data, extra={'if-none-match': '*', 'content-type': 'application/vnd.sqlite3'})
             except urllib.error.HTTPError as error:
