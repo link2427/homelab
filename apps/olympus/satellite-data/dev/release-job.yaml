@@ -1,0 +1,207 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: satellite-release-dev-20260912
+  namespace: satellite-data-dev
+data:
+  stage_snapshot.py: "\"\"\"Stage an independently qualified snapshot on the existing,\
+    \ idle publisher PVC.\n\nRun once with the CronJob suspended. This never calls\
+    \ any ingestion provider.\nProduction integrates only Horizons tables after proving\
+    \ other rows are current.\n\"\"\"\nfrom contextlib import closing\nimport datetime\
+    \ as dt\nimport fcntl\nimport hashlib\nimport json\nfrom pathlib import Path\n\
+    import shutil\nimport sqlite3\nimport sys\nimport tempfile\n\nsys.path.insert(0,\
+    \ '/app/scripts')\nimport local_publisher as publisher\n\nHORIZONS = ('CelestialBodyMetadata',\
+    \ 'SpacecraftMetadata', 'CelestialEphemerisSamples',\n            'CelestialOrbitEphemerisSamples',\
+    \ 'SpacecraftEphemerisSamples')\n\n\ndef digest(path):\n    return hashlib.sha256(Path(path).read_bytes()).hexdigest()\n\
+    \n\ndef inventory(path):\n    with closing(sqlite3.connect(Path(path).resolve().as_uri()\
+    \ + '?mode=ro', uri=True)) as db:\n        if db.execute('PRAGMA integrity_check').fetchone()[0]\
+    \ != 'ok' or db.execute('PRAGMA foreign_key_check').fetchone():\n            raise\
+    \ ValueError('SQLite integrity or foreign key failure')\n        result = {}\n\
+    \        for (table,) in db.execute(\"SELECT name FROM sqlite_master WHERE type='table'\
+    \ AND name NOT LIKE 'sqlite_%' ORDER BY name\").fetchall():\n            escaped\
+    \ = '\"' + table.replace('\"', '\"\"') + '\"'\n            columns = len(db.execute('PRAGMA\
+    \ table_info(' + escaped + ')').fetchall())\n            rows = db.execute('SELECT\
+    \ * FROM ' + escaped + ' ORDER BY ' + ','.join(str(i) for i in range(1, columns+1))).fetchall()\n\
+    \            result[table] = {'count': len(rows), 'sha256': hashlib.sha256(json.dumps(rows,\
+    \ ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()}\n        return\
+    \ result\n\n\ndef state_hashes(root):\n    return {str(p.relative_to(root)): digest(p)\
+    \ for p in sorted((root / 'state').rglob('*')) if p.is_file()}\n\n\ndef stage(config,\
+    \ source, metadata, integrate_horizons=False):\n    root = Path(config['root']).resolve()\n\
+    \    expected_root = Path('/data') / config['environment']\n    if root != expected_root\
+    \ or not (root / 'publisher.lock').is_file():\n        raise ValueError('Expected\
+    \ existing environment root and publisher lock')\n    if integrate_horizons and\
+    \ config['environment'] != 'prod':\n        raise ValueError('Working integration\
+    \ is reserved for the reviewed production release')\n    if digest(source) !=\
+    \ metadata['sha256'] or source.stat().st_size != metadata['size_bytes']:\n   \
+    \     raise ValueError('Qualified snapshot identity mismatch')\n    with (root\
+    \ / 'publisher.lock').open('a') as lock:\n        fcntl.flock(lock, fcntl.LOCK_EX\
+    \ | fcntl.LOCK_NB)\n        target = {'environment': config['environment'], **config['storage']}\n\
+    \        if json.loads((root / 'publisher-target.json').read_text()) != target:\n\
+    \            raise ValueError('Existing storage target differs')\n        for\
+    \ name in ('working.db', 'candidate.db', 'baseline.db', 'status.json'):\n    \
+    \        if not (root / name).is_file():\n                raise ValueError('Existing\
+    \ publisher state is required: ' + name)\n        status = json.loads((root /\
+    \ 'status.json').read_text())\n        if status.get('pending_delivery') or status.get('state')\
+    \ in ('running', 'validating') or status.get('operator_required'):\n         \
+    \   raise ValueError('An unfinished operation requires review before staging')\n\
+    \        before = inventory(root / 'working.db')\n        incoming = inventory(source)\n\
+    \        protected = {t: v for t, v in before.items() if t not in HORIZONS}\n\
+    \        if integrate_horizons and protected != {t: v for t, v in incoming.items()\
+    \ if t not in HORIZONS}:\n            raise ValueError('Working non-Horizons rows\
+    \ advanced or differ; replay on current state first')\n        validation = publisher.validate(source,\
+    \ root / 'baseline.db', cache_directory=root / 'state/celestrak')\n        states\
+    \ = state_hashes(root)\n        working_sha = digest(root / 'working.db')\n  \
+    \      backup = root / 'backups' / ('before-release-' + dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))\n\
+    \        backup.mkdir(parents=True)\n        files = [p for p in root.rglob('*')\
+    \ if p.is_file() and p.relative_to(root).parts[0] != 'backups'\n             \
+    \    and p.name != 'publisher.lock' and not p.name.endswith(('-wal', '-shm'))]\n\
+    \        for path in files:\n            destination = backup / path.relative_to(root)\n\
+    \            destination.parent.mkdir(parents=True, exist_ok=True)\n         \
+    \   if path.suffix == '.db':\n                publisher.snapshot(path, destination)\n\
+    \                if inventory(path) != inventory(destination):\n             \
+    \       raise ValueError('Backup row verification failed: ' + path.name)\n   \
+    \         else:\n                shutil.copy2(path, destination)\n           \
+    \     if digest(path) != digest(destination):\n                    raise ValueError('Backup\
+    \ hash verification failed: ' + path.name)\n        hashes = {str(p.relative_to(backup)):\
+    \ digest(p) for p in backup.rglob('*') if p.is_file()}\n        publisher.write_json(backup\
+    \ / 'manifest.json', {'files': hashes, 'state_hashes': states, 'working_tables':\
+    \ before})\n        if integrate_horizons:\n            with closing(sqlite3.connect(root\
+    \ / 'working.db')) as db:\n                db.execute('PRAGMA foreign_keys=ON')\n\
+    \                db.execute('ATTACH DATABASE ? AS incoming', (str(source),))\n\
+    \                with db:\n                    for table in reversed(HORIZONS):\n\
+    \                        db.execute('DELETE FROM main.' + table)\n           \
+    \         for table in HORIZONS:\n                        db.execute('INSERT INTO\
+    \ main.' + table + ' SELECT * FROM incoming.' + table)\n                    if\
+    \ db.execute('PRAGMA foreign_key_check').fetchone():\n                       \
+    \ raise ValueError('Integrated Horizons foreign key failure')\n            after\
+    \ = inventory(root / 'working.db')\n            if after != incoming:\n      \
+    \          raise ValueError('Integrated working table inventory differs from qualified\
+    \ snapshot')\n        else:\n            if inventory(root / 'working.db') !=\
+    \ before or digest(root / 'working.db') != working_sha:\n                raise\
+    \ ValueError('Development working database changed')\n        shutil.copyfile(source,\
+    \ root / 'candidate.incoming')\n        if digest(root / 'candidate.incoming')\
+    \ != metadata['sha256']:\n            raise ValueError('Staged copy checksum mismatch')\n\
+    \        (root / 'candidate.incoming').replace(root / 'candidate.db')\n      \
+    \  publisher.write_json(root / 'candidate.json', metadata)\n        if state_hashes(root)\
+    \ != states or json.loads((root / 'status.json').read_text()) != status:\n   \
+    \         raise ValueError('Provider state or publisher schedule changed while\
+    \ staging')\n        report = {'status': 'STAGED', 'environment': config['environment'],\
+    \ 'metadata': metadata,\n                  'backup': str(backup), 'backup_files':\
+    \ len(hashes), 'provider_state_hashes': states,\n                  'working_sha256_before':\
+    \ working_sha, 'working_tables_before': before,\n                  'working_tables_after':\
+    \ inventory(root / 'working.db'), 'horizons_integrated': integrate_horizons,\n\
+    \                  'protected_status': {k: status.get(k) for k in ('last_attempt','last_ingested','next_attempt','next_ingestion_due','retry_not_before')},\n\
+    \                  'validation': validation, 'ingestion_requests': 0}\n      \
+    \  publisher.write_json(root / 'release-staging.json', report)\n        print(json.dumps({'status':\
+    \ 'STAGED', 'backup': str(backup), 'backup_files': len(hashes),\n            \
+    \              'sha256': metadata['sha256'], 'horizons_integrated': integrate_horizons,\
+    \ 'ingestion_requests': 0}), flush=True)\n        return report\n\n\nif __name__\
+    \ == '__main__':\n    config = publisher.configuration(json.loads(Path(sys.argv[1]).read_text()),\
+    \ publish=True)\n    release = json.loads(Path(sys.argv[2]).read_text())\n   \
+    \ with tempfile.TemporaryDirectory() as temporary:\n        source = Path(temporary)\
+    \ / 'qualified.db'\n        storage_config = config if config['environment'] ==\
+    \ 'dev' else config['modern']\n        source.write_bytes(publisher.S3(storage_config).request(key=release['source_key']))\n\
+    \        stage(config, source, release['metadata'], release.get('integrate_horizons',\
+    \ False))\n"
+  release.json: "{\n  \"source_key\": \"release-handoffs/2026-09-12/session-d7b4044176f34a6e82e9e82cc752c82c/candidate.db\"\
+    ,\n  \"metadata\": {\n    \"sha256\": \"cad124e004fce63652fb4e53df990fc43b65bfc8606fdba5bd95c72b209b3c2d\"\
+    ,\n    \"size_bytes\": 18391040,\n    \"backend_commit\": \"51959d389cf9c3ab2d37f3ba915b94d1e2b3c0b0\"\
+    ,\n    \"generated_at_utc\": \"2026-09-12T22:26:44.743043+00:00\"\n  },\n  \"\
+    integrate_horizons\": false\n}"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: satellite-release-dev-20260912
+  namespace: satellite-data-dev
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: satellite-data-publisher
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      imagePullSecrets:
+      - name: satellite-data-registry
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: satellite-data-status
+                app.kubernetes.io/part-of: satellite-data
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: publisher
+        image: ghcr.io/link2427/satellite-data-api@sha256:974f31ea89077ae9743ddb21a6e1ab0eeb8630a857a91a4d64eee6438324bf79
+        args:
+        - 'python3 /release/stage_snapshot.py /config/publisher.json /release/release.json
+
+          python3 /app/scripts/local_publisher.py /config/publisher.json --reuse-snapshot
+          --publish'
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+            ephemeral-storage: 128Mi
+          limits:
+            cpu: '2'
+            memory: 2Gi
+            ephemeral-storage: 512Mi
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: config
+          mountPath: /config
+          readOnly: true
+        - name: credentials
+          mountPath: /run/secrets/r2
+          readOnly: true
+        - name: temporary
+          mountPath: /tmp
+        - name: release
+          mountPath: /release
+          readOnly: true
+        command:
+        - /usr/bin/tini
+        - -g
+        - --
+        - /bin/sh
+        - -ec
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: satellite-data
+      - name: config
+        configMap:
+          name: satellite-data-publisher
+      - name: credentials
+        secret:
+          secretName: satellite-data-r2
+          defaultMode: 288
+      - name: temporary
+        emptyDir:
+          sizeLimit: 256Mi
+      - name: release
+        configMap:
+          name: satellite-release-dev-20260912
