@@ -1,0 +1,18 @@
+{
+  "name": "cosmotrak-data-delivery",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260911.1",
+    "@types/node": "22.20.2",
+    "miniflare": "5.20260911.0-alpha",
+    "typescript": "7.0.2",
+    "wrangler": "4.131.1"
+  }
+}
