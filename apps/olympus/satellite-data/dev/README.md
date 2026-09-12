@@ -1,8 +1,14 @@
 # SatelliteDataApi development on private R2
 
+Current release: [September 12 verification and recovery record](../release/2026-09-12.md).
+Dev now runs source `218cfc8`, retains the existing working database and suspended
+schedule, and has independently published the freshly qualified `cad124e0` snapshot.
+The September 10 record below documents the original dev storage migration.
+
 Development uses the existing `satellite-data-dev` namespace, independent Flux
 Kustomization, and `satellite-data` PVC. Routine ingestion remains suspended.
-Production's image, database/PVC, credentials and AWS S3 delivery are unchanged.
+Production S3 compatibility delivery remains active alongside the subsequently
+authorized production R2 release described in the current record.
 
 ## Verified release, September 10, 2026
 

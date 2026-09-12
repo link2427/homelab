@@ -1,5 +1,12 @@
 # SatelliteDataApi on Olympus
 
+Current deployment: [September 12 qualified UTC export and dual-delivery release](release/2026-09-12.md).
+Both environments run `218cfc8`. Production publishes one compatible snapshot to
+S3 and private R2 with independent receipts; modern clients discover it through
+`https://data.cosmotrak.com/v1/manifest.json`. Shipped clients retain the dated S3
+path. Development remains private and unscheduled. The sections below retain
+the original cutover and September 11 recovery history.
+
 Production builds from `SatelliteDataApi/main`; development builds from `dev`.
 Both use the September 11 recovery changes described in the
 [publisher recovery runbook](https://github.com/link2427/SatelliteDataApi/blob/main/docs/publisher-recovery.md).

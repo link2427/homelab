@@ -81,3 +81,9 @@ rerun ingestion for a storage-only retry.
 No application or notification source was changed in this preparation. Snapshot
 bundles and temporary access links are kept only in the private coordination
 workspace; they contain no storage credentials and are not public Git artifacts.
+# Preparation completed and deployed
+
+This preparation record is historical. The credential is now mounted by the
+production publisher and both S3/R2 deliveries are verified. See the
+[September 12 release record](../release/2026-09-12.md) for the current image,
+public contract, preserved state, backups and rollback procedure.

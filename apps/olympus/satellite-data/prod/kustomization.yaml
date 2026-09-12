@@ -10,4 +10,3 @@ resources:
 - s3.secret.yaml
 - registry.secret.yaml
 - r2.secret.yaml
-- release-job.yaml
