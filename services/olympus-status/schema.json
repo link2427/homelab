@@ -1,0 +1,555 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jacob-neel.com/api/olympus/v1/schema.json",
+  "title": "Olympus public cluster snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "enum": [
+        "1.0"
+      ]
+    },
+    "cluster": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "olympus"
+          ]
+        },
+        "name": {
+          "enum": [
+            "Olympus"
+          ]
+        },
+        "status": {
+          "enum": [
+            "healthy",
+            "degraded",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status"
+      ]
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "refreshIntervalSeconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stale": {
+      "type": "boolean"
+    },
+    "partial": {
+      "type": "boolean"
+    },
+    "unavailableSources": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "nodes",
+          "pods",
+          "deployments",
+          "statefulsets",
+          "daemonsets",
+          "cronjobs",
+          "metrics",
+          "storage",
+          "gitops",
+          "hardware"
+        ]
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "readyNodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "memoryBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gpuSchedulingUnits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activePods": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "readyPods": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "services": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "healthyServices": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pausedServices": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cpuCores": {
+          "type": "number",
+          "minimum": 0
+        },
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "measuredNodes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cpuCores": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "memoryBytes": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "measuredNodes",
+            "cpuCores",
+            "memoryBytes"
+          ]
+        }
+      },
+      "required": [
+        "nodes",
+        "readyNodes",
+        "memoryBytes",
+        "gpuSchedulingUnits",
+        "activePods",
+        "readyPods",
+        "services",
+        "healthyServices",
+        "pausedServices",
+        "cpuCores",
+        "usage"
+      ]
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "control-plane",
+              "worker"
+            ]
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "architecture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operatingSystem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kubernetesVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manufacturer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cpuCores": {
+            "type": "number",
+            "minimum": 0
+          },
+          "memoryBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "allocatableCpuCores": {
+            "type": "number",
+            "minimum": 0
+          },
+          "allocatableMemoryBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gpuSchedulingUnits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "usage": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "measuredAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cpuCores": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "memoryBytes": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cpuPercent": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "memoryPercent": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "measuredAt",
+              "cpuCores",
+              "memoryBytes",
+              "cpuPercent",
+              "memoryPercent"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "status",
+          "architecture",
+          "operatingSystem",
+          "kubernetesVersion",
+          "model",
+          "manufacturer",
+          "cpuCores",
+          "memoryBytes",
+          "allocatableCpuCores",
+          "allocatableMemoryBytes",
+          "gpuSchedulingUnits",
+          "usage"
+        ]
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "Deployment",
+              "StatefulSet",
+              "DaemonSet",
+              "Group"
+            ]
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unknown",
+              "paused"
+            ]
+          },
+          "desiredReplicas": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "readyReplicas": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "members": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "publicUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "namespace",
+          "category",
+          "kind",
+          "status",
+          "desiredReplicas",
+          "readyReplicas",
+          "members",
+          "publicUrl"
+        ]
+      }
+    },
+    "scheduledJobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "suspended": {
+            "type": "boolean"
+          },
+          "activeJobs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastSucceededAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "namespace",
+          "suspended",
+          "activeJobs",
+          "lastSucceededAt"
+        ]
+      }
+    },
+    "storage": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "enum": [
+                "Longhorn"
+              ]
+            },
+            "disks": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "readyDisks": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "physicalCapacityBytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "physicalAvailableBytes": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "provider",
+            "disks",
+            "readyDisks",
+            "physicalCapacityBytes",
+            "physicalAvailableBytes"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "gitops": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ready": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "total",
+            "ready"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "cluster",
+    "generatedAt",
+    "expiresAt",
+    "refreshIntervalSeconds",
+    "stale",
+    "partial",
+    "unavailableSources",
+    "summary",
+    "nodes",
+    "services",
+    "scheduledJobs",
+    "storage",
+    "gitops"
+  ]
+}

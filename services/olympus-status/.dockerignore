@@ -1,0 +1,7 @@
+*
+!requirements.txt
+!collector.py
+!server.py
+!schema.json
+!types.ts
+!INTEGRATION.md

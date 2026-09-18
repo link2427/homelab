@@ -1,0 +1,76 @@
+name: Build Olympus public status feed
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [services/olympus-status/**, .github/workflows/olympus-status.yml]
+permissions:
+  contents: read
+concurrency:
+  group: olympus-status-image
+  cancel-in-progress: false
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify projection, health, freshness and HTTP contract
+        run: |
+          python -m pip install jsonschema==4.25.1
+          python -m unittest discover -s services/olympus-status -v
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/olympus-status
+          load: true
+          tags: ghcr.io/link2427/olympus-status:${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/link2427/homelab
+          cache-from: type=gha,scope=olympus-status
+          cache-to: type=gha,scope=olympus-status,mode=max
+      - name: Restricted runtime smoke test
+        env:
+          IMAGE: ghcr.io/link2427/olympus-status:${{ github.sha }}
+        run: |
+          docker run -d --name status-smoke --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:18080:8080 "$IMAGE"
+          trap 'docker logs status-smoke; docker rm -f status-smoke' EXIT
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:18080/healthz; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:18080/healthz
+          curl -fsS http://127.0.0.1:18080/api/olympus/v1/schema.json | python -m json.tool >/dev/null
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/olympus/v1/cluster)" = 503
+          test "$(curl -s -X POST -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/olympus/v1/cluster)" = 405
+      - run: docker push ghcr.io/link2427/olympus-status:${{ github.sha }}
+      - name: Record digest and update Flux image
+        env:
+          TAG: ghcr.io/link2427/olympus-status:${{ github.sha }}
+        run: |
+          image=$(docker inspect --format='{{index .RepoDigests 0}}' "$TAG")
+          echo "$image" > image.txt
+          python services/olympus-status/update-image.py "$image"
+          git config user.name 'Olympus status deployment'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/olympus/olympus-status/resources.yaml || true
+          git diff --cached --quiet && exit 0
+          git commit -m 'Deploy verified Olympus status feed image'
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: olympus-status-image
+          path: image.txt
