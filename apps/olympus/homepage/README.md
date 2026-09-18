@@ -28,7 +28,8 @@ ingestion is intentionally suspended. Dashboard probes only read existing status
 and never start ingestion, builds, notification delivery, or backup jobs.
 
 When adding a service, update `config/services.yaml` and, for a new group,
-`config/settings.yaml`. Use the actual live pod labels for status selectors and
+`config/settings.yaml`. Kubernetes cards require `app` to enable their status
+indicator, plus `namespace` and `podSelector` using the actual live pod labels. Use
 internal health URLs for server-side checks. Preserve existing access boundaries.
 Media widget secrets must remain `HOMEPAGE_VAR_*` placeholders in config.
 
