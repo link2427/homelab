@@ -1,0 +1,225 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: olympus-status
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collector
+  namespace: olympus-status
+automountServiceAccountToken: false
+---
+# Entire-cluster inventory is the purpose of this service. No secrets, logs,
+# configmaps, proxy, exec, mutation verbs or wildcard resources are authorized.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: olympus-status-inventory
+rules:
+  - apiGroups: ['']
+    resources: [nodes, pods]
+    verbs: [list]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [list]
+  - apiGroups: [batch]
+    resources: [cronjobs]
+    verbs: [list]
+  - apiGroups: [metrics.k8s.io]
+    resources: [nodes]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: olympus-status-inventory
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: olympus-status-inventory
+subjects:
+  - kind: ServiceAccount
+    name: collector
+    namespace: olympus-status
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: olympus-status-storage
+  namespace: longhorn-system
+rules:
+  - apiGroups: [longhorn.io]
+    resources: [nodes]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: olympus-status-storage
+  namespace: longhorn-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: olympus-status-storage
+subjects:
+  - kind: ServiceAccount
+    name: collector
+    namespace: olympus-status
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: olympus-status-gitops
+  namespace: flux-system
+rules:
+  - apiGroups: [kustomize.toolkit.fluxcd.io]
+    resources: [kustomizations]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: olympus-status-gitops
+  namespace: flux-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: olympus-status-gitops
+subjects:
+  - kind: ServiceAccount
+    name: collector
+    namespace: olympus-status
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: olympus-status
+  namespace: olympus-status
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: olympus-status
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: olympus-status
+    spec:
+      serviceAccountName: collector
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: public
+          image: ghcr.io/link2427/olympus-status@sha256:5fae2bfe17efe0937cf128a1d4e9ba89e4b4044a84bed6497ce71c391e414959
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 160Mi
+          volumeMounts:
+            - name: snapshot
+              mountPath: /snapshot
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+        - name: collector
+          image: ghcr.io/link2427/olympus-status@sha256:5fae2bfe17efe0937cf128a1d4e9ba89e4b4044a84bed6497ce71c391e414959
+          command: [python, /app/collector.py]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          volumeMounts:
+            - name: snapshot
+              mountPath: /snapshot
+            - name: credentials
+              mountPath: /var/run/collector
+              readOnly: true
+          startupProbe:
+            exec:
+              command: [python, -c, "from pathlib import Path; assert Path('/snapshot/heartbeat').exists()"]
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            exec:
+              command: [python, -c, "import time; from pathlib import Path; assert time.time()-Path('/snapshot/heartbeat').stat().st_mtime < 180"]
+            periodSeconds: 30
+      volumes:
+        - name: snapshot
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: credentials
+          projected:
+            defaultMode: 0440
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: olympus-status
+  namespace: olympus-status
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: olympus-status
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
