@@ -85,10 +85,9 @@ def visible(obj):
     return meta.get("namespace") not in ARCHIVED and meta.get("annotations", {}).get("status.olympus.dev/visibility") != "private"
 
 
-def workload(obj):
+def workload(obj, kind):
     meta, spec, status = obj["metadata"], obj.get("spec", {}), obj.get("status", {})
     namespace, name = meta["namespace"], meta["name"]
-    kind = obj["kind"]
     desired = status.get("desiredNumberScheduled", 0) if kind == "DaemonSet" else spec.get("replicas", 1)
     ready = status.get("numberReady", 0) if kind == "DaemonSet" else status.get("readyReplicas", 0)
     available = status.get("numberAvailable", 0) if kind == "DaemonSet" else status.get("availableReplicas", ready)
@@ -139,10 +138,11 @@ def project(raw, now):
                                 "cpuPercent": round(100 * used_cpu / cpu, 2) if used_cpu is not None and cpu else None,
                                 "memoryPercent": round(100 * used_memory / memory, 2) if used_memory is not None and memory else None}})
     services = {}
-    for obj in raw["deployments"] + raw["statefulsets"] + raw["daemonsets"]:
+    controllers = [(obj, kind) for source, kind in [("deployments", "Deployment"), ("statefulsets", "StatefulSet"), ("daemonsets", "DaemonSet")] for obj in raw[source]]
+    for obj, kind in controllers:
         if not visible(obj):
             continue
-        service = workload(obj)
+        service = workload(obj, kind)
         key = service["id"]
         if key in services:
             previous = services[key]

@@ -31,6 +31,16 @@ def fixture():
 
 
 class ProjectionTests(unittest.TestCase):
+    def test_typed_api_lists_can_omit_item_kind(self):
+        raw = fixture()
+        del raw["deployments"][0]["kind"]
+        raw["statefulsets"] = [copy.deepcopy(raw["deployments"][0])]
+        raw["daemonsets"] = [copy.deepcopy(raw["deployments"][0])]
+        raw["daemonsets"][0]["status"].update(desiredNumberScheduled=3, numberReady=3, numberAvailable=3, updatedNumberScheduled=3)
+        services = collector.project(raw, NOW)["services"]
+        self.assertEqual({s["kind"] for s in services}, {"Deployment", "StatefulSet", "DaemonSet"})
+        self.assertTrue(all(s["status"] == "healthy" for s in services))
+
     def test_quantity_and_automatic_inventory(self):
         self.assertEqual(collector.quantity("2Gi"), 2 * 1024 ** 3)
         self.assertEqual(collector.quantity("7500m"), 7.5)
