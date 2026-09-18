@@ -125,7 +125,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: public
-          image: ghcr.io/link2427/olympus-status@sha256:5fae2bfe17efe0937cf128a1d4e9ba89e4b4044a84bed6497ce71c391e414959
+          image: ghcr.io/link2427/olympus-status@sha256:2c76f06379be9a88f5ddc943b1d1f0c7df5f741cabff5038d3bbe90899cbe5e7
           ports:
             - name: http
               containerPort: 8080
@@ -159,7 +159,7 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 20
         - name: collector
-          image: ghcr.io/link2427/olympus-status@sha256:5fae2bfe17efe0937cf128a1d4e9ba89e4b4044a84bed6497ce71c391e414959
+          image: ghcr.io/link2427/olympus-status@sha256:2c76f06379be9a88f5ddc943b1d1f0c7df5f741cabff5038d3bbe90899cbe5e7
           command: [python, /app/collector.py]
           securityContext:
             allowPrivilegeEscalation: false
