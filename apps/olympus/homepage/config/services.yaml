@@ -287,13 +287,16 @@
       namespace: vpn-egress
       podSelector: app.kubernetes.io/name=nordvpn-egress
       widget:
-        type: gluetun
-        url: http://nordvpn-egress.vpn-egress.svc.cluster.local:8000
-        version: 2
-        fields:
-        - public_ip
-        - region
-        - country
+        type: customapi
+        url: http://nordvpn-egress.vpn-egress.svc.cluster.local:8000/v1/publicip/ip
+        refreshInterval: 60000
+        mappings:
+        - field: public_ip
+          label: Reported VPN IP
+          format: text
+          remap:
+          - value: ''
+            to: Not reported
 - Network & Storage:
   - NetBox:
       icon: netbox.png

@@ -32,6 +32,11 @@ When adding a service, update `config/services.yaml` and, for a new group,
 internal health URLs for server-side checks. Preserve existing access boundaries.
 Media widget secrets must remain `HOMEPAGE_VAR_*` placeholders in config.
 
+The VPN IP widget reads Gluetun's existing read-only public-IP endpoint. An empty
+IP appears as `Not reported`; it does not imply that the tunnel is connected or
+disconnected. Pod readiness separately reflects Gluetun's own health check.
+This avoids requiring country/region fields when Gluetun has no IP metadata.
+
 ## Diagnosis and deployment
 
 If the dashboard hostname fails, check `tailscale status` on the client first.
