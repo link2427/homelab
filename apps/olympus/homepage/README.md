@@ -8,6 +8,9 @@ Homepage is pinned to v2.4.0 and its multi-architecture image digest. Configurat
 lives in `config/`. Kustomize generates a content-addressed ConfigMap and rewrites
 the Deployment volume reference, so every configuration edit rolls the pod and
 refreshes its writable configuration copy. No manual rollout annotation is needed.
+The startup probe warms the generated page and waits for the configured OLYMPUS
+title before readiness can pass, keeping the image's bundled sample page out of
+the first user request after a rollout. Update the probe if renaming the dashboard.
 The dashboard is stateless; its config comes from Git and media credentials remain
 in the existing SOPS-encrypted `homepage-media.secret.yaml`.
 

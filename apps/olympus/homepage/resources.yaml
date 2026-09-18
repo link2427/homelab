@@ -33,6 +33,17 @@ spec:
             name: homepage-media-widgets
         image: ghcr.io/gethomepage/homepage:v2.4.0@sha256:643bd0be730d40f69d58028a55d1a896739333e8815786df42bc97f109ecbe61
         imagePullPolicy: IfNotPresent
+        # Warm the generated page before routing traffic; the image initially
+        # serves its bundled sample page while Next.js regenerates local config.
+        startupProbe:
+          exec:
+            command:
+            - node
+            - -e
+            - "fetch('http://127.0.0.1:3000/').then(async r => process.exit(r.ok && (await r.text()).includes('<title>OLYMPUS</title>') ? 0 : 1)).catch(() => process.exit(1))"
+          failureThreshold: 30
+          periodSeconds: 2
+          timeoutSeconds: 3
         livenessProbe:
           failureThreshold: 3
           httpGet:
