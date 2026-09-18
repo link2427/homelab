@@ -349,10 +349,6 @@
       icon: mdi-nvidia
       description: 72 threads · ~64 GiB · Tesla P40 24 GiB · DATA-2 NAS
       siteMonitor: http://10.0.0.5:30080
-  - kronos:
-      icon: mdi-server-network
-      description: 4 ARM64 cores / 4 GiB / control plane + etcd
-      siteMonitor: http://10.0.0.203:30080
 - CI & Development:
   - GitHub Actions:
       icon: github.png

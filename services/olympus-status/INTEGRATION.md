@@ -169,10 +169,12 @@ with hardcoded node-exporter addresses; it is unnecessary for this integration.
 
 Build a live **Olympus** section from this feed and a separate static **Personal
 hardware** section for the MacBook, main PC, spare/offline Pis and spare GPUs.
-One Pi is currently a live node (`kronos`): keep it in the live section and avoid
-counting it again as an additional active node. Keep other Pi inventory static.
-The physical Pi identity should be confirmed before associating it with an old
-8-GB entry: the live node reports approximately 4 GB OS-visible memory.
+The Pis are outside the active cluster. Kronos was retired on September 18, 2026;
+Hermes is the sole control plane, with Atlas and both Precision systems as workers.
+Use the feed's current node list rather than hardcoding that inventory. Keep retired
+and offline Pis in the static personal inventory without adding their capacity to
+cluster totals. Confirm their physical RAM before reusing old 8-GB descriptions:
+Kronos reported approximately 4 GB OS-visible memory before retirement.
 
 Derive cluster totals from `summary`, node cards from `nodes`, and software/service
 groups from `services`. Derive topology membership from node IDs; the feed does

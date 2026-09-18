@@ -43,6 +43,11 @@ virtual media. A GPU or monitor is not required for headless operation.
 
 ### Control-plane availability
 
+Reverified September 18, 2026: Kronos had rejoined after the original migration.
+It has now been gracefully retired, its Talos STATE/EPHEMERAL partitions reset,
+and the Pi shut down. Encrypted recovery snapshots and machine configurations were
+verified before removal. See [the retirement record](kronos-retirement-20260918.md).
+
 `optiplex-hermes` is currently the only control-plane and etcd member visible
 to Kubernetes. The Precision systems add compute, storage, and GPUs, but they do
 not currently provide control-plane redundancy. Losing or powering off the
