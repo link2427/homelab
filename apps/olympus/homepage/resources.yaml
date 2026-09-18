@@ -40,10 +40,10 @@ spec:
             command:
             - node
             - -e
-            - "fetch('http://127.0.0.1:3000/').then(async r => process.exit(r.ok && (await r.text()).includes('<title>OLYMPUS</title>') ? 0 : 1)).catch(() => process.exit(1))"
-          failureThreshold: 30
-          periodSeconds: 2
-          timeoutSeconds: 3
+            - "fetch('http://127.0.0.1:3000/api/revalidate').then(async warm => { if (!warm.ok) process.exit(1); const r = await fetch('http://127.0.0.1:3000/'); process.exit(r.ok && (await r.text()).includes('>OLYMPUS</title>') ? 0 : 1); }).catch(() => process.exit(1))"
+          failureThreshold: 12
+          periodSeconds: 5
+          timeoutSeconds: 10
         livenessProbe:
           failureThreshold: 3
           httpGet:
