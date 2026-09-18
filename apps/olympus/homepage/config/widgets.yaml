@@ -1,0 +1,26 @@
+- greeting:
+    text_size: 2xl
+    text: OLYMPUS // COMMAND CENTER
+- kubernetes:
+    cluster:
+      show: true
+      cpu: true
+      memory: true
+      showLabel: true
+      label: Olympus
+    nodes:
+      show: true
+      cpu: true
+      memory: true
+      showLabel: true
+- search:
+    provider: google
+    focus: false
+    showSearchSuggestions: true
+    target: _blank
+- datetime:
+    text_size: md
+    format:
+      dateStyle: medium
+      timeStyle: short
+      hour12: true

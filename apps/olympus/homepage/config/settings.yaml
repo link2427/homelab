@@ -1,0 +1,116 @@
+title: OLYMPUS
+description: Olympus homelab command center
+startUrl: http://olympus-dashboard/
+theme: dark
+color: slate
+iconStyle: theme
+headerStyle: boxedWidgets
+target: _blank
+fullWidth: true
+maxGroupColumns: 4
+maxBookmarkGroupColumns: 4
+useEqualHeights: true
+statusStyle: dot
+hideVersion: true
+disableIndexing: true
+quicklaunch:
+  provider: google
+  searchDescriptions: true
+  showSearchSuggestions: true
+  mobileButtonPosition: bottom-right
+layout:
+  Command Deck:
+    tab: Home
+    style: row
+    columns: 4
+    icon: mdi-view-dashboard-outline
+  Public Apps:
+    style: row
+    columns: 4
+    icon: mdi-web
+    tab: Home
+  Cosmotrak Services:
+    style: row
+    columns: 4
+    icon: mdi-satellite-variant
+    tab: Home
+  Apps & Automation:
+    tab: Home
+    style: row
+    columns: 4
+    icon: mdi-rocket-launch-outline
+  Telchar:
+    tab: Home
+    style: row
+    columns: 4
+    icon: mdi-domain
+  Media Control:
+    tab: Media
+    style: row
+    columns: 4
+    icon: mdi-movie-open-cog-outline
+  Network & Storage:
+    tab: Infrastructure
+    style: row
+    columns: 4
+    icon: mdi-lan
+  Compute Fleet:
+    tab: Infrastructure
+    style: row
+    columns: 3
+    icon: mdi-server-network
+  CI & Development:
+    style: row
+    columns: 4
+    icon: mdi-code-braces-box
+    tab: Development
+  Kubernetes Core:
+    tab: Platform
+    style: row
+    columns: 4
+    icon: kubernetes.png
+  Observability Internals:
+    tab: Platform
+    style: row
+    columns: 4
+    icon: mdi-chart-timeline-variant-shimmer
+  GitOps:
+    style: row
+    columns: 4
+    icon: mdi-git
+    tab: Platform
+  Background Services:
+    style: row
+    columns: 4
+    icon: mdi-cog-sync-outline
+    tab: Platform
+  Forge Workers:
+    tab: Platform
+    style: row
+    columns: 4
+    icon: mdi-cog-sync-outline
+  Data Plane:
+    tab: Platform
+    style: row
+    columns: 4
+    icon: mdi-database-outline
+  Storage Platform:
+    style: row
+    columns: 4
+    icon: mdi-database-sync-outline
+    tab: Platform
+  Operator & Tunnels:
+    tab: Platform
+    style: row
+    columns: 4
+    icon: mdi-cloud-sync-outline
+  Storage Shortcuts:
+    tab: Infrastructure
+    style: row
+    columns: 4
+    icon: mdi-folder-network-outline
+  Platform References:
+    tab: Platform
+    style: row
+    columns: 4
+    icon: mdi-book-open-page-variant-outline

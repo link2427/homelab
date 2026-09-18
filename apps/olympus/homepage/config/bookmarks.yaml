@@ -1,0 +1,27 @@
+- Storage Shortcuts:
+    - DATA-2:
+        - abbr: D2
+          href: smb://10.0.0.5/DATA-2
+          description: Atlas authenticated NAS share
+    - Plex Library:
+        - icon: plex.png
+          href: http://10.0.0.171:32400/web
+          description: P2000 on precision-7810-01; media on Atlas
+
+- Platform References:
+    - Talos Linux:
+        - icon: mdi-shield-crown-outline
+          href: https://docs.siderolabs.com/talos/v1.12/
+          description: Talos 1.12 documentation
+    - Kubernetes:
+        - icon: kubernetes.png
+          href: https://kubernetes.io/docs/
+          description: Kubernetes documentation
+    - NVIDIA Device Plugin:
+        - icon: nvidia.png
+          href: https://github.com/NVIDIA/k8s-device-plugin
+          description: GPU scheduling documentation
+    - Homepage:
+        - icon: homepage.png
+          href: https://gethomepage.dev/
+          description: Dashboard configuration reference

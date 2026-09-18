@@ -1,0 +1,676 @@
+- Command Deck:
+  - Headlamp:
+      icon: kubernetes.png
+      href: http://olympus-headlamp
+      description: Kubernetes workloads, logs, and cluster administration
+      server: kubernetes
+      namespace: headlamp
+      podSelector: app.kubernetes.io/name=headlamp
+  - Portainer:
+      icon: portainer.png
+      href: http://olympus-portainer:9000
+      description: Cluster operations and workload control
+      server: kubernetes
+      namespace: portainer
+      podSelector: app.kubernetes.io/name=portainer
+  - Coder:
+      icon: mdi-code-braces-box
+      href: https://coder.jacob-neel.dev
+      description: Linux development workspaces, GPU templates, and persistent build caches
+      server: kubernetes
+      namespace: coder
+      podSelector: app.kubernetes.io/name=coder
+  - Authentik:
+      icon: authentik.png
+      href: https://auth.jacob-neel.dev
+      description: Google identity and single sign-on
+      server: kubernetes
+      namespace: authentik
+      podSelector: app.kubernetes.io/name=authentik,app.kubernetes.io/component=server
+  - Grafana:
+      icon: grafana.png
+      href: http://olympus-grafana
+      description: Dashboards, metrics, and GPU visibility
+      server: kubernetes
+      namespace: monitoring
+      podSelector: app=grafana
+  - Prometheus:
+      icon: prometheus.png
+      href: http://olympus-prometheus
+      description: Metrics database and target health
+      server: kubernetes
+      namespace: monitoring
+      podSelector: app=prometheus
+      widget:
+        type: prometheus
+        url: http://prometheus.monitoring.svc.cluster.local:9090
+        fields:
+        - targets_up
+        - targets_down
+        - targets_total
+  - Uptime Kuma:
+      icon: uptime-kuma.png
+      href: http://olympus-uptime
+      description: Availability and incident monitoring
+      server: kubernetes
+      namespace: uptime-kuma
+      podSelector: app=uptime-kuma
+- Public Apps:
+  - Cosmotrak:
+      icon: mdi-orbit
+      href: https://cosmotrak.com
+      description: Space tracking app website
+      server: kubernetes
+      namespace: cosmotrak
+      podSelector: app.kubernetes.io/name=cosmotrak
+      siteMonitor: http://cosmotrak.cosmotrak.svc.cluster.local/healthz
+  - Personal Website:
+      icon: mdi-account-circle-outline
+      href: https://jacob-neel.com
+      description: Jacob Neel / projects, tools, and portfolio
+      server: kubernetes
+      namespace: personal-website
+      podSelector: app.kubernetes.io/name=personal-website
+      siteMonitor: http://personal-website.personal-website.svc.cluster.local/healthz
+  - ShaderWeave:
+      icon: mdi-palette-outline
+      href: https://shaderweave.com
+      description: Shader editor and image rendering
+      server: kubernetes
+      namespace: shaderweave
+      podSelector: app.kubernetes.io/name=shaderweave-web
+      siteMonitor: http://shaderweave-web.shaderweave.svc.cluster.local/healthz
+  - ShaderWeave API:
+      icon: mdi-api
+      href: https://shaderweave.com/v1/health
+      description: Rendering API, authentication, and billing
+      server: kubernetes
+      namespace: shaderweave
+      podSelector: app.kubernetes.io/name=shaderweave-api
+      siteMonitor: http://shaderweave-api.shaderweave.svc.cluster.local:3001/v1/ready
+- Cosmotrak Services:
+  - Cosmotrak Status:
+      icon: mdi-check-network-outline
+      href: https://cosmotrak.com/status
+      description: Public satellite data freshness and delivery status
+  - Notification Management:
+      icon: mdi-bell-cog-outline
+      href: https://manage.cosmotrak.com
+      description: Protected notification administration
+      server: kubernetes
+      namespace: cosmotrak-notifications
+      podSelector: app.kubernetes.io/name=api
+  - Notifications API:
+      icon: mdi-api
+      href: https://api.cosmotrak.com/v1/openapi.json
+      description: Installation registration and notification API
+      server: kubernetes
+      namespace: cosmotrak-notifications
+      podSelector: app.kubernetes.io/name=api
+      siteMonitor: http://api.cosmotrak-notifications.svc.cluster.local/readyz
+  - Notifications Worker:
+      icon: mdi-bell-ring-outline
+      description: Background scheduling and push delivery
+      server: kubernetes
+      namespace: cosmotrak-notifications
+      podSelector: app.kubernetes.io/name=worker
+  - Satellite Data Production:
+      icon: mdi-satellite-variant
+      href: http://olympus-satellite-data/status
+      description: Private publisher status / production schedule
+      server: kubernetes
+      namespace: satellite-data-prod
+      podSelector: app.kubernetes.io/name=satellite-data-status
+      siteMonitor: http://satellite-data-status.satellite-data-prod.svc.cluster.local/health/live
+  - Satellite Data Development:
+      icon: mdi-satellite-uplink
+      description: Internal status service / ingestion intentionally suspended
+      server: kubernetes
+      namespace: satellite-data-dev
+      podSelector: app.kubernetes.io/name=satellite-data-status
+      siteMonitor: http://satellite-data-status.satellite-data-dev.svc.cluster.local/health/live
+  - Cosmotrak Data Delivery:
+      icon: cloudflare.png
+      href: https://data.cosmotrak.com/v1/manifest.json
+      description: Cloudflare Worker / immutable database manifest
+      siteMonitor: https://data.cosmotrak.com/v1/manifest.json
+- Apps & Automation:
+  - n8n:
+      icon: n8n.png
+      href: http://olympus-n8n
+      description: Workflow and agent automation
+      server: kubernetes
+      namespace: n8n
+      podSelector: app=n8n
+  - Pi-hole:
+      icon: pi-hole.png
+      href: http://olympus-pihole
+      description: Network DNS and ad blocking
+      server: kubernetes
+      namespace: pihole
+      podSelector: app=pihole
+  - Tailscale:
+      icon: tailscale.png
+      href: https://login.tailscale.com/admin
+      description: Tailnet devices, DNS, and access policy
+- Telchar:
+  - Telchar Dynamics:
+      icon: mdi-domain
+      href: https://telchardynamics.com
+      description: Public company site
+      siteMonitor: https://telchardynamics.com
+      server: kubernetes
+      namespace: telchar-construct
+      podSelector: app.kubernetes.io/name=construct-site
+  - Telchar Forge:
+      icon: mdi-shield-search-outline
+      href: https://telcharforge.com
+      description: Intelligence platform site
+      siteMonitor: https://telcharforge.com
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-site
+  - Forge App:
+      icon: mdi-radar
+      href: https://app.telcharforge.com
+      description: Operational intelligence workspace
+      siteMonitor: https://app.telcharforge.com
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-mobile-web
+  - Forge API:
+      icon: mdi-api
+      href: https://api.telcharforge.com/health
+      description: Public API readiness endpoint
+      siteMonitor: https://api.telcharforge.com/health
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-api
+- Media Control:
+  - Seerr:
+      icon: seerr.png
+      href: http://olympus-seerr
+      description: Request movies and TV · HD 720p/1080p
+      server: kubernetes
+      namespace: media-automation
+      podSelector: app.kubernetes.io/name=seerr
+      widget:
+        type: seerr
+        url: http://seerr.media-automation.svc.cluster.local:5055
+        key: '{{HOMEPAGE_VAR_SEERR_KEY}}'
+        hideErrors: true
+        fields:
+        - pending
+        - approved
+        - processing
+        - available
+  - Plex:
+      icon: plex.png
+      href: http://10.0.0.171:32400/web
+      description: P2000 transcoding · DATA-2 library
+      server: kubernetes
+      namespace: plex
+      podSelector: app.kubernetes.io/name=plex
+      widget:
+        type: plex
+        url: http://plex.plex.svc.cluster.local:32400
+        key: '{{HOMEPAGE_VAR_PLEX_TOKEN}}'
+        fields:
+        - streams
+        - movies
+        - tv
+  - Radarr:
+      icon: radarr.png
+      href: http://olympus-radarr
+      description: Movie library · tailnet admin
+      server: kubernetes
+      namespace: media-automation
+      podSelector: app.kubernetes.io/name=radarr
+      widget:
+        type: radarr
+        url: http://radarr.media-automation.svc.cluster.local:7878
+        key: '{{HOMEPAGE_VAR_RADARR_KEY}}'
+        enableQueue: true
+        fields:
+        - wanted
+        - queued
+        - movies
+  - Sonarr:
+      icon: sonarr.png
+      href: http://olympus-sonarr
+      description: TV library · tailnet admin
+      server: kubernetes
+      namespace: media-automation
+      podSelector: app.kubernetes.io/name=sonarr
+      widget:
+        type: sonarr
+        url: http://sonarr.media-automation.svc.cluster.local:8989
+        key: '{{HOMEPAGE_VAR_SONARR_KEY}}'
+        enableQueue: true
+        fields:
+        - wanted
+        - queued
+        - series
+  - Prowlarr:
+      icon: prowlarr.png
+      href: http://olympus-prowlarr
+      description: Lawful source/indexer management · tailnet admin
+      server: kubernetes
+      namespace: media-automation
+      podSelector: app.kubernetes.io/name=prowlarr
+      widget:
+        type: prowlarr
+        url: http://prowlarr.media-automation.svc.cluster.local:9696
+        key: '{{HOMEPAGE_VAR_PROWLARR_KEY}}'
+  - qBittorrent:
+      icon: qbittorrent.png
+      description: Fail-closed downloads through NordVPN
+      server: kubernetes
+      namespace: media-automation
+      podSelector: app.kubernetes.io/name=qbittorrent
+      widget:
+        type: qbittorrent
+        url: http://qbittorrent.media-automation.svc.cluster.local:8080
+        username: '{{HOMEPAGE_VAR_QBITTORRENT_USERNAME}}'
+        password: '{{HOMEPAGE_VAR_QBITTORRENT_PASSWORD}}'
+        enableLeechProgress: true
+        enableLeechSize: true
+        fields:
+        - leech
+        - download
+        - seed
+        - upload
+  - NordVPN Egress:
+      icon: nordvpn.png
+      description: Shared authenticated VPN gateway
+      server: kubernetes
+      namespace: vpn-egress
+      podSelector: app.kubernetes.io/name=nordvpn-egress
+      widget:
+        type: gluetun
+        url: http://nordvpn-egress.vpn-egress.svc.cluster.local:8000
+        version: 2
+        fields:
+        - public_ip
+        - region
+        - country
+- Network & Storage:
+  - NetBox:
+      icon: netbox.png
+      href: http://olympus-netbox
+      description: Infrastructure source of truth, IPAM, racks, and cabling
+      server: kubernetes
+      namespace: netbox
+      podSelector: app.kubernetes.io/name=netbox,app.kubernetes.io/component=netbox
+  - HP 2920 Switch:
+      icon: mdi-switch
+      href: http://10.0.0.95
+      description: Rack switching and port console
+  - Network Gateway:
+      icon: mdi-router-network
+      href: http://10.0.0.1
+      description: LAN gateway and DHCP
+      siteMonitor: http://10.0.0.1
+  - Atlas:
+      icon: mdi-nas
+      href: smb://10.0.0.5
+      description: Talos NAS worker / DATA-2 media storage / 10.0.0.5
+  - Olympus DNS:
+      icon: mdi-dns
+      href: http://olympus-pihole
+      description: Pi-hole web and tailnet DNS
+      server: kubernetes
+      namespace: pihole
+      podSelector: app=pihole
+- Compute Fleet:
+  - optiplex-hermes:
+      icon: mdi-server-network
+      description: 12 threads · 16 GiB · control plane + etcd
+      siteMonitor: http://10.0.0.57:30080
+  - precision-5810-01:
+      icon: mdi-nvidia
+      description: 12 threads · 16 GiB · Quadro M4000 8 GiB
+      siteMonitor: http://10.0.0.25:30080
+  - precision-7810-01:
+      icon: mdi-nvidia
+      description: 8 threads · 32 GiB · Quadro P2000 5 GiB
+      siteMonitor: http://10.0.0.171:30080
+  - atlas:
+      icon: mdi-nvidia
+      description: 72 threads · ~64 GiB · Tesla P40 24 GiB · DATA-2 NAS
+      siteMonitor: http://10.0.0.5:30080
+  - kronos:
+      icon: mdi-server-network
+      description: 4 ARM64 cores / 4 GiB / control plane + etcd
+      siteMonitor: http://10.0.0.203:30080
+- CI & Development:
+  - GitHub Actions:
+      icon: github.png
+      href: https://github.com/link2427/homelab/actions
+      description: Olympus runner workflows and deployment history
+  - Actions Runner Controller:
+      icon: github.png
+      description: Ephemeral GitHub runner pools / scale to zero when idle
+      server: kubernetes
+      namespace: arc-system
+      podSelector: app.kubernetes.io/name=gha-rs-controller
+  - BuildKit:
+      icon: docker.png
+      description: Shared CI build cache / authenticated internal endpoint
+      server: kubernetes
+      namespace: actions-runners
+      podSelector: app=buildkit
+  - Coder Workspaces:
+      icon: mdi-code-braces-box
+      href: https://coder.jacob-neel.dev/workspaces
+      description: Personal and Forge workspaces with dedicated builders
+  - Coder Image Cache:
+      icon: docker.png
+      description: Standard workspace images cached on AMD64 workers
+      server: kubernetes
+      namespace: spegel
+      podSelector: app.kubernetes.io/name=coder-image-cache
+  - Coder GPU Image Cache:
+      icon: nvidia.png
+      description: CUDA workspace images cached on GPU workers
+      server: kubernetes
+      namespace: spegel
+      podSelector: app.kubernetes.io/name=coder-gpu-image-cache
+- Kubernetes Core:
+  - Homepage:
+      icon: homepage.png
+      href: http://olympus-dashboard
+      description: Olympus command center
+      server: kubernetes
+      namespace: homepage
+      podSelector: app=homepage
+  - CoreDNS:
+      icon: mdi-dns-outline
+      description: Cluster service discovery
+      server: kubernetes
+      namespace: kube-system
+      podSelector: k8s-app=kube-dns
+  - Metrics Server:
+      icon: mdi-chart-box-outline
+      description: Kubernetes resource metrics API
+      server: kubernetes
+      namespace: kube-system
+      podSelector: k8s-app=metrics-server
+  - Flannel:
+      icon: mdi-lan-connect
+      description: Pod overlay network
+      server: kubernetes
+      namespace: kube-system
+      podSelector: k8s-app=flannel
+  - kube-proxy:
+      icon: mdi-swap-horizontal-bold
+      description: Node service networking
+      server: kubernetes
+      namespace: kube-system
+      podSelector: k8s-app=kube-proxy
+  - Longhorn:
+      icon: mdi-database-sync
+      href: http://olympus-longhorn
+      description: Distributed NVMe, SSD, and HDD storage
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=longhorn-ui
+  - Samba · DATA-2:
+      icon: mdi-folder-network-outline
+      href: smb://10.0.0.5/DATA-2
+      description: Authenticated NAS share from Atlas
+      server: kubernetes
+      namespace: nas
+      podSelector: app.kubernetes.io/name=samba
+  - NVIDIA GPU Runtime:
+      icon: nvidia.png
+      description: 3 GPUs allocatable · R580 LTS
+      server: kubernetes
+      namespace: nvidia-device-plugin
+      podSelector: app.kubernetes.io/instance=nvidia-device-plugin
+- Observability Internals:
+  - kube-state-metrics:
+      icon: kubernetes.png
+      description: Kubernetes object metrics exporter
+      server: kubernetes
+      namespace: monitoring
+      podSelector: app=kube-state-metrics
+  - node-exporter:
+      icon: prometheus.png
+      description: Host metrics from all five nodes
+      server: kubernetes
+      namespace: monitoring
+      podSelector: app=node-exporter
+  - Portainer Agent:
+      icon: portainer.png
+      description: Cluster management agent
+      server: kubernetes
+      namespace: portainer
+      podSelector: app=portainer-agent
+- GitOps:
+  - Flux Source Controller:
+      icon: flux-cd.png
+      description: Fetches Git and chart sources
+      server: kubernetes
+      namespace: flux-system
+      podSelector: app=source-controller
+  - Flux Kustomize Controller:
+      icon: flux-cd.png
+      description: Reconciles cluster manifests from Git
+      server: kubernetes
+      namespace: flux-system
+      podSelector: app=kustomize-controller
+  - Flux Helm Controller:
+      icon: flux-cd.png
+      description: Reconciles Helm releases
+      server: kubernetes
+      namespace: flux-system
+      podSelector: app=helm-controller
+  - Flux Notification Controller:
+      icon: flux-cd.png
+      description: GitOps events and receiver endpoints
+      server: kubernetes
+      namespace: flux-system
+      podSelector: app=notification-controller
+- Background Services:
+  - Authentik Worker:
+      icon: authentik.png
+      description: Identity background tasks
+      server: kubernetes
+      namespace: authentik
+      podSelector: app.kubernetes.io/name=authentik,app.kubernetes.io/component=worker
+  - NetBox Worker:
+      icon: netbox.png
+      description: Inventory background tasks
+      server: kubernetes
+      namespace: netbox
+      podSelector: app.kubernetes.io/name=netbox,app.kubernetes.io/component=worker
+  - Plex Media NFS:
+      icon: mdi-folder-network-outline
+      description: Read-only DATA-2 media export for Plex
+      server: kubernetes
+      namespace: nas
+      podSelector: app.kubernetes.io/name=plex-media-nfs
+- Forge Workers:
+  - Forge MCP:
+      icon: mdi-connection
+      description: Model Context Protocol service
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-mcp
+  - Ingester:
+      icon: mdi-download-network-outline
+      description: Source ingestion pipeline
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-ingester
+  - Processor:
+      icon: mdi-cog-sync-outline
+      description: Event normalization and enrichment
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-processor
+  - Distributor:
+      icon: mdi-send-circle-outline
+      description: Alert and delivery pipeline
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-distributor
+  - Briefing:
+      icon: mdi-file-document-edit-outline
+      description: Automated intelligence briefings
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-briefing
+- Data Plane:
+  - PostgreSQL + PostGIS:
+      icon: postgres.png
+      description: Forge system of record and geospatial data
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-postgres
+  - Redis:
+      icon: redis.png
+      description: Cache and coordination layer
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-redis
+  - NATS JetStream:
+      icon: mdi-bus
+      description: Event transport and durable streams
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=forge-nats
+  - Authentik PostgreSQL:
+      icon: postgres.png
+      description: Identity provider database
+      server: kubernetes
+      namespace: authentik
+      podSelector: app.kubernetes.io/name=authentik-postgres
+  - Coder PostgreSQL:
+      icon: postgres.png
+      description: Workspace metadata and lifecycle state
+      server: kubernetes
+      namespace: coder
+      podSelector: app.kubernetes.io/name=coder-postgres
+  - NetBox PostgreSQL:
+      icon: postgres.png
+      description: Infrastructure inventory database
+      server: kubernetes
+      namespace: netbox
+      podSelector: app.kubernetes.io/name=netbox-postgres
+  - NetBox Valkey:
+      icon: redis.png
+      description: NetBox cache and background job queue
+      server: kubernetes
+      namespace: netbox
+      podSelector: app.kubernetes.io/name=netbox-valkey
+  - Personal Website PostgreSQL:
+      icon: postgres.png
+      description: Portfolio application data
+      server: kubernetes
+      namespace: personal-website
+      podSelector: app.kubernetes.io/name=personal-website-postgres
+  - Notifications PostgreSQL:
+      icon: postgres.png
+      description: Installations, schedules, and delivery records
+      server: kubernetes
+      namespace: cosmotrak-notifications
+      podSelector: app.kubernetes.io/name=postgres
+- Storage Platform:
+  - Longhorn Managers:
+      icon: longhorn.png
+      description: Volume orchestration across storage nodes
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=longhorn-manager
+  - Longhorn CSI Plugin:
+      icon: longhorn.png
+      description: Persistent volume attachment and mounts
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=longhorn-csi-plugin
+  - Longhorn Driver Deployer:
+      icon: longhorn.png
+      description: CSI driver management
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=longhorn-driver-deployer
+  - Longhorn Engines:
+      icon: longhorn.png
+      description: Replicated volume engines
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: longhorn.io/component=engine-image
+  - Longhorn Share Manager:
+      icon: longhorn.png
+      description: Shared volume NFS service
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: longhorn.io/component=share-manager
+  - CSI Attacher:
+      icon: mdi-database-cog-outline
+      description: Volume attachment controller
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=csi-attacher
+  - CSI Provisioner:
+      icon: mdi-database-cog-outline
+      description: Persistent volume provisioning
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=csi-provisioner
+  - CSI Resizer:
+      icon: mdi-database-cog-outline
+      description: Persistent volume expansion
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=csi-resizer
+  - CSI Snapshotter:
+      icon: mdi-database-cog-outline
+      description: Volume snapshot controller
+      server: kubernetes
+      namespace: longhorn-system
+      podSelector: app=csi-snapshotter
+  - Spegel:
+      icon: docker.png
+      description: Peer-to-peer OCI image registry cache
+      server: kubernetes
+      namespace: spegel
+      podSelector: app.kubernetes.io/name=spegel
+- Operator & Tunnels:
+  - Tailscale Operator:
+      icon: tailscale.png
+      href: https://login.tailscale.com/admin
+      description: Tailnet service exposure controller
+      server: kubernetes
+      namespace: tailscale
+      podSelector: app=operator
+  - Forge Cloudflare Tunnel:
+      icon: cloudflare.png
+      href: https://one.dash.cloudflare.com
+      description: Public routing for Forge site, app, and API
+      server: kubernetes
+      namespace: telchar-forge
+      podSelector: app.kubernetes.io/name=cloudflared
+  - Construct Cloudflare Tunnel:
+      icon: cloudflare.png
+      href: https://one.dash.cloudflare.com
+      description: Public routing for Telchar Dynamics
+      server: kubernetes
+      namespace: telchar-construct
+      podSelector: app.kubernetes.io/name=cloudflared
+  - Olympus Cloudflare Tunnel:
+      icon: cloudflare.png
+      href: https://one.dash.cloudflare.com
+      description: Shared public routing for identity, Coder, and hosted apps
+      server: kubernetes
+      namespace: authentik
+      podSelector: app.kubernetes.io/name=cloudflared
+  - Tailscale Service Proxies:
+      icon: tailscale.png
+      href: https://login.tailscale.com/admin
+      description: Private access paths for Olympus applications
+      server: kubernetes
+      namespace: tailscale
+      podSelector: tailscale.com/managed=true
