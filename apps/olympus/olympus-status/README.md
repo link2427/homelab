@@ -58,11 +58,22 @@ This tunnel setting is managed via Cloudflare API, not Flux. Preserve the full
 existing configuration when updating it. Path selection follows Cloudflare's
 [documented first-match ingress rules](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/configuration-file/).
 
+Cloudflare Browser Integrity Check returned error 1010 for stock Python clients.
+A single `http_config_settings` rule (`olympus_public_feed_clients`) sets `bic`
+to false only for GET/HEAD on the seven fixed feed/index/document URLs. `/uses`,
+other paths, other methods, WAF and DDoS protections keep their existing settings.
+The exact intended ingress and configuration rule are recorded in
+[cloudflare.json](cloudflare.json); this is an operational record, not a Flux
+resource. Configuration ruleset ID: `ab6234df944f4c238081641f24a63d37`,
+rule ID: `db5800b61a3d4388b1e267e8ac68cd9b`.
+
 ## Verification and rollback
 
 Validate the public JSON against the shipped strict schema; check two different
 `generatedAt` observations, empty `unavailableSources`, and the actual readiness
-states. GET/HEAD should work, POST should return 405 and unknown paths 404. Confirm
+states. GET/HEAD should work with curl and default Python clients. The origin
+returns 405 for POST and 404 for unknown paths; the edge may return 403 for
+non-browser requests outside the seven GET/HEAD exemptions. Confirm
 the public container has neither the projected nor default ServiceAccount token.
 Check collector RBAC denies Secrets and mutation verbs. `/uses` must still route
 to the website and retain its current content.
@@ -71,4 +82,6 @@ For code rollback, restore both image pins from a known good Git revision and
 reconcile this Kustomization. For public-route rollback, remove only the exact
 `jacob-neel.com` + `^/api/olympus(/.*)?$` tunnel rule. The site's catch-all route
 then handles that path as before. No user data or backup migration is involved.
+Also remove only the `olympus_public_feed_clients` configuration rule to restore
+Browser Integrity Check on those paths; preserve any later rules in the ruleset.
 Any later teardown/pruning of the namespace should be separately authorized.

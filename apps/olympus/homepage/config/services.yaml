@@ -56,6 +56,13 @@
       podSelector: app=uptime-kuma
       app: uptime-kuma
 - Public Apps:
+  - Olympus Cluster Feed:
+      icon: mdi-api
+      href: https://jacob-neel.com/api/olympus/v1/cluster
+      description: Public read-only cluster inventory, capacity, utilization, and readiness
+      namespace: olympus-status
+      podSelector: app.kubernetes.io/name=olympus-status
+      app: olympus-status
   - Cosmotrak:
       icon: mdi-orbit
       href: https://cosmotrak.com

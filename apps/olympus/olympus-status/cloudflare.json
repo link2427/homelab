@@ -1,0 +1,15 @@
+{
+  "ingress": {
+    "hostname": "jacob-neel.com",
+    "path": "^/api/olympus(/.*)?$",
+    "service": "http://olympus-status.olympus-status.svc.cluster.local:80"
+  },
+  "configurationRule": {
+    "ref": "olympus_public_feed_clients",
+    "description": "Allow non-browser readers on fixed read-only Olympus feed endpoints",
+    "expression": "(http.host eq \"jacob-neel.com\" and http.request.method in {\"GET\" \"HEAD\"} and http.request.uri.path in {\"/api/olympus\" \"/api/olympus/\" \"/api/olympus/v1\" \"/api/olympus/v1/cluster\" \"/api/olympus/v1/schema.json\" \"/api/olympus/v1/types.ts\" \"/api/olympus/v1/integration\"})",
+    "action": "set_config",
+    "action_parameters": { "bic": false },
+    "enabled": true
+  }
+}
