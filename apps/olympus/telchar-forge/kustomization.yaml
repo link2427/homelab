@@ -6,3 +6,4 @@ resources:
 - cloudflared-token.secret.yaml
 - forge-secrets.secret.yaml
 - ghcr-creds.secret.yaml
+- workspace-nats-pvc.yaml
