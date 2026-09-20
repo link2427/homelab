@@ -13,3 +13,13 @@ metadata:
   namespace: telchar-forge
 spec:
   replicas: 0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forge-config
+  namespace: telchar-forge
+data:
+  WORKSPACE_ENABLED: 'false'
+  WORKSPACE_PROCESSING_ENABLED: 'false'
+  WORKSPACE_SNAPSHOT_ENABLED: 'false'

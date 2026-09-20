@@ -8,5 +8,7 @@ resources:
 - ghcr-creds.secret.yaml
 - workspace-nats-pvc.yaml
 - workspace-nats-copy.yaml
+- workspace-migrate.yaml
+- workspace-monitor.yaml
 patches:
 - path: workspace-stage.yaml
