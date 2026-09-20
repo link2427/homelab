@@ -7,3 +7,5 @@ resources:
 - forge-secrets.secret.yaml
 - ghcr-creds.secret.yaml
 - workspace-nats-pvc.yaml
+patches:
+- path: workspace-stage.yaml

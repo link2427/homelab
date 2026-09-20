@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-ingester
+  namespace: telchar-forge
+spec:
+  replicas: 0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-briefing
+  namespace: telchar-forge
+spec:
+  replicas: 0
