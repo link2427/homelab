@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: monitor
-        image: ghcr.io/telchar-dynamics/forge-monitor@sha256:b445098f8adae94f162f5fa470adb58e97c50451050ee4455298c788f0cad026
+        image: ghcr.io/telchar-dynamics/forge-monitor@sha256:aeded76224b44563651e7afe28df48c6c8be6ecd54a4b4b97fdaea83940d5f5e
         envFrom:
         - configMapRef:
             name: forge-config
