@@ -686,7 +686,7 @@ spec:
         name: config
       - name: data
         persistentVolumeClaim:
-          claimName: forge-nats-longhorn
+          claimName: forge-nats-workspace
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1
