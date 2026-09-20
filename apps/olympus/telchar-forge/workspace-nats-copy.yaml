@@ -1,0 +1,83 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: forge-nats-copy-20260920
+  namespace: telchar-forge
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: forge-nats-copy
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: copy
+        image: busybox@sha256:7a3ebe5bfd1a4a19797d20b0c0bb39d44393e9a03fd852c0865b0f540d868df0
+        command:
+        - sh
+        - -c
+        - 'set -eu
+
+          test -d /source/jetstream
+
+          mkdir -p /target/jetstream
+
+          cd /source
+
+          find jetstream -type f -exec sha256sum ''{}'' '';'' | sort > /tmp/source.sha
+
+          cp -a /source/jetstream/. /target/jetstream/
+
+          cd /target
+
+          sha256sum -c /tmp/source.sha > /tmp/verified.log
+
+          test "$(find jetstream -type f | wc -l)" = "$(wc -l < /tmp/source.sha)"
+
+          sync
+
+          printf ''Verified broker copy: ''
+
+          wc -l < /tmp/source.sha
+
+          sha256sum /tmp/source.sha
+
+          '
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - CHOWN
+            - FOWNER
+            - DAC_OVERRIDE
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: '1'
+            memory: 128Mi
+        volumeMounts:
+        - name: source
+          mountPath: /source
+          readOnly: true
+        - name: target
+          mountPath: /target
+      volumes:
+      - name: source
+        persistentVolumeClaim:
+          claimName: forge-nats-longhorn
+          readOnly: true
+      - name: target
+        persistentVolumeClaim:
+          claimName: forge-nats-workspace
