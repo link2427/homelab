@@ -98,7 +98,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-api@sha256:cefe79d335362acefd49b7751e5dfafe9d4d496d2ed587d9763fbd06c01db024
+        image: ghcr.io/telchar-dynamics/forge-api@sha256:25b30a3acf1f5893c9387bbc9d8ffa88c706f14143844ed7b52eab0b87be1158
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
@@ -180,7 +180,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-briefing@sha256:0c12799e637e6ce7ad439f56d4671b02de5e6e15be3f00a5ac4265f550cb5222
+        image: ghcr.io/telchar-dynamics/forge-briefing@sha256:d614ff2d093811c75cdbf403fe60235da8b55188aeb5e05fce5f5c7b57d18e25
         imagePullPolicy: Always
         name: briefing
         resources:
@@ -238,7 +238,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-distributor@sha256:ad45e570a8cfdd217c9ee23c0bfca08d6ede0aa772f0f1a09df45e5ed63a914b
+        image: ghcr.io/telchar-dynamics/forge-distributor@sha256:417edc8255b4db19b9edce1a74089409ebaf9d43a6f5b90699f8cad138a47ece
         imagePullPolicy: Always
         name: distributor
         resources:
@@ -296,7 +296,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-ingester@sha256:23b088dc1554bd178f2f503b672cfaa91c51db9008b9210255b18f450d75489c
+        image: ghcr.io/telchar-dynamics/forge-ingester@sha256:1b22c1457d9646cd12b7f1da59ac0788323ceb42cc7ec61f62e765d8eb160276
         imagePullPolicy: Always
         name: ingester
         resources:
@@ -354,7 +354,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-mcp@sha256:da9a20638a24b14b6f91b907eb83ac82288e15d365b24fe9e174842d861b0300
+        image: ghcr.io/telchar-dynamics/forge-mcp@sha256:2cac1c8aa89729c3174e903fb89e886b3a66813781d12fff605b7f1493205a18
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
@@ -503,7 +503,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-processor@sha256:a962ea7d995e10bddff8cb1029b86c698582d99df454f5361755f62dc66e24e9
+        image: ghcr.io/telchar-dynamics/forge-processor@sha256:59e854da2652f3ef3a793083735ffda308b0b43dade7e31deb7576a33c9b1cbd
         imagePullPolicy: Always
         name: processor
         resources:
@@ -1212,7 +1212,7 @@ spec:
                 name: forge-config
             - secretRef:
                 name: forge-secrets
-            image: ghcr.io/telchar-dynamics/forge-processor@sha256:ca0aa845dad36a77b144033859d2d7da1baf5494eba87382ed361b4de8b953db
+            image: ghcr.io/telchar-dynamics/forge-static@sha256:3bda1d9a9fb31b2e6c23f230786a207b4874a2bf9e9206518f0adf93a0d853b1
             imagePullPolicy: Always
             name: static-import
             resources:

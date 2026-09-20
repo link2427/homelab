@@ -4,7 +4,7 @@ metadata:
   name: forge-ingester
   namespace: telchar-forge
 spec:
-  replicas: 0
+  replicas: 1
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -12,7 +12,7 @@ metadata:
   name: forge-briefing
   namespace: telchar-forge
 spec:
-  replicas: 0
+  replicas: 1
 ---
 apiVersion: v1
 kind: ConfigMap
