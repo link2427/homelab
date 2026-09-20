@@ -13,3 +13,11 @@ metadata:
   namespace: telchar-forge
 spec:
   replicas: 0
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: forge-nats
+  namespace: telchar-forge
+spec:
+  replicas: 0
