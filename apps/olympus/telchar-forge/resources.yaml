@@ -431,7 +431,7 @@ spec:
         telcharforge.com/environment: resume-demo
     spec:
       containers:
-      - image: ghcr.io/telchar-dynamics/forge-mobile-web@sha256:bc52addaf1f268c6f97f4fa50e4b69d8f760c7e5fa7c311d5cc352fbfc90262c
+      - image: ghcr.io/telchar-dynamics/forge-mobile-web@sha256:b3c2a2f74dbf9888707fac1377c74ae642b9f9644b78c9c270499783dffd7e5f
         imagePullPolicy: Always
         name: mobile-web
         ports:
