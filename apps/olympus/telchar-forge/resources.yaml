@@ -550,7 +550,7 @@ spec:
   template:
     metadata:
       annotations:
-        telcharforge.com/site-dist-revision: 9da9d65-site-card-layout-20260630185719
+        telcharforge.com/site-dist-revision: d867a3cf4155c7ff84da3eccae435bea4c862092
       labels:
         app.kubernetes.io/managed-by: kustomize
         app.kubernetes.io/name: forge-site
@@ -558,7 +558,7 @@ spec:
         telcharforge.com/environment: resume-demo
     spec:
       containers:
-      - image: ghcr.io/telchar-dynamics/forge-site:c6e8e8f6cfac4b74dcbf4a91cb5458c54026f1cc
+      - image: ghcr.io/telchar-dynamics/forge-site@sha256:a40c13d6f09ac520ae20a84e3c7c8c345b2d604bc67cd1ca3b5f1b2b68b092c4
         imagePullPolicy: Always
         name: site
         ports:
