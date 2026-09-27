@@ -1,0 +1,142 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: partdb-data
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/olympus-app-backup: enabled
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-resilient
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partdb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: partdb
+  template:
+    metadata:
+      labels:
+        app: partdb
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: initialize
+          image: jbtronics/part-db1:2.18.0@sha256:ab622014d471e0f488f59b242e53815cd7f642bd05ba03820a9fbc7eb75b7721
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              mkdir -p /data/db /data/uploads /data/media
+              if ! php bin/console doctrine:migrations:up-to-date -q; then
+                if [ -s /data/db/app.db ]; then
+                  mkdir -p /data/uploads/.automigration-backup
+                  php bin/console partdb:backup -n --database /data/uploads/.automigration-backup/before-migration-$(date -u +%Y%m%dT%H%M%SZ).zip
+                fi
+                # Initial migration prints a random admin password; keep it out of pod logs.
+                php bin/console doctrine:migrations:migrate -n >/tmp/migration.log 2>&1 || { echo 'Database migration failed; inspect /tmp/migration.log securely.'; exit 1; }
+              fi
+              php /config/bootstrap.php
+          envFrom:
+            - configMapRef: {name: partdb-config}
+            - secretRef: {name: partdb-secrets}
+          env:
+            - name: DATABASE_URL
+              value: sqlite:////data/db/app.db
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: '2', memory: 1Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: runtime, mountPath: /config}
+      containers:
+        - name: partdb
+          image: jbtronics/part-db1:2.18.0@sha256:ab622014d471e0f488f59b242e53815cd7f642bd05ba03820a9fbc7eb75b7721
+          envFrom:
+            - configMapRef: {name: partdb-config}
+            - secretRef: {name: partdb-secrets}
+          ports:
+            - {name: http, containerPort: 8080}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: '2', memory: 1Gi}
+          startupProbe:
+            httpGet:
+              path: /en/login
+              port: http
+              httpHeaders: [{name: Host, value: localhost}]
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /en/login
+              port: http
+              httpHeaders: [{name: Host, value: localhost}]
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /en/login
+              port: http
+              httpHeaders: [{name: Host, value: localhost}]
+            periodSeconds: 30
+          volumeMounts:
+            - {name: data, mountPath: /var/www/html/var/db, subPath: db}
+            - {name: data, mountPath: /var/www/html/uploads, subPath: uploads}
+            - {name: data, mountPath: /var/www/html/public/media, subPath: media}
+            - {name: php-run, mountPath: /run/php}
+            - {name: runtime, mountPath: /etc/apache2/sites-available/symfony.conf, subPath: apache.conf}
+            - {name: runtime, mountPath: /etc/apache2/ports.conf, subPath: empty.conf}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: partdb-data}
+        - name: php-run
+          emptyDir: {}
+        - name: runtime
+          configMap:
+            name: partdb-runtime
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: partdb
+spec:
+  selector: {app: partdb}
+  ports:
+    - {name: http, port: 80, targetPort: http}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: partdb-tailscale
+  annotations:
+    tailscale.com/hostname: olympus-partdb
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector: {app: partdb}
+  ports:
+    - {name: http, port: 80, targetPort: http}

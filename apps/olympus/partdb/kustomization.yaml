@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: partdb
+resources:
+  - namespace.yaml
+  - resources.yaml
+  - partdb.secret.yaml
+configMapGenerator:
+  - name: partdb-config
+    envs: [config.env]
+  - name: partdb-runtime
+    files: [bootstrap.php, apache.conf]
+    literals: [empty.conf=]

@@ -9,6 +9,7 @@ resources:
   - cloudflared-token.secret.yaml
   - identity-blueprint.yaml
   - cosmotrak-blueprint.yaml
+  - partdb-blueprint.yaml
   - database.yaml
   - cloudflared.yaml
 configMapGenerator:

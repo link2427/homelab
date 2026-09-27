@@ -15,6 +15,7 @@ blueprints:
   configMaps:
     - olympus-identity-blueprint
     - cosmotrak-notifications-blueprint
+    - partdb-blueprint
 
 server:
   replicas: 1
