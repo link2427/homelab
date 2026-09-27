@@ -137,6 +137,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale
+  allocateLoadBalancerNodePorts: false
   selector: {app: partdb}
   ports:
     - {name: http, port: 80, targetPort: http}

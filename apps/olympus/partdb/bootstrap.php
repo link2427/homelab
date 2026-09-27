@@ -27,5 +27,7 @@ if (!$user) {
     $user->setGroup($em->find(App\Entity\UserSystem\Group::class, 1));
     $em->persist($user);
 }
+$user->getPermissions()->setPermissionValue('api', 'access_api', true);
+$user->getPermissions()->setPermissionValue('api', 'use_mcp', true);
 $em->flush();
 echo "Anonymous permissions denied; bootstrap admin disabled; SAML user ready.\n";
