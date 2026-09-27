@@ -16,6 +16,20 @@ Migrations run before the web server and take a database backup before upgrading
 - MCP is denied on the public hostname by both Apache and Cloudflare Tunnel.
   Tailscale encrypts the private transport; no Funnel or public NodePort is used.
 
+The Windows Codex client has a `partdb` MCP server entry in its user configuration
+with a dedicated Edit-scoped bearer token, expiring September 27, 2027. Restart
+Codex (or reload MCP servers) to load newly added tools. Other clients can create
+their own token from the user's API settings; never copy credentials into Git.
+
+Run `python apps/olympus/partdb/verify.py --write` from a tailnet client to check
+HTTPS, access restrictions, the SAML redirect, MCP discovery and a complete
+create/read/update/delete cycle on one temporary category. It accepts
+`PARTDB_TOKEN` or reads the local Codex `partdb` credentials without printing them.
+The actual Google → Authentik → Part-DB browser login was also verified.
+
+Initial R2 backup `partdb-initial-20260927` completed successfully. A backup's
+completion is not a claim that a full disaster recovery restore was rehearsed.
+
 An independent Flux Kustomization owns this directory. Do not also add it to the
 aggregate apps directory. Authentik's existing Helm release mounts
 `../authentik/partdb-blueprint.yaml`.
