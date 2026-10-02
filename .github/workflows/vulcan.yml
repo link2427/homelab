@@ -16,6 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify runner is unreachable outside the tailnet
+        run: |
+          if curl --silent --output /dev/null --connect-timeout 10 --max-time 20             https://olympus-vulcan.taild90e78.ts.net/api/list_images; then
+            echo "Runner unexpectedly reachable from an unjoined hosted runner"
+            exit 1
+          fi
+          echo "Private runner unreachable from GitHub-hosted runner as expected"
       - uses: astral-sh/setup-uv@v6
         with:
           version: 0.11.5
