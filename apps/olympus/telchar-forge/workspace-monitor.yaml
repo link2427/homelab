@@ -16,7 +16,7 @@ spec:
         app.kubernetes.io/name: forge-monitor
         app.kubernetes.io/part-of: telchar-forge
       annotations:
-        telcharforge.com/release-sha: d54d060271b77389dc018da34af1b1a9d96cfeec
+        telcharforge.com/release-sha: e661396878498b2904284c0365fcfff779fe1d52
     spec:
       serviceAccountName: forge
       automountServiceAccountToken: false
@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: monitor
-        image: ghcr.io/telchar-dynamics/forge-monitor@sha256:e1d4433ccca360924fa0253bfb12b34e559c7804d97c6089943621d5b02f0555
+        image: ghcr.io/telchar-dynamics/forge-monitor@sha256:ad57d56233c0363fc7c74ffbed559ca3c6f115bcc19ebda225779bd8978a36e0
         envFrom:
         - configMapRef:
             name: forge-config
