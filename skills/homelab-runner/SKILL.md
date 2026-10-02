@@ -17,7 +17,7 @@ aliases initially include `python`, `cae`, `mujoco`, `blender`.
 
 For real CAD/CAE projects, read [CAD runs](references/cad-runs.md): image
 compatibility, indexed case packaging, deadlines across waves, result validation
-and the activation/testing handoff. The initial CAE image does not include CadQuery.
+and the client integration/testing handoff. The initial CAE image does not include CadQuery.
 
 ## Submit and retrieve
 

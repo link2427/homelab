@@ -1,7 +1,8 @@
-# Vulcan verification — October 1, 2026
+# Vulcan verification - October 2, 2026
 
-This is a review-stage implementation. No Olympus resources, tailnet ACLs,
-public routes or existing workloads were changed. Main has not been merged.
+Vulcan, Kueue and firewall-only kube-router are merged and deployed through
+Flux. The tailnet endpoint is enrolled, HTTPS is enabled, and submissions are
+active. State and the 20-GiB artifact volume each have two healthy replicas.
 
 ## Executed
 
@@ -11,8 +12,10 @@ public routes or existing workloads were changed. Main has not been merged.
   are pinned by digest; anonymous GHCR manifest pulls passed for all five.
 - Four live Talos/Kubernetes nodes Ready; all 13 existing Flux Kustomizations
   Ready at `0130a147` during initial inspection.
-- Confirmed plain Flannel plus kube-proxy; no policy enforcement engine.
-- 25 Python checks pass: real MCP initialize/call and REST routes, common image
+- Initial inspection found plain Flannel plus kube-proxy. Deployment added
+  kube-router v2.11.1 firewall-only on all four nodes. 288 isolation checks
+  passed with positive controls; raw sanitized results are in evidence.json.
+- 26 Python checks pass (including transient input transport retries): real MCP initialize/call and REST routes, common image
   inventory, missing identity, foreign Job ownership, image/input allowlists,
   resource validation, fail-closed activation gate, tar traversal/link/device
   rejection, bounded expansion, artifact round trip, and Indexed Job structure.
@@ -46,20 +49,43 @@ public routes or existing workloads were changed. Main has not been merged.
   the local cube fixture in restricted, network-disabled CAE containers.
   PARDISO/two-thread output, case mapping, archives' source files and displacement
   range were checked. Documentation links resolve. This is recipe validation;
-  the user's actual CAD project and live cluster still require the documented tests.
+  the user's actual CAD project still requires its own numerical baseline tests.
 
 ## Live acceptance gates
 
 | Requested check | Status |
 | --- | --- |
-| Tailnet MCP and REST hello, logs, outputs | Pending reviewed activation and Tailscale enrollment/grants |
-| 37-task Indexed CalculiX Job, all outputs and wall time | Pending real Kubernetes run; executable acceptance script provided |
-| Outside-tailnet refusal | Pending deployed endpoint and external vantage point |
-| Tailnet identity without grant refused | Unit check passes; separate live identity check pending |
-| Quota queues excess work; other identity advances | Admission manifest check passes; live two-identity evidence pending |
-| Finished Jobs expire | TTL set; live controller expiry check pending |
+| Tailnet MCP and REST hello, logs, outputs | Passed both transports with rebuilt workers; logs, archive and receipt verified |
+| 37-task Indexed CalculiX Job, all outputs and wall time | Passed: indices 0-36, 37 archives and 37 zero-exit receipts; 315.062s from submission to success (includes image pulls) |
+| Outside-tailnet refusal | Passed from GitHub-hosted runner, CI 36969165601 |
+| Tailnet identity without grant refused | Live ephemeral tag:runner client received HTTP 403 |
+| Quota queues excess work; other identity advances | Passed: Norma completed while Jacob saturated and a second Jacob Job queued; cancellation released the queued Job |
+| Finished Jobs expire | Passed: both 300-second hello Jobs deleted; stored outputs still retrievable |
 | Artifacts expire after seven days | Configuration verified; elapsed deletion pending |
 | Coder workspace creation | Not applicable: optional tool omitted |
 
-Image publication/build checks are complete. The PR remains a draft for the
-activation review. Do not describe pending live checks as demonstrated.
+Live identity checks also confirmed that Jacob cannot inspect Norma's Job (HTTP
+404, deliberately hiding foreign identifiers). The temporary client used
+in-memory ephemeral Tailscale state, then the existing runner-norma profile.
+
+The first live CAE batch exposed transient connection refusal immediately after
+pod startup; diagnostic tasks succeeded on the same path two seconds later.
+PR #35 adds bounded input-download retries without changing HTTP authorization
+failures or download-size limits. All rebuilt images passed CI 36969281700,
+including real-S3 restricted-container checks. PR #36 pins those digests.
+The repeat live Indexed Job completed all 37 tasks without failures. Its total
+time includes deployment image pulls, including 4m25.761s on precision-7810-01.
+
+Final live acceptance ran against Flux revision `723598d`, image CI
+[36969281700](https://github.com/link2427/homelab/actions/runs/36969281700).
+The 37 cases repeat the small uploaded cube fixture; they are not 37 distinct
+CAD designs. All archives contain nonempty cube.dat/cube.frd and correct index
+markers. The cold-image run is not a steady-state throughput benchmark.
+
+Seven-day expiry must be observed after October 9, 2026, plus the store sweep
+interval. Baseline Job IDs are retained under `live_acceptance` in evidence.json.
+The original empty 40-GiB artifact claim remains detached and prune-protected;
+the active 20-GiB claim and 1-GiB state claim are healthy with two replicas each.
+Temporary isolation/prewarm pods and the ephemeral identity client were stopped.
+The actual CAD project's numerical baseline/integration is a separate client
+workflow, described in the copyable CAD calling prompt.

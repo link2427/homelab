@@ -139,8 +139,8 @@ kubectl -n <namespace> get events --sort-by=.lastTimestamp
   Talos inspection and configuration only when the task explicitly requires it.
 - Do not format, wipe, repartition, mount, or repurpose physical disks while
   deploying an application.
-- Do not rely on Kubernetes `NetworkPolicy` as an enforced security boundary;
-  Olympus currently uses plain Flannel without a policy engine.
+- Olympus uses Flannel with firewall-only kube-router enforcement. Verify
+  controller health and live allowed/denied paths before claiming isolation.
 - Avoid `hostPath`, `hostNetwork`, privileged pods, host devices, and broad
   cluster RBAC. Require an explicit reason and user authorization for them.
 - Treat deletion of namespaces, PVCs, PVs, Longhorn volumes/backups, Flux

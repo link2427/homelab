@@ -1,7 +1,7 @@
 {
-  "date": "2026-10-01",
-  "environment": "Local workstation Docker, not live Olympus acceptance",
-  "python_tests": 25,
+  "date": "2026-10-02",
+  "environment": "Local image checks plus separately labeled live Olympus verification",
+  "python_tests": 26,
   "go_identity_tests": "passed",
   "kubernetes_job_server_dry_run": "37 completions accepted; no resources created",
   "kueue_crd_schema_validation": "five queue/flavor resources passed",
@@ -732,5 +732,74 @@
       }
     ],
     "note": "Unreachable control targets alone do not prove policy denial; explicit control_required checks prove live allowed/denied paths."
+  },
+  "live_identity_checks": {
+    "date": "2026-10-02",
+    "ungranted_tailnet_http": 403,
+    "ungranted_subject": "ephemeral tag:runner client; no runner app capability",
+    "outside_tailnet": "GitHub-hosted runner could not reach endpoint",
+    "outside_ci": "https://github.com/link2427/homelab/actions/runs/36969165601",
+    "fairness": {
+      "saturated_jacob_job": "vulcan-1dc75730901a4cdfac687cb7b5073407",
+      "queued_jacob_job": "vulcan-65354122f0f740eaa1446faac786f1ea",
+      "norma_job": "vulcan-af679c0ee26f4e12b9e1fc61f7da92ca",
+      "norma_completed_while_jacob_queued": true,
+      "foreign_status_http": 404,
+      "norma_artifacts": [
+        "0/outputs.tar.gz",
+        "0/result.json",
+        "0/stdout.log"
+      ],
+      "jacob_completed_after_cancel": true
+    }
+  },
+  "deployed_revision": "723598ddcffbb04f45766e99393601aa1fcd41c2",
+  "image_ci": "https://github.com/link2427/homelab/actions/runs/36969281700",
+  "live_storage": {
+    "state_gib": 1,
+    "artifacts_gib": 20,
+    "replicas_each": 2,
+    "robustness": "healthy",
+    "retained_empty_original_artifacts_gib": 40
+  },
+  "live_metrics": "HTTP 200; queue, task and per-identity requested-resource metrics present",
+  "live_acceptance": {
+    "base": "https://olympus-vulcan.taild90e78.ts.net",
+    "checks": {
+      "REST": {
+        "job_id": "vulcan-9bdad84302164940a684380fe23c2b73",
+        "logs": "hello",
+        "tasks": 1,
+        "archives": 1,
+        "receipts": 1,
+        "all_exit_zero": true
+      },
+      "MCP": {
+        "job_id": "vulcan-da0ef929b38140ec9fd5fc712a2dbf2a",
+        "logs": "hello",
+        "tasks": 1,
+        "archives": 1,
+        "receipts": 1,
+        "all_exit_zero": true
+      },
+      "fanout": {
+        "job_id": "vulcan-7318322f28904a5b846ecc0a98083d52",
+        "wall_seconds": 315.062,
+        "completed_indexes": "0-36",
+        "tasks": 37,
+        "archives": 37,
+        "receipts": 37,
+        "all_exit_zero": true
+      },
+      "quota": {
+        "first_job": "vulcan-d938efd53c554a128e4bcd55cfcdb23e",
+        "queued_job": "vulcan-70ebbf4c641849f8bcee6326bfb6edae",
+        "queued_then_completed": true,
+        "other_identity_progress": "Passed separately; see live_identity_checks.fairness"
+      },
+      "job_ttl": "Both 300-second TTL Jobs removed; outputs still retrievable",
+      "seven_day_artifact_expiry": "Pending elapsed retention; record baseline object IDs now and verify absence after seven days"
+    },
+    "environment": "Olympus Kubernetes; submission-to-terminal wall time includes new image pulls"
   }
 }

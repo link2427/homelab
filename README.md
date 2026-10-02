@@ -23,7 +23,7 @@ apps/olympus/              User-facing workloads and their configuration
 - [Application import workflow](apps/olympus/README.md)
 - [Coder workspace templates](apps/olympus/coder/template/README.md)
 - [Vulcan batch runner](apps/olympus/vulcan/README.md) — tailnet REST/MCP,
-  Kueue/Indexed Jobs, artifacts and activation runbook; currently review-stage
+  Kueue/Indexed Jobs, artifacts and operations runbook; deployed on Olympus
 - [CAD runs and handoff](skills/homelab-runner/references/cad-runs.md) — prepare
   real CAD/CAE cases, validate results and continue the rollout/testing
 - [Headlamp access](apps/olympus/headlamp/README.md)
