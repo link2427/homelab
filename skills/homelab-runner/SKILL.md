@@ -15,6 +15,10 @@ Authenticate through the machine's existing Tailscale connection; no API token.
 Use `list_images` first. Images are administrator-approved immutable digests;
 aliases initially include `python`, `cae`, `mujoco`, `blender`.
 
+For real CAD/CAE projects, read [CAD runs](references/cad-runs.md): image
+compatibility, indexed case packaging, deadlines across waves, result validation
+and the activation/testing handoff. The initial CAE image does not include CadQuery.
+
 ## Submit and retrieve
 
 1. Put inputs into a `.tar.gz` containing only regular files/directories with
@@ -104,5 +108,6 @@ Codex `config.toml`:
 url = "https://olympus-vulcan.taild90e78.ts.net/mcp/"
 ```
 
-This folder can be copied unchanged to Norma's `.agents/skills/homelab-runner/`.
+Copy this entire folder, including `references/`, to the selected CAD project's
+or Norma's `.agents/skills/homelab-runner/`.
 Keep Coder for interactive debugging; this service does not create workspaces.

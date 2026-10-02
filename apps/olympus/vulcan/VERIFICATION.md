@@ -41,6 +41,12 @@ public routes or existing workloads were changed. Main has not been merged.
   Raw non-secret receipts are committed in [`evidence.json`](evidence.json).
 - Seven-day S3 lifecycle configuration round trip passed. Seven-day elapsed
   deletion has **not** been observed.
+- [CAD guide](../../../skills/homelab-runner/references/cad-runs.md) JSON validates
+  against `JobSpec`; its exact shell command passed for indices 0 and 36 with
+  the local cube fixture in restricted, network-disabled CAE containers.
+  PARDISO/two-thread output, case mapping, archives' source files and displacement
+  range were checked. Documentation links resolve. This is recipe validation;
+  the user's actual CAD project and live cluster still require the documented tests.
 
 ## Live acceptance gates
 

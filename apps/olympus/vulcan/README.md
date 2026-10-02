@@ -9,6 +9,10 @@ Vulcan runs independent container jobs for any project. REST and Streamable HTTP
 MCP share the same eight operations. Kubernetes Indexed Jobs implement fan-out;
 Kueue 0.19.2 controls admission. Coder remains the interactive workspace service.
 
+For project use, see the [CAD run guide and continuation prompt](../../../skills/homelab-runner/references/cad-runs.md).
+It covers image compatibility, indexed case layout, output validation and the
+steps to prove the service with actual CAD workloads after activation.
+
 ## Design
 
 ```
@@ -69,6 +73,8 @@ task pod -> DNS and S3 only; scoped expiring object URLs; no cluster credentials
   Tar input links/devices/traversal are rejected. Output links/escapes are rejected.
   CPU/memory/storage limits equal requests. Active deadlines include a five-minute
   artifact-upload allowance. Application commands get a TERM/KILL timeout first.
+  The Job's `timeout+300` deadline covers all indexed waves; size the submitted
+  timeout for the full batch or split long sweeps into smaller jobs.
 - Optional GPU requests pin the exact configured node (`atlas` for Jacob), use
   RuntimeClass `nvidia`, and count against Kueue's GPU budget. Standard images
   default to CPU; there is no blanket claim of compatible CUDA rendering.
