@@ -78,6 +78,27 @@ def put(url, path):
             time.sleep(2**attempt)
 
 
+def download_input(url, path):
+    # New pod policy rules can converge after the process starts. Retry transport
+    # failures only; truncate partial downloads and retain the size boundary.
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen(url, timeout=120) as response, path.open("wb") as output:
+                total = 0
+                while chunk := response.read(1024 * 1024):
+                    total += len(chunk)
+                    if total > MAX_INPUT:
+                        raise ValueError("compressed input exceeds 1 GiB")
+                    output.write(chunk)
+            return
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == 4:
+                raise RuntimeError("input download failed (URL redacted)") from None
+            time.sleep(2**attempt)
+
+
 def run(spec, root=Path("/work")):
     root.mkdir(exist_ok=True)
     index = os.environ.get("JOB_INDEX", "0")
@@ -88,13 +109,7 @@ def run(spec, root=Path("/work")):
     try:
         for number, url in enumerate(spec["inputs"]):
             download = Path(f"/tmp/input-{number}.tar")
-            with urllib.request.urlopen(url, timeout=120) as response, download.open("wb") as output:
-                total = 0
-                while chunk := response.read(1024 * 1024):
-                    total += len(chunk)
-                    if total > MAX_INPUT:
-                        raise ValueError("compressed input exceeds 1 GiB")
-                    output.write(chunk)
+            download_input(url, download)
             with download.open("rb") as stream:
                 extract(stream, root)
             download.unlink()
