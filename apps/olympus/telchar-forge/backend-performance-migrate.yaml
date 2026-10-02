@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: forge-migrate-performance-d54d060
+  namespace: telchar-forge
+  annotations:
+    telcharforge.com/release-sha: d54d060271b77389dc018da34af1b1a9d96cfeec
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: forge-migrator
+    spec:
+      restartPolicy: Never
+      serviceAccountName: forge
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: migrate
+        image: ghcr.io/telchar-dynamics/forge-migrator@sha256:27e49e22dd4609674ba0d04b9b6723b5ad46c7fcf14e204ae5ede3f065475b74
+        env:
+        - name: PGOPTIONS
+          value: "-c lock_timeout=5s -c statement_timeout=600000 -c application_name=forge-migrate-performance-d54d060"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: forge-secrets
+              key: DATABASE_URL
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: '1'
+            memory: 256Mi

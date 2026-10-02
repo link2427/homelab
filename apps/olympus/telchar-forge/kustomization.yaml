@@ -9,6 +9,7 @@ resources:
 - workspace-nats-pvc.yaml
 - workspace-nats-copy.yaml
 - workspace-migrate.yaml
+- backend-performance-migrate.yaml
 - workspace-monitor.yaml
 patches:
 - path: workspace-stage.yaml
