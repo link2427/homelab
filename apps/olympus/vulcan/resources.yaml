@@ -52,7 +52,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vulcan-artifacts
+  name: vulcan-artifacts-active
   namespace: vulcan
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
@@ -61,7 +61,7 @@ spec:
   storageClassName: longhorn-fast
   resources:
     requests:
-      storage: 40Gi
+      storage: 20Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -189,7 +189,7 @@ spec:
             - {name: tmp, mountPath: /tmp}
       volumes:
         - name: data
-          persistentVolumeClaim: {claimName: vulcan-artifacts}
+          persistentVolumeClaim: {claimName: vulcan-artifacts-active}
         - name: tmp
           emptyDir: {sizeLimit: 256Mi}
 ---
