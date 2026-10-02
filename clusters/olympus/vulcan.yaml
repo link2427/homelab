@@ -4,8 +4,8 @@ metadata:
   name: vulcan
   namespace: flux-system
 spec:
-  # Review hold: network policy engine, Tailscale grants and image pins required.
-  suspend: true
+  # Submissions remain disabled in config.json until live isolation checks pass.
+  suspend: false
   interval: 5m
   retryInterval: 1m
   timeout: 10m
@@ -14,6 +14,7 @@ spec:
   wait: true
   dependsOn:
     - name: kueue
+    - name: network-policy
   sourceRef:
     kind: GitRepository
     name: flux-system
