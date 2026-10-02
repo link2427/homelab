@@ -96,7 +96,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gateway
-          image: ghcr.io/link2427/vulcan-gateway@sha256:669dc17d854233f876d79c3cbc187ab45f4c948ba0bff42e3c8d2b30a8381270
+          image: ghcr.io/link2427/vulcan-gateway@sha256:2ca4bf2b15a7944f8959becb1085fe8559a6be41b6b83515bb402052d9f13680
           ports:
             - {name: metrics, containerPort: 9000}
           env:

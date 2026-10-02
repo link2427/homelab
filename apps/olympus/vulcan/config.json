@@ -43,19 +43,19 @@
   },
   "images": {
     "python": {
-      "image": "ghcr.io/link2427/vulcan-python@sha256:367ebe6ba36ebb97377874070d47bc93df5b8bb1940d8e55bdbeb233432777d0",
+      "image": "ghcr.io/link2427/vulcan-python@sha256:8d24d1b81a1de6adeb87b2fb944a626d80639cd73d99ad695c424cb7d65df068",
       "description": "Python 3.12 and uv; install dependencies in the image, runtime egress is denied."
     },
     "cae": {
-      "image": "ghcr.io/link2427/vulcan-cae@sha256:2ec3ce8a89c5e3c730e030cfffe602b05d97f82c57f11221f61bb265ff1b09f8",
+      "image": "ghcr.io/link2427/vulcan-cae@sha256:abd5fd235c33c7cbe5f1f08b258a03fff493a09992be2275019517336cb99848",
       "description": "FreeCAD headless, Gmsh, CalculiX with threaded Intel MKL PARDISO."
     },
     "mujoco": {
-      "image": "ghcr.io/link2427/vulcan-mujoco@sha256:60c5127230cf5df5bf9aebd13bd135b3718bb4b1897700439ed14dbd69640d09",
+      "image": "ghcr.io/link2427/vulcan-mujoco@sha256:bb9c8a6c94a2db12e2cdeafd5fffd38e7439ccfb2b75a6dca5ce287be18ad66d",
       "description": "MuJoCo, NumPy, CPU OSMesa rendering."
     },
     "blender": {
-      "image": "ghcr.io/link2427/vulcan-blender@sha256:4b9b17f3870905571438b82dbf2ab3109aa32248d231e547f27d38e952585cd7",
+      "image": "ghcr.io/link2427/vulcan-blender@sha256:9790b3f1cc01dfa2afc757a61bc326152dd7a3faea34dfd6b09bc39f1f09eda0",
       "description": "Blender headless CPU rendering."
     }
   }
