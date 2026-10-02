@@ -1,0 +1,8 @@
+FROM python:3.12.13-slim-bookworm AS python
+FROM debian:bookworm-20260316-slim
+RUN apt-get update && apt-get install -y --no-install-recommends blender python3 ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=python /usr/local/ /usr/local/
+COPY worker.py /opt/vulcan/worker.py
+ENV HOME=/tmp PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+USER 1000:1000
+WORKDIR /work

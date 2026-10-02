@@ -1,0 +1,102 @@
+name: Vulcan runner
+on:
+  pull_request:
+    paths: [runner-service/**, apps/olympus/vulcan/**, infrastructure/olympus/kueue/**, .github/workflows/vulcan.yml]
+  push:
+    branches: [main, codex/homelab-runner]
+    paths: [runner-service/**, .github/workflows/vulcan.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vulcan-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.11.5
+          python-version: '3.12'
+      - run: uv run --frozen pytest -q
+        working-directory: runner-service
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: runner-service/edge/go.mod
+          cache-dependency-path: runner-service/edge/go.sum
+      - run: go test ./...
+        working-directory: runner-service/edge
+      - name: Validate generated policy and manifests
+        run: |
+          cd runner-service
+          uv run python render-queues.py
+          cd ..
+          git diff --exit-code apps/olympus/vulcan/queues.yaml
+          kubectl kustomize apps/olympus/vulcan > /dev/null
+          kubectl kustomize infrastructure/olympus/kueue > /dev/null
+          git diff --check
+  images:
+    # Trusted branch pushes build/publish once; the paired PR run repeats checks only.
+    if: github.event_name != 'pull_request'
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [gateway, python, cae, mujoco, blender]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.11.5
+          python-version: '3.12'
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: dockerfile
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          file=runner-service/images/Dockerfile.$IMAGE
+          if [ "$IMAGE" = gateway ]; then file=runner-service/Dockerfile; fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: runner-service
+          file: ${{ steps.dockerfile.outputs.file }}
+          load: true
+          tags: |
+            vulcan-${{ matrix.image }}:check
+            ghcr.io/link2427/vulcan-${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=vulcan-${{ matrix.image }}
+          cache-to: type=gha,scope=vulcan-${{ matrix.image }},mode=max
+      - name: Verify hardened worker and S3 artifacts
+        if: matrix.image != 'gateway'
+        env:
+          IMAGE: ${{ matrix.image }}
+        working-directory: runner-service
+        run: |
+          mkdir -p evidence
+          uv run --frozen python tests/container-smoke.py --image "$IMAGE" > "evidence/$IMAGE.json"
+      - name: Publish verified image
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE: ${{ matrix.image }}
+          REVISION: ${{ github.sha }}
+        run: |
+          docker push "ghcr.io/link2427/vulcan-$IMAGE:$REVISION"
+          mkdir -p runner-service/evidence
+          docker inspect --format='{{index .RepoDigests 0}}' "ghcr.io/link2427/vulcan-$IMAGE:$REVISION" > "runner-service/evidence/$IMAGE.digest"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vulcan-${{ matrix.image }}
+          path: runner-service/evidence/

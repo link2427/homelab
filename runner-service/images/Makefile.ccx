@@ -1,0 +1,13 @@
+include Makefile.inc
+CC = gcc
+FC = gfortran
+CFLAGS = -O2 -fcommon -fopenmp -pthread -DARCH="Linux" -DARPACK -DMATRIXSTORAGE -DUSE_MT=1 -DPARDISO -I/opt/mkl/include
+FFLAGS = -O2 -fopenmp -cpp -fallow-argument-mismatch
+LIBS = -L/opt/mkl/lib -Wl,-rpath,/opt/mkl/lib -l:libmkl_gf_lp64.so.2 -l:libmkl_gnu_thread.so.2 -l:libmkl_core.so.2 -larpack -lgomp -lpthread -lm -ldl
+OBJECTS = $(SCCXF:.f=.o) $(SCCXC:.c=.o)
+ccx: CalculiX.o $(OBJECTS)
+	$(FC) -fopenmp -o $@ $^ $(LIBS)
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+.f.o:
+	$(FC) $(FFLAGS) -c $<

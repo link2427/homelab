@@ -1,0 +1,24 @@
+FROM debian:bookworm-20260316-slim AS solver
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gfortran curl ca-certificates python3-venv libarpack2-dev && rm -rf /var/lib/apt/lists/*
+RUN python3 -m venv /opt/mkl && /opt/mkl/bin/pip install --no-cache-dir mkl-devel==2025.3.1
+WORKDIR /src
+ARG CALCULIX=078778112369f18a207de039d50307d5797f941b
+RUN curl -fsSL https://codeload.github.com/Dhondtguido/CalculiX/tar.gz/${CALCULIX} -o calculix.tar.gz && \
+    echo '5387bf66f9088e8fe725d34977febd0429e0cb8580643f77f9a6ee263d93aa9d  calculix.tar.gz' | sha256sum -c - && \
+    mkdir calculix && tar xf calculix.tar.gz -C calculix --strip-components=1
+COPY images/Makefile.ccx /src/calculix/src/Makefile.runner
+RUN make -C calculix/src -f Makefile.runner -j4 ccx && install -m755 calculix/src/ccx /usr/local/bin/ccx
+
+FROM python:3.12.13-slim-trixie
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates freecad gmsh libarpack2t64 libgomp1 && rm -rf /var/lib/apt/lists/*
+COPY --from=solver /usr/local/bin/ccx /usr/local/bin/ccx
+COPY --from=solver /opt/mkl/lib/ /opt/mkl/lib/
+# Complete corresponding source accompanies the GPL solver binary.
+COPY --from=solver /src/calculix.tar.gz /usr/share/vulcan/sources/
+COPY images/Makefile.ccx /usr/share/vulcan/sources/Makefile.runner
+COPY images/Dockerfile.cae /usr/share/vulcan/sources/
+RUN ldconfig && ln -s /usr/bin/freecadcmd /usr/local/bin/FreeCADCmd && useradd --uid 1000 --home-dir /tmp vulcan
+COPY worker.py /opt/vulcan/worker.py
+ENV HOME=/tmp QT_QPA_PLATFORM=offscreen PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MKL_THREADING_LAYER=GNU MKL_NUM_THREADS=2 OMP_NUM_THREADS=2 CCX_NPROC_EQUATION_SOLVER=2 CCX_NPROC_RESULTS=2 NUMBER_OF_CPUS=2
+USER 1000:1000
+WORKDIR /work

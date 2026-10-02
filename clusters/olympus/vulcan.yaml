@@ -1,0 +1,23 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: vulcan
+  namespace: flux-system
+spec:
+  # Review hold: network policy engine, Tailscale grants and image pins required.
+  suspend: true
+  interval: 5m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./apps/olympus/vulcan
+  prune: true
+  wait: true
+  dependsOn:
+    - name: kueue
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

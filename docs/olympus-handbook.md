@@ -415,6 +415,33 @@ coder login https://coder.jacob-neel.dev
 .\Publish-CoderTemplates.ps1
 ```
 
+## Vulcan batch compute and CAD runs
+
+October 1, 2026 status: [PR #31](https://github.com/link2427/homelab/pull/31)
+contains the implementation; it is not merged or deployed. New Kueue and Vulcan
+Flux Kustomizations are suspended and the submission gate is false. Activation
+requires reviewed network-policy enforcement and Tailscale enrollment/grants.
+Plain Flannel does not enforce the supplied NetworkPolicy objects.
+
+After activation, a granted tailnet agent uploads inputs and submits through
+REST or Streamable HTTP MCP. The tsnet gateway maps verified identity to a Kueue
+queue and budgets. Kubernetes runs isolated Indexed Job tasks, each with its own
+`JOB_INDEX`, working directory and bounded S3 outputs. Agents poll status, read
+logs, download each task's receipt/archive and validate the project results.
+Transient artifacts have seven-day retention and must be saved elsewhere if
+wanted. The endpoint is planned as `https://olympus-vulcan.taild90e78.ts.net`;
+no Cloudflare route or Funnel is used.
+
+Use Coder/workstation for interactive CAD and Vulcan for independent batch cases.
+The initial CAE image supplies headless FreeCAD, Gmsh and threaded CalculiX with
+PARDISO; CadQuery/project dependencies need an approved image. Fan-out runs in
+quota-limited waves, and the Job deadline covers the entire batch.
+
+- [Design, activation and recovery](../apps/olympus/vulcan/README.md)
+- [Executed checks and pending live acceptance](../apps/olympus/vulcan/VERIFICATION.md)
+- [Portable client skill and MCP setup](../skills/homelab-runner/SKILL.md)
+- [CAD packaging, validation and continuation prompt](../skills/homelab-runner/references/cad-runs.md)
+
 ## Headlamp administration
 
 Headlamp runs without an implicit cluster-admin token. Create a short-lived

@@ -1,0 +1,367 @@
+{
+  "date": "2026-10-01",
+  "environment": "Local workstation Docker, not live Olympus acceptance",
+  "python_tests": 25,
+  "go_identity_tests": "passed",
+  "kubernetes_job_server_dry_run": "37 completions accepted; no resources created",
+  "kueue_crd_schema_validation": "five queue/flavor resources passed",
+  "container_checks": {
+    "python": {
+      "environment": "local Docker (not Kubernetes acceptance)",
+      "image": "python",
+      "tasks": [
+        {
+          "index": 0,
+          "exit_code": 0,
+          "wall_seconds": 0.102,
+          "output_bytes": 185
+        }
+      ],
+      "wall_seconds": 1.36,
+      "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+    },
+    "mujoco": {
+      "environment": "local Docker (not Kubernetes acceptance)",
+      "image": "mujoco",
+      "tasks": [
+        {
+          "index": 0,
+          "exit_code": 0,
+          "wall_seconds": 0.368,
+          "output_bytes": 186
+        }
+      ],
+      "wall_seconds": 0.917,
+      "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+    },
+    "blender": {
+      "environment": "local Docker (not Kubernetes acceptance)",
+      "image": "blender",
+      "tasks": [
+        {
+          "index": 0,
+          "exit_code": 0,
+          "wall_seconds": 0.811,
+          "output_bytes": 1369
+        }
+      ],
+      "wall_seconds": 27.5,
+      "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+    },
+    "cae": {
+      "environment": "local Docker (not Kubernetes acceptance)",
+      "image": "cae",
+      "tasks": [
+        {
+          "index": 0,
+          "exit_code": 0,
+          "wall_seconds": 0.221,
+          "output_bytes": 1014
+        }
+      ],
+      "wall_seconds": 0.906,
+      "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+    },
+    "cae_37": {
+      "environment": "local Docker (not Kubernetes acceptance)",
+      "image": "cae",
+      "tasks": [
+        {
+          "index": 0,
+          "exit_code": 0,
+          "wall_seconds": 0.223,
+          "output_bytes": 1015
+        },
+        {
+          "index": 1,
+          "exit_code": 0,
+          "wall_seconds": 0.204,
+          "output_bytes": 1012
+        },
+        {
+          "index": 2,
+          "exit_code": 0,
+          "wall_seconds": 0.218,
+          "output_bytes": 1009
+        },
+        {
+          "index": 3,
+          "exit_code": 0,
+          "wall_seconds": 0.212,
+          "output_bytes": 1008
+        },
+        {
+          "index": 4,
+          "exit_code": 0,
+          "wall_seconds": 0.265,
+          "output_bytes": 1007
+        },
+        {
+          "index": 5,
+          "exit_code": 0,
+          "wall_seconds": 0.281,
+          "output_bytes": 1014
+        },
+        {
+          "index": 6,
+          "exit_code": 0,
+          "wall_seconds": 0.255,
+          "output_bytes": 1014
+        },
+        {
+          "index": 7,
+          "exit_code": 0,
+          "wall_seconds": 0.215,
+          "output_bytes": 1006
+        },
+        {
+          "index": 8,
+          "exit_code": 0,
+          "wall_seconds": 0.232,
+          "output_bytes": 1007
+        },
+        {
+          "index": 9,
+          "exit_code": 0,
+          "wall_seconds": 0.209,
+          "output_bytes": 1006
+        },
+        {
+          "index": 10,
+          "exit_code": 0,
+          "wall_seconds": 0.21,
+          "output_bytes": 1005
+        },
+        {
+          "index": 11,
+          "exit_code": 0,
+          "wall_seconds": 0.217,
+          "output_bytes": 1015
+        },
+        {
+          "index": 12,
+          "exit_code": 0,
+          "wall_seconds": 0.254,
+          "output_bytes": 1006
+        },
+        {
+          "index": 13,
+          "exit_code": 0,
+          "wall_seconds": 0.233,
+          "output_bytes": 1006
+        },
+        {
+          "index": 14,
+          "exit_code": 0,
+          "wall_seconds": 0.243,
+          "output_bytes": 1005
+        },
+        {
+          "index": 15,
+          "exit_code": 0,
+          "wall_seconds": 0.229,
+          "output_bytes": 1004
+        },
+        {
+          "index": 16,
+          "exit_code": 0,
+          "wall_seconds": 0.238,
+          "output_bytes": 1008
+        },
+        {
+          "index": 17,
+          "exit_code": 0,
+          "wall_seconds": 0.213,
+          "output_bytes": 1013
+        },
+        {
+          "index": 18,
+          "exit_code": 0,
+          "wall_seconds": 0.222,
+          "output_bytes": 1008
+        },
+        {
+          "index": 19,
+          "exit_code": 0,
+          "wall_seconds": 0.206,
+          "output_bytes": 1007
+        },
+        {
+          "index": 20,
+          "exit_code": 0,
+          "wall_seconds": 0.211,
+          "output_bytes": 1007
+        },
+        {
+          "index": 21,
+          "exit_code": 0,
+          "wall_seconds": 0.22,
+          "output_bytes": 1008
+        },
+        {
+          "index": 22,
+          "exit_code": 0,
+          "wall_seconds": 0.227,
+          "output_bytes": 1008
+        },
+        {
+          "index": 23,
+          "exit_code": 0,
+          "wall_seconds": 0.218,
+          "output_bytes": 1008
+        },
+        {
+          "index": 24,
+          "exit_code": 0,
+          "wall_seconds": 0.218,
+          "output_bytes": 1005
+        },
+        {
+          "index": 25,
+          "exit_code": 0,
+          "wall_seconds": 0.223,
+          "output_bytes": 1009
+        },
+        {
+          "index": 26,
+          "exit_code": 0,
+          "wall_seconds": 0.214,
+          "output_bytes": 1010
+        },
+        {
+          "index": 27,
+          "exit_code": 0,
+          "wall_seconds": 0.209,
+          "output_bytes": 1015
+        },
+        {
+          "index": 28,
+          "exit_code": 0,
+          "wall_seconds": 0.242,
+          "output_bytes": 1009
+        },
+        {
+          "index": 29,
+          "exit_code": 0,
+          "wall_seconds": 0.241,
+          "output_bytes": 1009
+        },
+        {
+          "index": 30,
+          "exit_code": 0,
+          "wall_seconds": 0.234,
+          "output_bytes": 1008
+        },
+        {
+          "index": 31,
+          "exit_code": 0,
+          "wall_seconds": 0.227,
+          "output_bytes": 1009
+        },
+        {
+          "index": 32,
+          "exit_code": 0,
+          "wall_seconds": 0.272,
+          "output_bytes": 1015
+        },
+        {
+          "index": 33,
+          "exit_code": 0,
+          "wall_seconds": 0.276,
+          "output_bytes": 1016
+        },
+        {
+          "index": 34,
+          "exit_code": 0,
+          "wall_seconds": 0.217,
+          "output_bytes": 1015
+        },
+        {
+          "index": 35,
+          "exit_code": 0,
+          "wall_seconds": 0.224,
+          "output_bytes": 1006
+        },
+        {
+          "index": 36,
+          "exit_code": 0,
+          "wall_seconds": 0.229,
+          "output_bytes": 1006
+        }
+      ],
+      "wall_seconds": 10.265,
+      "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+    }
+  },
+  "ci": {
+    "url": "https://github.com/link2427/homelab/actions/runs/36965681413",
+    "source_commit": "1446d47b3ff13e250f50d9e3e14fd5f510ab4ee8",
+    "conclusion": "success",
+    "image_digests": {
+      "gateway": "ghcr.io/link2427/vulcan-gateway@sha256:669dc17d854233f876d79c3cbc187ab45f4c948ba0bff42e3c8d2b30a8381270",
+      "python": "ghcr.io/link2427/vulcan-python@sha256:367ebe6ba36ebb97377874070d47bc93df5b8bb1940d8e55bdbeb233432777d0",
+      "mujoco": "ghcr.io/link2427/vulcan-mujoco@sha256:60c5127230cf5df5bf9aebd13bd135b3718bb4b1897700439ed14dbd69640d09",
+      "blender": "ghcr.io/link2427/vulcan-blender@sha256:4b9b17f3870905571438b82dbf2ab3109aa32248d231e547f27d38e952585cd7",
+      "cae": "ghcr.io/link2427/vulcan-cae@sha256:2ec3ce8a89c5e3c730e030cfffe602b05d97f82c57f11221f61bb265ff1b09f8"
+    },
+    "worker_smoke": {
+      "python": {
+        "environment": "local Docker (not Kubernetes acceptance)",
+        "image": "python",
+        "tasks": [
+          {
+            "index": 0,
+            "exit_code": 0,
+            "wall_seconds": 0.145,
+            "output_bytes": 185
+          }
+        ],
+        "wall_seconds": 0.689,
+        "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+      },
+      "mujoco": {
+        "environment": "local Docker (not Kubernetes acceptance)",
+        "image": "mujoco",
+        "tasks": [
+          {
+            "index": 0,
+            "exit_code": 0,
+            "wall_seconds": 0.382,
+            "output_bytes": 186
+          }
+        ],
+        "wall_seconds": 0.678,
+        "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+      },
+      "blender": {
+        "environment": "local Docker (not Kubernetes acceptance)",
+        "image": "blender",
+        "tasks": [
+          {
+            "index": 0,
+            "exit_code": 0,
+            "wall_seconds": 1.106,
+            "output_bytes": 1370
+          }
+        ],
+        "wall_seconds": 1.597,
+        "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+      },
+      "cae": {
+        "environment": "local Docker (not Kubernetes acceptance)",
+        "image": "cae",
+        "tasks": [
+          {
+            "index": 0,
+            "exit_code": 0,
+            "wall_seconds": 0.298,
+            "output_bytes": 1012
+          }
+        ],
+        "wall_seconds": 0.765,
+        "s3_lifecycle_configuration": "7 days; expiry not elapsed"
+      }
+    },
+    "anonymous_manifest_pulls": "all five pinned digests verified"
+  }
+}
