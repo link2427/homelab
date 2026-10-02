@@ -145,3 +145,26 @@ def test_kubernetes_deserialization(monkeypatch):
     job = client.ApiClient().deserialize(response, "V1Job")
     job.status = client.V1JobStatus()
     assert app.summarize(job)["state"] == "queued"
+
+
+def test_input_download_retries_transport_without_leaking_url(tmp_path, monkeypatch):
+    import urllib.error
+    attempts = []
+    def open_url(url, timeout):
+        attempts.append(url)
+        if len(attempts) < 3:
+            raise urllib.error.URLError("connection refused")
+        return io.BytesIO(b"input")
+    monkeypatch.setattr(worker.urllib.request, "urlopen", open_url)
+    monkeypatch.setattr(worker.time, "sleep", lambda _: None)
+    target = tmp_path / "input.tar"
+    worker.download_input("http://store/private?signature=secret", target)
+    assert target.read_bytes() == b"input" and len(attempts) == 3
+    monkeypatch.setattr(worker, "MAX_INPUT", 2)
+    with pytest.raises(ValueError):
+        worker.download_input("http://store/private", target)
+    def forbidden(url, timeout):
+        raise urllib.error.HTTPError(url, 403, "Forbidden", {}, None)
+    monkeypatch.setattr(worker.urllib.request, "urlopen", forbidden)
+    with pytest.raises(urllib.error.HTTPError):
+        worker.download_input("http://store/private", target)
