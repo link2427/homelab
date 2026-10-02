@@ -1,6 +1,6 @@
 ---
 name: homelab-runner
-description: Run containerized batch work on Olympus through Vulcan: submit independent jobs or indexed fan-out, read logs, cancel, and fetch artifacts. Use for CAE solves, MuJoCo, CPU renders, tests, and data processing when the caller has tailnet access.
+description: "Run containerized batch work on Olympus through Vulcan: submit independent jobs or indexed fan-out, read logs, cancel, and fetch artifacts. Use for CAE solves, MuJoCo, CPU renders, tests, and data processing when the caller has tailnet access."
 ---
 
 # Homelab runner
