@@ -1,0 +1,99 @@
+# Firewall-only kube-router: preserve Talos Flannel and kube-proxy.
+# Privileged host networking is required for this infrastructure controller only.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-router
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-router-firewall
+rules:
+  - apiGroups: [""]
+    resources: [nodes, namespaces, pods, services]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-router-firewall
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-router-firewall
+subjects:
+  - kind: ServiceAccount
+    name: kube-router
+    namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-router
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels: {k8s-app: kube-router}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate: {maxUnavailable: 1}
+  template:
+    metadata:
+      labels: {k8s-app: kube-router}
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: kube-router
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: Default
+      nodeSelector: {kubernetes.io/os: linux}
+      tolerations:
+        - {operator: Exists, effect: NoSchedule}
+        - {operator: Exists, effect: NoExecute}
+      containers:
+        - name: kube-router
+          image: cloudnativelabs/kube-router:v2.11.1@sha256:64da9a538d29e13780e256ce3897a52932a68657793bef009063bbeb2762146a
+          args:
+            - --run-router=false
+            - --run-service-proxy=false
+            - --run-loadbalancer=false
+            - --run-firewall=true
+            - --enable-cni=false
+            - --hostname-override=$(NODE_NAME)
+            - --service-cluster-ip-range=10.96.0.0/12
+            - --iptables-sync-period=30s
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef: {fieldPath: spec.nodeName}
+          securityContext:
+            privileged: true
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {memory: 512Mi}
+          startupProbe:
+            httpGet: {path: /healthz, port: 20244}
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /healthz, port: 20244}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: 20244}
+            periodSeconds: 10
+          volumeMounts:
+            - {name: lib-modules, mountPath: /lib/modules, readOnly: true}
+            - {name: xtables-lock, mountPath: /run/xtables.lock}
+      volumes:
+        - name: lib-modules
+          hostPath: {path: /lib/modules, type: Directory}
+        - name: xtables-lock
+          hostPath: {path: /run/xtables.lock, type: FileOrCreate}
