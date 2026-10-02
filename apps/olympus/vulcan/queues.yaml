@@ -27,13 +27,13 @@ spec:
     - name: vulcan-amd64
       resources:
       - name: cpu
-        nominalQuota: '8'
+        nominalQuota: '32'
       - name: memory
-        nominalQuota: 16Gi
+        nominalQuota: 32Gi
       - name: ephemeral-storage
-        nominalQuota: 64Gi
+        nominalQuota: 128Gi
       - name: pods
-        nominalQuota: '8'
+        nominalQuota: '16'
       - name: nvidia.com/gpu
         nominalQuota: '1'
 ---
@@ -65,13 +65,13 @@ spec:
     - name: vulcan-amd64
       resources:
       - name: cpu
-        nominalQuota: '4'
+        nominalQuota: '8'
       - name: memory
-        nominalQuota: 8Gi
+        nominalQuota: 16Gi
       - name: ephemeral-storage
-        nominalQuota: 32Gi
+        nominalQuota: 64Gi
       - name: pods
-        nominalQuota: '4'
+        nominalQuota: '8'
       - name: nvidia.com/gpu
         nominalQuota: '0'
 ---

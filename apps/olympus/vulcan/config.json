@@ -13,10 +13,10 @@
         "blender"
       ],
       "quota": {
-        "cpu": "8",
-        "memory": "16Gi",
-        "ephemeral-storage": "64Gi",
-        "pods": 8,
+        "cpu": "32",
+        "memory": "32Gi",
+        "ephemeral-storage": "128Gi",
+        "pods": 16,
         "nvidia.com/gpu": "1"
       },
       "gpu_node": "atlas"
@@ -33,10 +33,10 @@
         "blender"
       ],
       "quota": {
-        "cpu": "4",
-        "memory": "8Gi",
-        "ephemeral-storage": "32Gi",
-        "pods": 4,
+        "cpu": "8",
+        "memory": "16Gi",
+        "ephemeral-storage": "64Gi",
+        "pods": 8,
         "nvidia.com/gpu": "0"
       }
     }
@@ -47,7 +47,7 @@
       "description": "Python 3.12 and uv; install dependencies in the image, runtime egress is denied."
     },
     "cae": {
-      "image": "UNPUBLISHED",
+      "image": "ghcr.io/link2427/vulcan-cae@sha256:2ec3ce8a89c5e3c730e030cfffe602b05d97f82c57f11221f61bb265ff1b09f8",
       "description": "FreeCAD headless, Gmsh, CalculiX with threaded Intel MKL PARDISO."
     },
     "mujoco": {

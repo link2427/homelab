@@ -26,10 +26,10 @@ spec:
   hard:
     count/jobs.batch: "256"
     pods: "256"
-    requests.cpu: "12"
-    requests.memory: 24Gi
-    requests.ephemeral-storage: 96Gi
-    limits.cpu: "12"
-    limits.memory: 24Gi
-    limits.ephemeral-storage: 96Gi
+    requests.cpu: "40"
+    requests.memory: 48Gi
+    requests.ephemeral-storage: 192Gi
+    limits.cpu: "40"
+    limits.memory: 48Gi
+    limits.ephemeral-storage: 192Gi
     requests.nvidia.com/gpu: "1"

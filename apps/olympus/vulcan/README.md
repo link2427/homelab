@@ -35,8 +35,10 @@ task pod -> DNS and S3 only; scoped expiring object URLs; no cluster credentials
   an identity cannot consume another identity's reservation. This is the simple
   fair-share model; add Kueue cohorts only if unused reserved capacity matters.
   Physical scheduling can still wait for existing non-runner cluster workloads.
+  Initial budgets: Jacob 32 CPU/32 GiB/16 concurrent tasks; Norma 8 CPU/16 GiB/8
+  tasks. Combined ceiling is 40 CPU and 48 GiB on the four-node, 104-thread fleet.
   Task count is independent of concurrent pods: 37 tasks run in waves when only
-  four/eight slots fit. A single impossible task is rejected rather than queued
+  16/eight slots fit. A single impossible task is rejected rather than queued
   forever. Jobs above currently available budget remain suspended in Kueue.
 - **Artifact-store deviation:** SeaweedFS 4.48 `weed mini`, one replica over
   Longhorn, replaces MinIO because [MinIO's upstream repository is archived](https://github.com/minio/minio).
@@ -75,10 +77,10 @@ task pod -> DNS and S3 only; scoped expiring object URLs; no cluster credentials
 
 ## Required activation review
 
-1. Review this PR and image CI. Do not merge automatically. Replace every
-   unpublished image with its verified digest, including gateway. New GHCR
-   package visibility must be checked: confirm public pulls or provision a dedicated
-   pull credential through SOPS in both namespaces. Do not reuse app secrets.
+1. Review this PR and image CI. Do not merge automatically. All five images are
+   published and pinned to verified digests; GHCR package visibility is public.
+   For later private images, provision a dedicated pull credential through SOPS
+   in both namespaces. Do not reuse app secrets.
 2. **Network isolation is currently blocked.** Live inspection on October 1,
    2026 found only `kube-flannel` and `kube-proxy` on all four nodes. Flannel
    does not enforce these policies. A policy engine must be approved, deployed

@@ -5,6 +5,10 @@ public routes or existing workloads were changed. Main has not been merged.
 
 ## Executed
 
+- [Image CI run 36965681413](https://github.com/link2427/homelab/actions/runs/36965681413)
+  passed all checks and all five builds at source commit `1446d47`. Every worker
+  passed its real-S3 restricted-container smoke before publication. All images
+  are pinned by digest; anonymous GHCR manifest pulls passed for all five.
 - Four live Talos/Kubernetes nodes Ready; all 13 existing Flux Kustomizations
   Ready at `0130a147` during initial inspection.
 - Confirmed plain Flannel plus kube-proxy; no policy enforcement engine.
@@ -29,6 +33,12 @@ public routes or existing workloads were changed. Main has not been merged.
   0.811s. This Debian build lacks OpenImageDenoiser.
 - A 37-completion suspended Indexed Job passed the live Kubernetes API's server
   dry-run validation. No Job or Pod was created by this check.
+- 37 independent CAE containers, four concurrent, all passed the complete S3
+  input/solve/output path in **10.265 seconds** on the workstation: 37 success
+  receipts, 37 valid archives, 37,338 compressed output bytes. Every task checks
+  PARDISO's two-thread selection and expected displacement range, plus headless
+  FreeCAD and Gmsh. This is **not** a homelab/Kubernetes speed measurement.
+  Raw non-secret receipts are committed in [`evidence.json`](evidence.json).
 - Seven-day S3 lifecycle configuration round trip passed. Seven-day elapsed
   deletion has **not** been observed.
 
@@ -45,5 +55,5 @@ public routes or existing workloads were changed. Main has not been merged.
 | Artifacts expire after seven days | Configuration verified; elapsed deletion pending |
 | Coder workspace creation | Not applicable: optional tool omitted |
 
-The PR must remain a draft until publication/build checks and the activation
-review are resolved. Do not describe these pending checks as demonstrated.
+Image publication/build checks are complete. The PR remains a draft for the
+activation review. Do not describe pending live checks as demonstrated.
