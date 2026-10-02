@@ -20,7 +20,7 @@ Always inspect the current repository before relying on this summary.
 
 - Talos Linux on x86-64 nodes; do not use node SSH or host package managers.
 - Kubernetes with Flux, Kustomize, and SOPS age decryption.
-- Flannel CNI without a NetworkPolicy enforcement engine.
+- Flannel CNI with firewall-only kube-router v2.11.1 NetworkPolicy enforcement.
 - Longhorn for distributed application storage and Cloudflare R2 backups.
 - Spegel for peer-to-peer container image caching.
 - Tailscale operator for private application access.
@@ -102,10 +102,11 @@ Do not assume an application is safe for the Internet because it has its own
 login page. Do not create a public route with a default password or unfinished
 bootstrap account.
 
-## Known architectural constraint
+## Network isolation
 
-Kubernetes `NetworkPolicy` objects may document intended connectivity, but
-plain Flannel does not enforce them here. A pod can potentially reach sensitive
-cluster-internal services even when it has no Kubernetes RBAC. Do not place an
-untrusted autonomous workload in a normal pod and call it isolated solely
-because a NetworkPolicy exists.
+Flannel provides pod networking; kube-router enforces NetworkPolicy while
+kube-proxy retains service routing. The policy engine is managed through Flux
+under `infrastructure/olympus/network-policy`. Existing policies now take effect.
+Vulcan workers are restricted to DNS and S3; 288 live checks across four nodes
+passed during deployment. Recheck actual connectivity after networking changes;
+policy objects or controller readiness alone do not establish isolation.

@@ -2,15 +2,12 @@
 
 ## Availability and prerequisites
 
-As of the October 1, 2026 implementation handoff, Vulcan is **not deployed**.
-[PR #31](https://github.com/link2427/homelab/pull/31) is a draft awaiting review.
-The two Flux Kustomizations are suspended and `isolation_verified=false`.
-Read the [activation runbook](https://github.com/link2427/homelab/blob/codex/homelab-runner/apps/olympus/vulcan/README.md)
-before changing those gates. Plain Flannel currently does not enforce isolation;
-a reviewed policy engine, worker canaries, Tailscale enrollment and grants are
-required. Refresh live state before assuming this dated status still applies.
+Vulcan is deployed through Flux as of October 2, 2026. Network enforcement and
+Tailscale enrollment are active. Check the [verification record](https://github.com/link2427/homelab/blob/main/apps/olympus/vulcan/VERIFICATION.md)
+for completed live tests and remaining checks. Deployment is handled separately
+from CAD project integration.
 
-After activation, use a granted tailnet host and the REST/MCP setup in
+Use a granted tailnet host and the REST/MCP setup in
 [SKILL.md](../SKILL.md). A cloud agent needs an actual tailnet-connected execution
 environment. Keep interactive CAD editing and inspection on the workstation or
 in Coder; send independent geometry, mesh, solve or render tasks to Vulcan.
@@ -120,7 +117,7 @@ results and reduce locally, or upload the collected results to a second job.
   room for expanded inputs, solver scratch and output compression. Declared
   outputs are relative to `/work`, even after the command changes directories.
   Output limit is 2 GiB uncompressed/10,000 entries per task; saved logs are
-  capped at 20 MiB. The initial shared artifact store is only 40 GiB.
+  capped at 20 MiB. The initial shared artifact store is only 20 GiB.
 - There are no automatic solver retries (`backoffLimit=0`). A failed index can
   fail the whole Job and terminate other tasks; inspect receipts and logs before
   rerunning a bounded set of cases. Cancellation, OOM or node loss can leave
@@ -153,8 +150,8 @@ compute job just to download it again.
 
 ## Real CAD acceptance checklist
 
-1. Complete the service activation and generic live acceptance in the runbook.
-   The existing 37-container workstation check is not live cluster evidence.
+1. Check the live acceptance record and call `list_images` from the intended
+   client. Local Docker timings are not cluster performance evidence.
 2. Identify the actual CAD repository, representative command and expected
    outputs. If these are not known, ask for their location instead of inventing
    a project. Check dependencies against the approved image.
@@ -173,16 +170,23 @@ compute job just to download it again.
    the homelab runbook, verification record and local operational context with
    actual deployed commits, outcomes and remaining limitations.
 
-## Copyable continuation prompt
+## Copyable calling prompt
 
 ```text
-Continue Vulcan PR #31 (https://github.com/link2427/homelab/pull/31) so I can use it for my real CAD runs, and test it with those workloads.
+Integrate my CAD runs with the Olympus Vulcan compute runner. Deployment is handled separately; focus on calling jobs and testing my CAD workflow.
 
-Read C:/Users/Jacob/Documents/ChatGPT/Homelab/.ai-context/README.md, the current PR, apps/olympus/vulcan/README.md and VERIFICATION.md, and skills/homelab-runner/references/cad-runs.md. The implementation worktree was D:/repos/homelab-runner; the canonical Flux repo is D:/repos/homelab. Verify current state before proceeding.
+Read D:/repos/homelab-runner/skills/homelab-runner/SKILL.md and references/cad-runs.md. Copy the entire skill folder into the CAD project's .agents/skills/homelab-runner/.
 
-Find my current CAD project and representative run from available context; ask for the repo/run path only if it is unclear. Reuse its pipeline and define expected outputs and numerical tolerances. Check image dependencies, then prepare a local baseline and a minimal project integration using the portable skill and MCP setup.
+MCP: https://olympus-vulcan.taild90e78.ts.net/mcp/
+On a granted tailnet machine:
+claude mcp add --transport http --scope user homelab-runner https://olympus-vulcan.taild90e78.ts.net/mcp/
+Authentication uses Tailscale identity; no API key.
 
-Respect the existing review-before-merge requirement. Prepare any outstanding activation changes for review; use approved GitOps changes and verified network isolation/Tailscale grants before enabling jobs. Keep this tailnet-only. Once activation is authorized and complete, test real CAD cases through REST and MCP, then a small sweep and a 37-task Indexed run. Collect every output, check numerical results, measure wall time, and exercise auth, quotas and cleanup. Account for the shared job deadline across waves.
+Call list_images. Package relative-path inputs as tar.gz, call upload_inputs(size=<bytes>), and PUT bytes with the returned URL/headers. Pass the returned input URI to submit_job(spec={image,command,inputs,outputs,resources,parallelism,timeout}). Resources are per task; parallelism is total tasks, each with JOB_INDEX starting at zero. Quotas cap simultaneous execution.
 
-Update the CAD project's docs, homelab runbook/verification and operational notes with reproducible commands, input hashes, image digests, deployed revision and sanitized evidence. Clearly separate local checks from live acceptance and report any remaining blocker. Do not claim the prior 10.265-second local Docker test as cluster performance.
+Poll job_status(job_id), inspect job_logs(job_id,index), and call get_outputs(job_id). Download every index's outputs.tar.gz and result.json; check all indices, exit_code=0, outputs_uploaded=true and engineering tolerances. cancel_job stops work; save wanted artifacts before seven-day expiry. REST is POST /api/<tool> on the same hostname with the same JSON arguments.
+
+Prepare one real local CAD baseline, run the matching remote case through REST and MCP, then an indexed sweep. Compare numerical results and record timings. CAE includes FreeCAD, Gmsh and CalculiX/PARDISO, NOT CadQuery. No runtime Internet/package installation. The whole-Job deadline is timeout+300 seconds across all waves; split long sweeps as needed.
+
+If connectivity is temporarily unavailable, continue packaging, adapters and local baseline tests and report the precise failure. Do not take over deployment. Document the CAD project's submission, monitoring, artifact retrieval and tested results.
 ```

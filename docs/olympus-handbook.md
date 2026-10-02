@@ -11,7 +11,7 @@ access paths, recovery model, and the work completed during the current rebuild.
 - Operating system: Talos Linux `v1.12.6`
 - Kubernetes: `v1.35.2`
 - GitOps: Flux `v2.9.3`, watching `main` in `link2427/homelab`
-- CNI: Flannel
+- CNI: Flannel; firewall-only kube-router enforces NetworkPolicy
 - Primary remote network: Tailscale
 - Public application ingress: Cloudflare Tunnel
 - Distributed storage: Longhorn `v1.12.0`
@@ -417,19 +417,19 @@ coder login https://coder.jacob-neel.dev
 
 ## Vulcan batch compute and CAD runs
 
-October 1, 2026 status: [PR #31](https://github.com/link2427/homelab/pull/31)
-contains the implementation; it is not merged or deployed. New Kueue and Vulcan
-Flux Kustomizations are suspended and the submission gate is false. Activation
-requires reviewed network-policy enforcement and Tailscale enrollment/grants.
-Plain Flannel does not enforce the supplied NetworkPolicy objects.
+October 2, 2026: Vulcan is merged and deployed through Flux. Kueue and
+firewall-only kube-router are active; 288 network checks passed across four
+nodes before enabling submissions. State (1 GiB) and artifacts (20 GiB) have
+healthy two-replica Longhorn volumes. See the verification record for current
+live acceptance results and remaining checks.
 
-After activation, a granted tailnet agent uploads inputs and submits through
+A granted tailnet agent uploads inputs and submits through
 REST or Streamable HTTP MCP. The tsnet gateway maps verified identity to a Kueue
 queue and budgets. Kubernetes runs isolated Indexed Job tasks, each with its own
 `JOB_INDEX`, working directory and bounded S3 outputs. Agents poll status, read
 logs, download each task's receipt/archive and validate the project results.
 Transient artifacts have seven-day retention and must be saved elsewhere if
-wanted. The endpoint is planned as `https://olympus-vulcan.taild90e78.ts.net`;
+wanted. The endpoint is `https://olympus-vulcan.taild90e78.ts.net`;
 no Cloudflare route or Funnel is used.
 
 Use Coder/workstation for interactive CAD and Vulcan for independent batch cases.
@@ -440,7 +440,7 @@ quota-limited waves, and the Job deadline covers the entire batch.
 - [Design, activation and recovery](../apps/olympus/vulcan/README.md)
 - [Executed checks and pending live acceptance](../apps/olympus/vulcan/VERIFICATION.md)
 - [Portable client skill and MCP setup](../skills/homelab-runner/SKILL.md)
-- [CAD packaging, validation and continuation prompt](../skills/homelab-runner/references/cad-runs.md)
+- [CAD packaging, validation and calling prompt](../skills/homelab-runner/references/cad-runs.md)
 
 ## Headlamp administration
 

@@ -1,15 +1,15 @@
 # Vulcan compute runner
 
-**Review-stage implementation; not deployed to Olympus.** Both new Flux
-Kustomizations are suspended. `isolation_verified` is false, which rejects every
-submission. Do not remove either gate until the activation checks below pass.
-Flux still follows `main`; the implementation branch is not a live deployment.
+**Deployed on Olympus October 2, 2026.** Kueue, firewall-only kube-router and
+Vulcan are active through Flux. Submissions are enabled after 288 network checks
+across all four nodes. See [verification](VERIFICATION.md) for live acceptance
+results and remaining checks.
 
 Vulcan runs independent container jobs for any project. REST and Streamable HTTP
 MCP share the same eight operations. Kubernetes Indexed Jobs implement fan-out;
 Kueue 0.19.2 controls admission. Coder remains the interactive workspace service.
 
-For project use, see the [CAD run guide and continuation prompt](../../../skills/homelab-runner/references/cad-runs.md).
+For project use, see the [CAD run guide and calling prompt](../../../skills/homelab-runner/references/cad-runs.md).
 It covers image compatibility, indexed case layout, output validation and the
 steps to prove the service with actual CAD workloads after activation.
 
@@ -81,50 +81,31 @@ task pod -> DNS and S3 only; scoped expiring object URLs; no cluster credentials
 - No Argo, custom scheduler, database, custom image builder, or optional Coder
   workspace creation tool. The Go tsnet edge and Python API share one container.
 
-## Required activation review
+## Deployment and isolation
 
-1. Review this PR and image CI. Do not merge automatically. All five images are
-   published and pinned to verified digests; GHCR package visibility is public.
-   For later private images, provision a dedicated pull credential through SOPS
-   in both namespaces. Do not reuse app secrets.
-2. **Network isolation is currently blocked.** Live inspection on October 1,
-   2026 found only `kube-flannel` and `kube-proxy` on all four nodes. Flannel
-   does not enforce these policies. A policy engine must be approved, deployed
-   through Flux and tested before enabling submissions. A firewall-only
-   [kube-router installation](https://www.kube-router.io/docs/user-guide/) can
-   retain Flannel (`--run-router=false --run-service-proxy=false
-   --run-firewall=true --enable-cni=false`). Its host networking/NET_ADMIN
-   exception belongs to the infrastructure controller, never the task pods.
-   Do not install an unreviewed privileged DaemonSet as part of an app rollout.
-   Existing dormant policies in `authentik`, `coder`, `netbox`, and `flux-system`
-   need connectivity review first: enabling enforcement affects them too.
-3. After that review, test from a restricted canary pod on **each worker**:
-   DNS and S3:8333 succeed; Kubernetes API, database Services, pod IPs, node/LAN
-   addresses, metadata/link-local addresses and public TCP/UDP are refused.
-   S3 filer/admin/master/volume ports must be refused even though 8333 works.
-   Verify cross-identity pods cannot connect. Store dated evidence. Do not set
-   `isolation_verified=true` based merely on policy objects or controller health.
-4. Add the Tailscale policy entries below through the normal tailnet admin flow;
-   preserve unrelated grants. No new tailnet admin credential is stored here.
-5. After reviewed merge, unsuspend only Kueue in Git and reconcile. Its namespace
-   selector manages only `vulcan-jobs`, leaving Coder, ARC and other Jobs alone.
-   Verify its webhook and controller before unsuspending Vulcan in Git.
-6. Inspect actual Longhorn capacity before provisioning: state 1 GiB, artifacts
-   40 GiB, both two replicas. State has the usual daily R2 backup label. Transient
-   seven-day artifacts deliberately have no longer-lived R2 backup; consumers
-   must save wanted results. PVCs are protected from Flux pruning.
-7. Unsuspend Vulcan in Git while keeping submission gate false. The first tsnet
-   start requires enrolling `olympus-vulcan` into the tailnet and assigning
-   `tag:runner`. Use its one-time login URL locally, or a dedicated preauthorized
-   tag-scoped key supplied as a SOPS Secret/`TS_AUTHKEY` env reference. Never put
-   that enrollment key in an agent config, PR or logs. The persisted `/state`
-   holds the device identity; do not create duplicate devices on each restart.
-   HTTPS certificates must be enabled for the tailnet. Confirm exact hostname;
-   a suffixed duplicate is not the documented endpoint.
-8. Verify denial without the application grant, even if an existing broad ACL
-   permits TCP443. Then commit `isolation_verified=true` and run acceptance.
-   `main` + Flux reconciliation + checks are required before declaring service
-   availability. Suspending reconciliation alone does not stop an existing app.
+The user authorized merge and deployment. PRs #31-#36 merged the implementation,
+Kueue, firewall-only kube-router, Tailscale enrollment configuration and verified
+submission gate and startup transport retry fix. Flux applied `723598d`. Flannel and kube-proxy remain in place;
+kube-router v2.11.1 enforces NetworkPolicy on all four nodes. Its privileged host
+access is an infrastructure exception, never granted to task pods.
+
+Run `python scripts/verify-vulcan-isolation.py` after networking changes. It uses
+restricted canaries and unrestricted positive controls on every node, tests DNS
+and S3 access versus API, node/LAN, pod, database, metadata and Internet paths,
+and cleans its own pods. A destination unreachable from controls is not evidence
+of enforcement. Close submissions with `isolation_verified=false` before removing
+the policy engine. Kueue manages only the `vulcan-jobs` namespace.
+
+State uses a 1-GiB Longhorn claim; artifacts use `vulcan-artifacts-active`, 20 GiB.
+Both have two healthy replicas. The initial empty 40-GiB artifact claim could not
+place its second replica and is retained, detached, as a rollback copy. State has
+the daily R2 backup label; transient artifacts deliberately do not. PVCs are
+protected from Flux pruning. Monitor capacity before large CAD batches.
+
+The enrolled `olympus-vulcan` device has `tag:runner`. Its identity persists in
+`/state`; HTTPS certificates are enabled. Avoid duplicate enrollment on restart.
+No agent API token, public route or Funnel is required. Preserve unrelated
+Tailscale grants when modifying the following policy.
 
 Tailscale policy fragment (merge with the existing policy, do not replace it):
 
@@ -195,6 +176,7 @@ Run from a granted tailnet machine, inside `runner-service`:
 
 ```sh
 uv sync --frozen
+mkdir -p evidence
 uv run python acceptance.py --fanout --quota --cleanup > evidence/live.json
 ```
 
@@ -233,7 +215,7 @@ evidence. Keep raw receipts free of credentials and signed URLs.
   cluster resource consumption.
 - An artifact upload failure makes a worker fail; OOM/forced deletion/node loss
   may prevent even a failure receipt. Inspect Kubernetes conditions and logs.
-  The 40-GiB store is a homelab capacity limit, not a promise that 128 simultaneous
+  The 20-GiB store is a homelab capacity limit, not a promise that 128 simultaneous
   2-GiB outputs fit. Monitor and expand the Longhorn claim before large runs.
 - The gateway restarts without losing Kubernetes Jobs or S3 receipts. If it is
   down past the Job TTL, `expired_or_removed` is honest uncertainty, not success.
