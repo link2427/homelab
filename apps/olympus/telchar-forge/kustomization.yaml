@@ -12,3 +12,4 @@ resources:
 - workspace-monitor.yaml
 patches:
 - path: workspace-stage.yaml
+- path: backend-performance-pause.yaml

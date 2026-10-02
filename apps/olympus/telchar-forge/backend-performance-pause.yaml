@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-processor
+  namespace: telchar-forge
+spec:
+  replicas: 0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-monitor
+  namespace: telchar-forge
+spec:
+  replicas: 0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-distributor
+  namespace: telchar-forge
+spec:
+  replicas: 0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-api
+  namespace: telchar-forge
+spec:
+  replicas: 0
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-static-import
+  namespace: telchar-forge
+spec:
+  suspend: true
