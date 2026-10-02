@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vulcan
+  namespace: vulcan
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vulcan
+  namespace: vulcan-jobs
+rules:
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list, create, delete]
+  - apiGroups: [""]
+    resources: [pods, pods/log]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vulcan
+  namespace: vulcan-jobs
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vulcan
+subjects:
+  - kind: ServiceAccount
+    name: vulcan
+    namespace: vulcan
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vulcan-state
+  namespace: vulcan
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    recurring-job.longhorn.io/source: enabled
+    recurring-job.longhorn.io/olympus-app-backup: enabled
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-fast
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vulcan-artifacts
+  namespace: vulcan
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-fast
+  resources:
+    requests:
+      storage: 40Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulcan
+  namespace: vulcan
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vulcan
+  template:
+    metadata:
+      labels:
+        app: vulcan
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: /metrics
+    spec:
+      serviceAccountName: vulcan
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: ghcr.io/link2427/vulcan-gateway:unpublished
+          ports:
+            - {name: metrics, containerPort: 9000}
+          env:
+            - {name: RUNNER_CONFIG, value: /config/config.json}
+            - {name: S3_ENDPOINT, value: "http://vulcan-store.vulcan.svc.cluster.local:8333"}
+            - {name: PUBLIC_URL, value: "https://olympus-vulcan.taild90e78.ts.net"}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef: {name: vulcan-store, key: AWS_ACCESS_KEY_ID}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: {name: vulcan-store, key: AWS_SECRET_ACCESS_KEY}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "2", memory: 1Gi}
+          startupProbe:
+            httpGet: {path: /healthz, port: metrics}
+            periodSeconds: 10
+            failureThreshold: 120
+          readinessProbe:
+            httpGet: {path: /healthz, port: metrics}
+          livenessProbe:
+            httpGet: {path: /healthz, port: metrics}
+            periodSeconds: 15
+          volumeMounts:
+            - {name: config, mountPath: /config, readOnly: true}
+            - {name: state, mountPath: /state}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: config
+          configMap: {name: vulcan-config}
+        - name: state
+          persistentVolumeClaim: {claimName: vulcan-state}
+        - name: tmp
+          emptyDir: {sizeLimit: 256Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulcan-store
+  namespace: vulcan
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: vulcan-store}
+  template:
+    metadata:
+      labels: {app: vulcan-store}
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: store
+          image: chrislusf/seaweedfs:4.48
+          args: [mini, -dir=/data, -ip=127.0.0.1, -ip.bind=0.0.0.0, -admin.ui=false, -s3.port.iceberg=0, -s3.port.lance=0, -s3.iam=false, -volume.fileSizeLimitMB=2048]
+          envFrom:
+            - secretRef: {name: vulcan-store}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          ports:
+            - {name: s3, containerPort: 8333}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "2", memory: 2Gi}
+          startupProbe:
+            tcpSocket: {port: s3}
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            tcpSocket: {port: s3}
+          livenessProbe:
+            tcpSocket: {port: s3}
+            periodSeconds: 15
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: vulcan-artifacts}
+        - name: tmp
+          emptyDir: {sizeLimit: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vulcan-store
+  namespace: vulcan
+spec:
+  type: ClusterIP
+  selector: {app: vulcan-store}
+  ports:
+    - {name: s3, port: 8333, targetPort: s3}

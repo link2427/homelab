@@ -6,3 +6,4 @@
 apps/olympus/coder/skills/*/scripts/* text eol=lf
 apps/olympus/coder/runtime/bin/* text eol=lf
 apps/olympus/coder/**/*.py text eol=lf
+runner-service/** text eol=lf

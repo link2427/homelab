@@ -1,0 +1,24 @@
+{
+  "isolation_verified": false,
+  "profiles": {
+    "jacob": {
+      "subjects": ["user:jacob.neel@gmail.com"],
+      "queue": "jacob",
+      "images": ["python", "cae", "mujoco", "blender"],
+      "quota": {"cpu": "8", "memory": "16Gi", "ephemeral-storage": "64Gi", "pods": 8, "nvidia.com/gpu": "1"},
+      "gpu_node": "atlas"
+    },
+    "norma": {
+      "subjects": ["tag:runner-norma"],
+      "queue": "norma",
+      "images": ["python", "cae", "mujoco", "blender"],
+      "quota": {"cpu": "4", "memory": "8Gi", "ephemeral-storage": "32Gi", "pods": 4, "nvidia.com/gpu": "0"}
+    }
+  },
+  "images": {
+    "python": {"image": "UNPUBLISHED", "description": "Python 3.12 and uv; install dependencies in the image, runtime egress is denied."},
+    "cae": {"image": "UNPUBLISHED", "description": "FreeCAD headless, Gmsh, CalculiX with threaded Intel MKL PARDISO."},
+    "mujoco": {"image": "UNPUBLISHED", "description": "MuJoCo, NumPy, CPU OSMesa rendering."},
+    "blender": {"image": "UNPUBLISHED", "description": "Blender headless CPU rendering."}
+  }
+}

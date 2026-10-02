@@ -1,0 +1,7 @@
+FROM python:3.12.13-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends libegl1 libgl1 libosmesa6 && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir mujoco==3.6.0 numpy==2.4.3
+COPY worker.py /opt/vulcan/worker.py
+ENV HOME=/tmp PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MUJOCO_GL=osmesa
+USER 1000:1000
+WORKDIR /work

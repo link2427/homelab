@@ -1,0 +1,100 @@
+# Enforced only after an actual policy engine is installed and tested.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: vulcan-jobs
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-egress
+  namespace: vulcan-jobs
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: vulcan-task}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: vulcan}
+          podSelector:
+            matchLabels: {app: vulcan-store}
+      ports:
+        - {protocol: TCP, port: 8333}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: vulcan
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: store
+  namespace: vulcan
+spec:
+  podSelector:
+    matchLabels: {app: vulcan-store}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app: vulcan}}
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: vulcan-jobs}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: vulcan-task}}
+      ports:
+        - {protocol: TCP, port: 8333}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway
+  namespace: vulcan
+spec:
+  podSelector:
+    matchLabels: {app: vulcan}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: monitoring}}
+      ports:
+        - {protocol: TCP, port: 9000}
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app: vulcan-store}}
+      ports:
+        - {protocol: TCP, port: 8333}
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - ipBlock: {cidr: 10.0.0.57/32}
+      ports:
+        - {protocol: TCP, port: 6443}
+    # Tailscale control/DERP and peer discovery. tsnet never binds host/pod TCP 443.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]
+      ports:
+        - {protocol: TCP, port: 443}
+        - {protocol: UDP, port: 3478}
+        - {protocol: UDP, port: 41641}
