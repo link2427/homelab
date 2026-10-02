@@ -34,6 +34,9 @@ JOB_ID = re.compile(r"^vulcan-[a-f0-9]{32}$")
 UPLOAD_ID = re.compile(r"^[a-f0-9]{32}$")
 ID = ContextVar("identity", default="")
 LOG = logging.getLogger("vulcan.audit")
+LOG.setLevel(logging.INFO)
+LOG.addHandler(logging.StreamHandler())
+LOG.propagate = False
 SETTINGS = {}
 batch = core = s3 = external_s3 = None
 
@@ -148,7 +151,7 @@ def signed(key, method, public=False, size=None):
     if size is not None:
         params["ContentLength"] = size
     return (external_s3 if public else s3).generate_presigned_url(
-        method, Params=params, ExpiresIn=900 if public else 172800)
+        method, Params=params, ExpiresIn=900 if public else 259200)
 
 
 def upload_inputs(size: int, payload_base64: str = "") -> dict:

@@ -55,17 +55,19 @@ try:
                 raise RuntimeError("S3 startup failed (credentials/logs redacted)") from None
             time.sleep(1)
     local.put_bucket_lifecycle_configuration(Bucket="vulcan", LifecycleConfiguration={"Rules": [
-        {"ID": "seven-days", "Status": "Enabled", "Filter": {"Prefix": ""}, "Expiration": {"Days": 7}}]})
+        {"ID": "seven-days", "Status": "Enabled", "Filter": {"Prefix": ""}, "Expiration": {"Days": 7},
+         "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 1}}]})
     assert local.get_bucket_lifecycle_configuration(Bucket="vulcan")["Rules"][0]["Expiration"]["Days"] == 7
     def signed(key, method):
         return internal.generate_presigned_url(method, Params={"Bucket": "vulcan", "Key": key}, ExpiresIn=3600)
     payload = io.BytesIO()
     with tarfile.open(fileobj=payload, mode="w:gz") as archive:
         archive.add(Path(__file__).with_name("cube.inp"), arcname="cube.inp")
+        archive.add(Path(__file__).with_name("freecad-check.py"), arcname="freecad-check.py")
     local.put_object(Bucket="vulcan", Key="input.tar.gz", Body=payload.getvalue())
     commands = {
         "python": ["python3", "-c", "import os,pathlib; print('hello '+os.environ['JOB_INDEX']); pathlib.Path('out.txt').write_text(os.environ['JOB_INDEX'])"],
-        "cae": ["sh", "-ec", "ccx -i cube; test -s cube.frd; test -s cube.dat; gmsh --version; freecadcmd --version"],
+        "cae": ["sh", "-ec", "ccx -i cube; test -s cube.frd; test -s cube.dat; gmsh --version; freecadcmd freecad-check.py; test -s freecad-ok.json; test -s cube.step"],
         "mujoco": ["python3", "-c", "import mujoco,numpy,pathlib; m=mujoco.MjModel.from_xml_string('<mujoco><worldbody><body><joint type=\"free\"/><geom type=\"sphere\" size=\".1\"/></body></worldbody></mujoco>'); d=mujoco.MjData(m); mujoco.mj_step(m,d); pathlib.Path('out.txt').write_text(str(d.time)); print(d.time)"],
         "blender": ["blender", "--background", "--factory-startup", "--python-expr", "import bpy; bpy.context.scene.render.engine='CYCLES'; bpy.context.scene.cycles.device='CPU'; bpy.context.scene.cycles.samples=1; bpy.context.scene.cycles.use_denoising=False; bpy.context.scene.render.resolution_x=32; bpy.context.scene.render.resolution_y=32; bpy.context.scene.render.filepath='/work/out.png'; bpy.ops.render.render(write_still=True)"],
     }

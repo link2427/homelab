@@ -2,23 +2,61 @@
   "isolation_verified": false,
   "profiles": {
     "jacob": {
-      "subjects": ["user:jacob.neel@gmail.com"],
+      "subjects": [
+        "user:jacob.neel@gmail.com"
+      ],
       "queue": "jacob",
-      "images": ["python", "cae", "mujoco", "blender"],
-      "quota": {"cpu": "8", "memory": "16Gi", "ephemeral-storage": "64Gi", "pods": 8, "nvidia.com/gpu": "1"},
+      "images": [
+        "python",
+        "cae",
+        "mujoco",
+        "blender"
+      ],
+      "quota": {
+        "cpu": "8",
+        "memory": "16Gi",
+        "ephemeral-storage": "64Gi",
+        "pods": 8,
+        "nvidia.com/gpu": "1"
+      },
       "gpu_node": "atlas"
     },
     "norma": {
-      "subjects": ["tag:runner-norma"],
+      "subjects": [
+        "tag:runner-norma"
+      ],
       "queue": "norma",
-      "images": ["python", "cae", "mujoco", "blender"],
-      "quota": {"cpu": "4", "memory": "8Gi", "ephemeral-storage": "32Gi", "pods": 4, "nvidia.com/gpu": "0"}
+      "images": [
+        "python",
+        "cae",
+        "mujoco",
+        "blender"
+      ],
+      "quota": {
+        "cpu": "4",
+        "memory": "8Gi",
+        "ephemeral-storage": "32Gi",
+        "pods": 4,
+        "nvidia.com/gpu": "0"
+      }
     }
   },
   "images": {
-    "python": {"image": "UNPUBLISHED", "description": "Python 3.12 and uv; install dependencies in the image, runtime egress is denied."},
-    "cae": {"image": "UNPUBLISHED", "description": "FreeCAD headless, Gmsh, CalculiX with threaded Intel MKL PARDISO."},
-    "mujoco": {"image": "UNPUBLISHED", "description": "MuJoCo, NumPy, CPU OSMesa rendering."},
-    "blender": {"image": "UNPUBLISHED", "description": "Blender headless CPU rendering."}
+    "python": {
+      "image": "ghcr.io/link2427/vulcan-python@sha256:367ebe6ba36ebb97377874070d47bc93df5b8bb1940d8e55bdbeb233432777d0",
+      "description": "Python 3.12 and uv; install dependencies in the image, runtime egress is denied."
+    },
+    "cae": {
+      "image": "UNPUBLISHED",
+      "description": "FreeCAD headless, Gmsh, CalculiX with threaded Intel MKL PARDISO."
+    },
+    "mujoco": {
+      "image": "ghcr.io/link2427/vulcan-mujoco@sha256:60c5127230cf5df5bf9aebd13bd135b3718bb4b1897700439ed14dbd69640d09",
+      "description": "MuJoCo, NumPy, CPU OSMesa rendering."
+    },
+    "blender": {
+      "image": "ghcr.io/link2427/vulcan-blender@sha256:4b9b17f3870905571438b82dbf2ab3109aa32248d231e547f27d38e952585cd7",
+      "description": "Blender headless CPU rendering."
+    }
   }
 }

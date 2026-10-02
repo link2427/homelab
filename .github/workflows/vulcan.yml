@@ -38,6 +38,8 @@ jobs:
           kubectl kustomize infrastructure/olympus/kueue > /dev/null
           git diff --check
   images:
+    # Trusted branch pushes build/publish once; the paired PR run repeats checks only.
+    if: github.event_name != 'pull_request'
     needs: checks
     runs-on: ubuntu-latest
     permissions:

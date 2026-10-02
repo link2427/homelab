@@ -58,7 +58,7 @@ task pod -> DNS and S3 only; scoped expiring object URLs; no cluster credentials
   Existing cluster container-log retention applies to stdout audit events.
 - A 30-second status collector preserves final state across Kubernetes TTL and
   cancels jobs still queued after 24 hours. It does not schedule/admit workloads.
-  Worker URLs last 48 hours (queue wait + one-day maximum runtime). If the gateway
+  Worker URLs last 72 hours (queue wait + one-day maximum runtime + upload margin). If the gateway
   is unavailable beyond that window, expired URLs cause a task failure; resubmit
   after recovery. Jobs already admitted continue without the gateway.
 - Workloads run as UID/GID 1000 with restricted PodSecurity, dropped capabilities,
@@ -77,7 +77,7 @@ task pod -> DNS and S3 only; scoped expiring object URLs; no cluster credentials
 
 1. Review this PR and image CI. Do not merge automatically. Replace every
    unpublished image with its verified digest, including gateway. New GHCR
-   packages default private: confirm their visibility or provision a dedicated
+   package visibility must be checked: confirm public pulls or provision a dedicated
    pull credential through SOPS in both namespaces. Do not reuse app secrets.
 2. **Network isolation is currently blocked.** Live inspection on October 1,
    2026 found only `kube-flannel` and `kube-proxy` on all four nodes. Flannel
@@ -153,7 +153,8 @@ Source: [`runner-service`](../../../runner-service). CI:
 All five images build on hosted Linux; the four workload images must pass an
 actual read-only/non-root, real-S3 smoke test before publication. Image tags are
 source SHAs; deployment consumes immutable digests. CI never writes to `main`.
-PRs test but do not publish; pushes to the implementation branch/main publish.
+PRs run validation; trusted pushes to the implementation branch/main build,
+smoke-test and publish (avoids building the same five images twice per push).
 
 The CAE image builds upstream CalculiX commit
 `078778112369f18a207de039d50307d5797f941b` with `-DPARDISO` and Intel MKL
@@ -162,9 +163,11 @@ included in the image. `tests/cube.inp` explicitly requests PARDISO; the smoke
 test checks two threads and the cube's displacement range. It also exercises
 headless FreeCAD and Gmsh. Set `OMP_NUM_THREADS`, `MKL_NUM_THREADS` and
 `CCX_NPROC_EQUATION_SOLVER` to the requested CPUs to avoid oversubscription.
-Python includes uv; MuJoCo uses OSMesa; Blender uses CPU Cycles.
+Python includes uv; MuJoCo uses OSMesa; Blender uses CPU Cycles. The Debian
+Blender build has no OpenImageDenoiser: set `scene.cycles.use_denoising = False`
+for Cycles renders, as the tested example does.
 
-To add an image, build from a pinned base, include Python >=3.11.8 and
+To add an image, build from a pinned base, include Python >=3.12 and
 `worker.py` at `/opt/vulcan/worker.py`, support UID1000, read-only root and writable
 `/work`/`/tmp`, add a meaningful container smoke test, add the CI matrix entry,
 and publish as `ghcr.io/link2427/vulcan-<alias>`. Add its digest/description to

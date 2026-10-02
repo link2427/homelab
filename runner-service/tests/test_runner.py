@@ -105,6 +105,9 @@ def test_allowlist_and_foreign_inputs(monkeypatch):
 
 def test_rest_and_mcp_share_inventory_and_auth(monkeypatch):
     configure(monkeypatch)
+    app.batch = Mock()
+    app.batch.list_namespaced_job.return_value.items = []
+    app.s3 = Mock()
     # Exercise real stateless streamable HTTP SDK protocol; only downstream Kube/S3 are replaced.
     async def check():
         import httpx
@@ -123,6 +126,13 @@ def test_rest_and_mcp_share_inventory_and_auth(monkeypatch):
                 assert call.status_code == 200, call.text
                 assert not call.json()["result"].get("isError"), call.text
                 assert "python" in json.loads(call.json()["result"]["content"][0]["text"])
+                spec = {"image": "python", "command": ["python3", "-c", "print(42)"], "parallelism": 37}
+                submitted = await http.post("/api/submit_job", headers=headers, json={"spec": spec})
+                assert submitted.status_code == 200 and submitted.json()["tasks"] == 37, submitted.text
+                mcp_submit = await http.post("/mcp/", headers=headers, json={"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "submit_job", "arguments": {"spec": spec}}})
+                assert not mcp_submit.json()["result"].get("isError"), mcp_submit.text
+                assert json.loads(mcp_submit.json()["result"]["content"][0]["text"])["tasks"] == 37
+                assert app.batch.create_namespaced_job.call_count == 2
                 oversized = await http.post("/mcp/", headers=headers, content=b"x" * 1500001)
                 assert oversized.status_code == 413
     asyncio.run(check())
