@@ -51,12 +51,12 @@ spec:
               drop: [ALL]
           resources:
             requests:
-              cpu: '2'
-              memory: 4Gi
+              cpu: '8'
+              memory: 8Gi
               ephemeral-storage: 256Mi
             limits:
-              cpu: '8'
-              memory: 12Gi
+              cpu: '32'
+              memory: 24Gi
               ephemeral-storage: 2Gi
           startupProbe:
             httpGet:

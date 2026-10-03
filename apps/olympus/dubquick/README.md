@@ -5,7 +5,7 @@ Public clip-to-game-pack service for `dubquick.com`. Source: private `link2427/a
 ## Deployment shape
 
 - One `Recreate` replica, one application worker, eight queued jobs. SQLite, project metadata, and journals have a single writer process.
-- CPU-only Atlas scheduling, 2 CPU/4 GiB requested, 8 CPU/12 GiB limited. No GPU allocation or change to Coder/Plex.
+- CPU-only Atlas scheduling, 8 CPU/8 GiB requested, 32 CPU/24 GiB limited. No GPU allocation or change to Coder/Plex.
 - Restricted pod security, read-only root, UID/GID 10001, no service-account token.
 - `dubquick-state`: 5 GiB `longhorn-resilient`, prune-protected, daily `olympus-app-backup` with seven retained copies.
 - `dubquick-scratch`: 30 GiB `longhorn-bulk`, prune-protected but deliberately unbacked because working media and models are rebuildable.
