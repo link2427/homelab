@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dubquick
+resources:
+  - namespace.yaml
+  - storage.yaml
+  - resources.yaml
+  - network-policy.yaml
+  - app.secret.yaml
+  - registry.secret.yaml
+configMapGenerator:
+  - name: dubquick-config
+    literals:
+      - DUBQUICK_MODE=saas
+      - DUBQUICK_PUBLIC_URL=https://dubquick.com
+      - DUBQUICK_STATE_DIR=/state
+      - AUTO_DUB_DATA_DIR=/scratch
+      - HF_HOME=/scratch/models/huggingface
+      - AUTO_DUB_DIARIZATION_DIR=/scratch/models/diarization
+      - XDG_CACHE_HOME=/scratch/cache
+      - R2_ENDPOINT_URL=https://52018eaf0359596038f45ce3b2443891.r2.cloudflarestorage.com
+      - R2_BUCKET=dubquick-clips
+      - DUBQUICK_MODEL=large-v3-turbo
+      - DUBQUICK_DEVICE=cpu
+      - DUBQUICK_DIARIZATION_MODEL=pyannote-titanet-large
+      - DUBQUICK_WORKERS=1
+      - DUBQUICK_QUEUE_SIZE=8
+      - STRIPE_LIVE_MODE=true
+      - STRIPE_PRICE_STARTER=price_1UMFrkL3HpTc4wghtY8H8mzD
+      - STRIPE_PRICE_GAME_NIGHT=price_1UMFrlL3HpTc4wghDecyQHuq
+      - STRIPE_PRICE_SEASON=price_1UMFrmL3HpTc4wghbktF3aBK
+      - OMP_NUM_THREADS=8
+      - FORWARDED_ALLOW_IPS=10.244.0.0/16
