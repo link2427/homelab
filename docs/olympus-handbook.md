@@ -29,7 +29,7 @@ powered off and are not part of the active compute fleet.
 
 | System | Address | Role | Capacity | Accelerator | Longhorn role |
 | --- | --- | --- | --- | --- | --- |
-| `optiplex-hermes` | `10.0.0.57` | control plane + etcd + worker | 12 CPU threads, 16 GiB RAM, ~473 GiB NVMe | none | `fast`, `nvme`, `storage`; 200 GiB reserved |
+| `optiplex-hermes` | `10.0.0.57` | control plane + etcd + worker | 12 CPU threads, 16 GiB RAM, ~473 GiB NVMe | none | `fast`, `nvme`, `storage`; 199 GiB reserved |
 | `precision-5810-01` | `10.0.0.25` | worker | 12 CPU threads, 16 GiB RAM, ~231 GiB SSD | Quadro M4000, 8 GiB | `fast`, `ssd`, `storage`; 40 GiB reserved |
 | `precision-7810-01` | `10.0.0.171` | worker | 8 CPU threads, 32 GiB RAM, ~1.86 TiB HDD | Quadro P2000, 5 GiB | `bulk`, `hdd`, `storage`; 300 GiB reserved |
 | `atlas` | `10.0.0.5` (iLO `10.0.0.24`) | Talos worker + NAS | 72 CPU threads, ~64 GiB RAM, 500 GB SSD; existing 5.4 TB DATA-2 | Tesla P40, 24 GiB | `fast`, `ssd`, `storage`; 150 GiB reserved |
@@ -111,6 +111,16 @@ the build template defaults to bulk storage. Longhorn permits a conservative
 110% of post-reservation logical provisioning so sparse volume capacity does
 not strand a disk at a few percent over 100%; the 20% real-free-space floor
 still blocks placement before physical space becomes critically low.
+
+On October 2, 2026, the owner approved a narrow Hermes capacity adjustment for
+DubQuick: `nvme-os-ephemeral.storageReserved` changed from 200 to 199 GiB
+using a tested runtime JSON Patch. The disk had about 273 GiB physically free;
+a new 5 GiB state replica missed the previous logical allocation limit by
+about 30 MiB. The 110% provisioning limit, 20% real-free-space floor, and
+final three-replica durability policy remain unchanged. Longhorn owns this
+Node configuration; do not add a competing server-side-apply Node manifest.
+This reviewed allocation exception does not resolve Atlas system-disk I/O
+contention documented in [the incident record](../infrastructure/olympus/longhorn/IO-INCIDENT.md).
 
 Longhorn backs up directly to the private Cloudflare R2 bucket
 `s3://olympus-longhorn-backups@auto/`:
