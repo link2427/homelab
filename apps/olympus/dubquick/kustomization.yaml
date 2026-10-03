@@ -20,7 +20,7 @@ configMapGenerator:
       - XDG_CACHE_HOME=/scratch/cache
       - R2_ENDPOINT_URL=https://52018eaf0359596038f45ce3b2443891.r2.cloudflarestorage.com
       - R2_BUCKET=dubquick-clips
-      - DUBQUICK_MODEL=large-v3-turbo
+      - DUBQUICK_MODEL=large-v3
       - DUBQUICK_DEVICE=cpu
       - DUBQUICK_DIARIZATION_MODEL=pyannote-titanet-large
       - DUBQUICK_WORKERS=1
