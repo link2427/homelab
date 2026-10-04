@@ -10,6 +10,7 @@ resources:
 - workspace-nats-copy.yaml
 - workspace-migrate.yaml
 - backend-performance-migrate.yaml
+- weather-geometry-migrate.yaml
 - workspace-monitor.yaml
 patches:
 - path: workspace-stage.yaml

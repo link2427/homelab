@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: forge-migrate-weather-7eb6d14
+  namespace: telchar-forge
+  annotations:
+    telcharforge.com/release-sha: 7eb6d14765d090982e14727e5297df97ccfe4889
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: forge-migrator
+    spec:
+      restartPolicy: Never
+      serviceAccountName: forge
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: migrate
+        image: ghcr.io/telchar-dynamics/forge-migrator@sha256:245bf8b7a470e0a284920b4e8fddfc0c3e7c2a12145fd2028baa2d0c831335f1
+        env:
+        - name: PGOPTIONS
+          value: "-c lock_timeout=5s -c statement_timeout=600000 -c application_name=forge-migrate-weather-7eb6d14"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: forge-secrets
+              key: DATABASE_URL
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: '1'
+            memory: 512Mi
