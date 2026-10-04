@@ -98,7 +98,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-api@sha256:ab3840e752e209d177690d5c966b548a620454b5cd81512f9abffe70a74340da
+        image: ghcr.io/telchar-dynamics/forge-api@sha256:ca40c0a3fe57f24ffcfa2ef3aaae0cc52eb78baff7931c116f18612d9dc26ea3
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
