@@ -23,6 +23,7 @@ configMapGenerator:
       - DUBQUICK_MODEL=large-v3
       - DUBQUICK_DEVICE=cpu
       - DUBQUICK_DIARIZATION_MODEL=pyannote-titanet-large
+      - DUBQUICK_ADMIN_STEAM_IDS=76561198065314983
       - DUBQUICK_WORKERS=1
       - DUBQUICK_QUEUE_SIZE=8
       - STRIPE_LIVE_MODE=true

@@ -7,6 +7,7 @@ Public clip-to-game-pack service for `dubquick.com`. Source: private `link2427/a
 - One `Recreate` replica, one application worker, eight queued jobs. SQLite, project metadata, and journals have a single writer process.
 - CPU-only Atlas scheduling, 8 CPU/8 GiB requested, 32 CPU/24 GiB limited. No GPU allocation or change to Coder/Plex.
 - Full Whisper large-v3 transcription (CPU INT8), with Pyannote + TitaNet Large for voice grouping. Model selection is pinned in the generated ConfigMap; releases only update the image digest.
+- The configured admin Steam ID can override processing models for its own clips in Script options or the preparation confirmation. Other accounts retain the defaults; ownership, minute billing, and queue limits still apply. Optional model runtimes and GPU capacity are not installed by this account permission.
 - Restricted pod security, read-only root, UID/GID 10001, no service-account token.
 - `dubquick-state`: 5 GiB `longhorn-resilient`, prune-protected, daily `olympus-app-backup` with seven retained copies.
 - `dubquick-scratch`: 30 GiB `longhorn-bulk`, prune-protected but deliberately unbacked because working media and models are rebuildable.
