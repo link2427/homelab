@@ -17,6 +17,7 @@ spec:
         app.kubernetes.io/name: dubquick
     spec:
       automountServiceAccountToken: false
+      runtimeClassName: nvidia
       terminationGracePeriodSeconds: 120
       nodeSelector:
         kubernetes.io/hostname: atlas
@@ -57,6 +58,7 @@ spec:
             limits:
               cpu: '32'
               memory: 24Gi
+              nvidia.com/gpu: '1'
               ephemeral-storage: 2Gi
           startupProbe:
             httpGet:

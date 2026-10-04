@@ -5,9 +5,9 @@ Public clip-to-game-pack service for `dubquick.com`. Source: private `link2427/a
 ## Deployment shape
 
 - One `Recreate` replica, one application worker, eight queued jobs. SQLite, project metadata, and journals have a single writer process.
-- CPU-only Atlas scheduling, 8 CPU/8 GiB requested, 32 CPU/24 GiB limited. No GPU allocation or change to Coder/Plex.
+- Atlas scheduling, 8 CPU/8 GiB requested, 32 CPU/24 GiB limited, with the P40 exclusively allocated through the NVIDIA runtime. The owner approved stopping Coder workspace `counterwear-lime-centipede-58` while preserving its PVC; Plex is unchanged.
 - Full Whisper large-v3 transcription (CPU INT8), with Pyannote + TitaNet Large for voice grouping. Model selection is pinned in the generated ConfigMap; releases only update the image digest.
-- The configured admin Steam ID can override processing models for its own clips in Script options or the preparation confirmation. Other accounts retain the defaults; ownership, minute billing, and queue limits still apply. Optional model runtimes and GPU capacity are not installed by this account permission.
+- The configured admin Steam ID can override processing models for its own clips in Script options or the preparation confirmation. Other accounts retain the defaults; ownership, minute billing, and queue limits still apply. The image includes an isolated optional-model runtime at `/opt/models`; VibeVoice uses NF4 weights with FP32 compute on the Pascal P40. Select NVIDIA GPU for VibeVoice: its CPU path requires 40 GiB available RAM and rejects this 24 GiB container. Model weights are cached on scratch storage, outside the image.
 - Restricted pod security, read-only root, UID/GID 10001, no service-account token.
 - `dubquick-state`: 5 GiB `longhorn-resilient`, prune-protected, daily `olympus-app-backup` with seven retained copies.
 - `dubquick-scratch`: 30 GiB `longhorn-bulk`, prune-protected but deliberately unbacked because working media and models are rebuildable.
@@ -40,3 +40,5 @@ kubectl -n dubquick get pods,svc,pvc
 Check the actual applied Git revision and image digest, three healthy Longhorn state replicas, a completed state backup, public health/sign-in and an authorized sample import/export. Exercise cross-account denial and permitted/blocked network paths. Retention configuration alone does not prove elapsed deletion; observe a known test object's expiry without real customer media.
 
 Rollback by reverting only the image pin in Git, then reconcile Flux. Preserve both claims and all backups. Database changes may need a separate compatible data restore; never delete the namespace or PVCs as an image rollback.
+
+To return the P40 to Coder, first remove DubQuick's GPU limit and NVIDIA RuntimeClass through GitOps and verify the GPU is released, then start the preserved Coder workspace. Do not delete its PVC.
