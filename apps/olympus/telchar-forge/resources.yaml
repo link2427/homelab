@@ -735,6 +735,13 @@ spec:
               name: forge-secrets
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
+        args:
+        - -c
+        - shared_buffers=2GB
+        - -c
+        - effective_cache_size=6GB
+        - -c
+        - max_wal_size=2GB
         image: postgis/postgis:16-3.4
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -771,10 +778,10 @@ spec:
         resources:
           limits:
             cpu: '4'
-            memory: 4Gi
+            memory: 8Gi
           requests:
             cpu: 500m
-            memory: 1Gi
+            memory: 3Gi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
