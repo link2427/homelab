@@ -35,7 +35,7 @@ spec:
       containers:
         - name: app
           # Replaced with a verified immutable digest by the app's release workflow.
-          image: ghcr.io/link2427/dubquick@sha256:222be22281851409163759305bd8187c803226eaa783c9af2447db34484d01cc
+          image: ghcr.io/link2427/dubquick@sha256:baf4c25e66b2bb2d4865a6d61c35445b9a12ccd2f9824b4656d1d07492ba3595
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
