@@ -98,7 +98,7 @@ spec:
             name: forge-config
         - secretRef:
             name: forge-secrets
-        image: ghcr.io/telchar-dynamics/forge-api@sha256:ca40c0a3fe57f24ffcfa2ef3aaae0cc52eb78baff7931c116f18612d9dc26ea3
+        image: ghcr.io/telchar-dynamics/forge-api@sha256:446516c91cc6a5c961ba5829f3e298ae7c08fe616bef6e8d7ed34f54b9e19400
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
@@ -431,7 +431,7 @@ spec:
         telcharforge.com/environment: resume-demo
     spec:
       containers:
-      - image: ghcr.io/telchar-dynamics/forge-mobile-web@sha256:42e87549221eb3151356ddb15d6c981087ce1783b9c9b6bb85ae33849b777406
+      - image: ghcr.io/telchar-dynamics/forge-mobile-web@sha256:7ad44f21dacace7dd7415e61341bf5e1bbc25de83027410aed555ccc9e736f2d
         imagePullPolicy: Always
         name: mobile-web
         ports:
