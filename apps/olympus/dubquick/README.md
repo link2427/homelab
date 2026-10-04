@@ -42,3 +42,7 @@ Check the actual applied Git revision and image digest, three healthy Longhorn s
 Rollback by reverting only the image pin in Git, then reconcile Flux. Preserve both claims and all backups. Database changes may need a separate compatible data restore; never delete the namespace or PVCs as an image rollback.
 
 To return the P40 to Coder, first remove DubQuick's GPU limit and NVIDIA RuntimeClass through GitOps and verify the GPU is released, then start the preserved Coder workspace. Do not delete its PVC.
+
+## VibeVoice P40 baseline
+
+October 4, 2026: a 6.63-second synthetic single-speaker clip transcribed correctly with speaker-labelled output in an isolated adapter test. P40 NF4/FP32 used 8.13 GiB peak allocated VRAM. Total time was 230.16 seconds, including 225.64 seconds for model loading and input preparation and about 4.52 seconds for generation. This is a startup/compatibility sample, not a multi-speaker quality or sustained-throughput benchmark. The optional runtime currently reloads the model per clip; a persistent worker is needed before treating this as a low-latency production option.
