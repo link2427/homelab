@@ -79,7 +79,7 @@ spec:
         app.kubernetes.io/part-of: telchar-construct
     spec:
       containers:
-      - image: ghcr.io/telchar-dynamics/construct-site:503a9522c8ea9be2dbad4837c3ef31174af7bc55
+      - image: ghcr.io/telchar-dynamics/construct-site:b691fb1d0dab4d01fefdcad766d2087f5b4ad766
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
