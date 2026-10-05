@@ -22,6 +22,14 @@ configMapGenerator:
       - R2_BUCKET=dubquick-clips
       - DUBQUICK_MODEL=large-v3
       - DUBQUICK_DEVICE=cpu
+      # Enable only after Modal billing setup and a successful GPU benchmark.
+      - DUBQUICK_PREPARATION_BACKEND=local
+      - DUBQUICK_MODAL_APP=dubquick-prepare
+      - MODAL_ENVIRONMENT=main
+      - DUBQUICK_MODAL_BATCH_SIZE=1
+      - DUBQUICK_MODAL_MAX_IN_FLIGHT=2
+      - DUBQUICK_MODAL_DAILY_GPU_SECONDS=14400
+      - DUBQUICK_MODAL_FREE_DAILY_GPU_SECONDS=2400
       - DUBQUICK_DIARIZATION_MODEL=pyannote-titanet-large
       - DUBQUICK_ADMIN_STEAM_IDS=76561198065314983
       - DUBQUICK_WORKERS=1
