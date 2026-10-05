@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: dubquick
 spec:
+  # Temporary release hold while the verified image is preloaded on Atlas.
+  paused: true
   # ponytail: one process owns SQLite/jobs; add a durable queue before replicas.
   replicas: 1
   strategy:
