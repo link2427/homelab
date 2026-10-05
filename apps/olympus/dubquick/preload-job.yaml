@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dubquick-preload-f471998
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dubquick-image-preload
+    spec:
+      automountServiceAccountToken: false
+      runtimeClassName: nvidia
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/hostname: atlas
+        kubernetes.io/arch: amd64
+      imagePullSecrets:
+        - name: dubquick-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: check
+          image: ghcr.io/link2427/dubquick@sha256:55b3dfcc6493d5d11d31e405d34d1b94cf504f569d1dd1cd4bb0febc90d0028a
+          imagePullPolicy: IfNotPresent
+          command: [python, -c, "from importlib.metadata import version; from backend import cloud_jobs; assert version('modal') == '1.6.1'; print('Modal backend import verified; image ready on Atlas')"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: '1'
+              memory: 256Mi

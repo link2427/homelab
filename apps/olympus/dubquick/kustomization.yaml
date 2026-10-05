@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - storage.yaml
   - resources.yaml
+  - preload-job.yaml
   - network-policy.yaml
   - app.secret.yaml
   - registry.secret.yaml
