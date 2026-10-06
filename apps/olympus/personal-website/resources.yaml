@@ -4,7 +4,7 @@ metadata:
   name: personal-website
   namespace: personal-website
 spec:
-  replicas: 1
+  replicas: 0
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 300
   selector:

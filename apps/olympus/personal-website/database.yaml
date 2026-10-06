@@ -43,7 +43,7 @@ metadata:
     app.kubernetes.io/part-of: personal-website
 spec:
   serviceName: personal-website-postgres
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: personal-website-postgres

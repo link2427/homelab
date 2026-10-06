@@ -1,5 +1,16 @@
 # Personal website on Olympus
 
+## Taken down October 6, 2026
+
+The owner took the site offline for privacy reasons. The web Deployment and
+the PostgreSQL StatefulSet are pinned to `replicas: 0` here, so Flux keeps both
+stopped and a source CI image-pin commit cannot start them. Everything below
+describes the site as it ran before the takedown.
+
+The namespace, Services, Secrets and the retained `postgres-data` volume are
+kept. To restore, set both `replicas` back to 1 and wait for Flux. Do not
+restore without the owner asking.
+
 Public URL: https://jacob-neel.com. Cloudflare zone
 `fe30bfa48a36527b0ac45dfe3dc6e2cf`; shared tunnel `olympus-access`
 `3fb7dbb0-08b5-4003-895c-1c2c0ea858ca`. Apex and www route to
