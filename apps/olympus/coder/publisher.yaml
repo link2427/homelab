@@ -38,7 +38,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: publisher
-              image: ghcr.io/link2427/coder-catalog@sha256:bead3cae6fb66654c54aaffbe3dae86200a9bd8c0189436b10ff1e232b68ea60
+              image: ghcr.io/link2427/coder-catalog@sha256:efcd89ae6286d43d7a8540b3d12219873e88e7bc1cc6b62f092dc2f338a2b798
               imagePullPolicy: IfNotPresent
               env:
                 - name: CODER_URL
