@@ -15,7 +15,7 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify runner is unreachable outside the tailnet
         run: |
           if curl --silent --output /dev/null --connect-timeout 10 --max-time 20             https://olympus-vulcan.taild90e78.ts.net/api/list_images; then
@@ -23,13 +23,13 @@ jobs:
             exit 1
           fi
           echo "Private runner unreachable from GitHub-hosted runner as expected"
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: 0.11.5
           python-version: '3.12'
       - run: uv run --frozen pytest -q
         working-directory: runner-service
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: runner-service/edge/go.mod
           cache-dependency-path: runner-service/edge/go.sum
@@ -57,13 +57,13 @@ jobs:
       matrix:
         image: [gateway, python, cae, mujoco, blender]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           version: 0.11.5
           python-version: '3.12'
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
@@ -76,7 +76,7 @@ jobs:
           file=runner-service/images/Dockerfile.$IMAGE
           if [ "$IMAGE" = gateway ]; then file=runner-service/Dockerfile; fi
           echo "file=$file" >> "$GITHUB_OUTPUT"
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: runner-service
           file: ${{ steps.dockerfile.outputs.file }}
@@ -103,7 +103,7 @@ jobs:
           docker push "ghcr.io/link2427/vulcan-$IMAGE:$REVISION"
           mkdir -p runner-service/evidence
           docker inspect --format='{{index .RepoDigests 0}}' "ghcr.io/link2427/vulcan-$IMAGE:$REVISION" > "runner-service/evidence/$IMAGE.digest"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: vulcan-${{ matrix.image }}
           path: runner-service/evidence/
