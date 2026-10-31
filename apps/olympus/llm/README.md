@@ -8,7 +8,7 @@ Presets are in `models.ini`. The router holds one model at a time (`--models-max
 
 | Model ID | Use | File | Size | Context |
 | --- | --- | --- | ---: | ---: |
-| `ornith-1.5-9b` | Coding agent (MIT) | `Ornith-1.5-9B-Q6_K.gguf` | 7.56 GB | 65536 |
+| `ornith-1.5-9b` | Coding agent (MIT) | `Ornith-1.5-9B-Q6_K.gguf` | 7.56 GB | 262144 |
 | `hemmingway-1.5` | Prose (CC BY-NC 4.0, non-commercial) | `HemmingwayAI_Hemmingway-1.5-Q4_K_L.gguf` | 18.82 GB | 32768 |
 
 The `fetch-models` init container downloads missing files at pinned Hugging Face revisions and checks their SHA-256 before use. To add or change a model, update the init script and `models.ini`, and grow the PVC if needed.
