@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: llm-models
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    app.kubernetes.io/name: llm
+spec:
+  accessModes: [ReadWriteOnce]
+  # ponytail: rebuildable downloads, so one unbacked replica on fast storage.
+  storageClassName: longhorn-ci-cache
+  resources:
+    requests:
+      storage: 40Gi

@@ -18,3 +18,4 @@ resources:
 - telchar-construct
 - telchar-forge
 - dubquick
+- llm
