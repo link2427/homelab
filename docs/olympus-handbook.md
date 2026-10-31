@@ -196,8 +196,9 @@ drop the M4000.
 Plex is pinned to `precision-7810-01`, requests the `nvidia` runtime class and
 one `nvidia.com/gpu`, and uses its Quadro P2000. Atlas serves DATA-2's Plex
 media to that node through a source-restricted, read-only NFSv4 export; Plex
-metadata remains on replicated Longhorn storage. Atlas's Tesla P40 is therefore
-available for Coder and other compute workloads.
+metadata remains on replicated Longhorn storage. Atlas's Tesla P40 is held by
+the [`llm`](../apps/olympus/llm/README.md) llama.cpp router, so Coder and other
+compute workloads can't use it while that Deployment runs.
 
 ## Access and service catalog
 

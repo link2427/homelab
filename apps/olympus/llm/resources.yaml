@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm
+spec:
+  # ponytail: the P40 holds one large model at a time; the router swaps on request.
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: llm
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: llm
+    spec:
+      automountServiceAccountToken: false
+      runtimeClassName: nvidia
+      nodeSelector:
+        kubernetes.io/hostname: atlas
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: fetch-models
+          image: curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
+          workingDir: /models
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              fetch() {
+                [ -f "$2" ] && return 0
+                curl -fL --retry 5 --retry-all-errors -C - -o "$2.part" "https://huggingface.co/$1/resolve/$3/$2"
+                echo "$4  $2.part" | sha256sum -c -
+                mv "$2.part" "$2"
+              }
+              fetch ornith-ai/Ornith-1.5-9B-GGUF Ornith-1.5-9B-Q6_K.gguf abdd624b12ebf020b767fff532ff44fe552b28c3 b6f76e74f86245b3caee014b797c10dca931c4dfdaabfb134eab655f81e4154a
+              fetch bartowski/HemmingwayAI_Hemmingway-1.5-GGUF HemmingwayAI_Hemmingway-1.5-Q4_K_L.gguf 4d91b1bc050200ccfc562c0830a78536d2dbd77b fd8eba1a55854e2a4a645d73badebdd6c7aeba22f8ccb92fc53e2817a22fda73
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              cpu: '4'
+              memory: 1Gi
+          volumeMounts:
+            - name: models
+              mountPath: /models
+      containers:
+        - name: llama-server
+          image: ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:f25bfa096802cdf35ceb7d124816387a1e3ed5cbfc869eb242246cd29ab29352
+          args:
+            - --host=0.0.0.0
+            - --port=8080
+            - --models-preset=/config/models.ini
+            - --models-max=1
+          env:
+            - name: HOME
+              value: /tmp
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: '2'
+              memory: 4Gi
+            limits:
+              cpu: '16'
+              memory: 24Gi
+              nvidia.com/gpu: '1'
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: presets
+              mountPath: /config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: llm-models
+        - name: presets
+          configMap:
+            name: llm-presets
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: llm
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
