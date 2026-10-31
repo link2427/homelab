@@ -63,10 +63,14 @@ spec:
         - name: llama-server
           image: ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:f25bfa096802cdf35ceb7d124816387a1e3ed5cbfc869eb242246cd29ab29352
           args:
-            - --host=0.0.0.0
-            - --port=8080
-            - --models-preset=/config/models.ini
-            - --models-max=1
+            - --host
+            - 0.0.0.0
+            - --port
+            - '8080'
+            - --models-preset
+            - /config/models.ini
+            - --models-max
+            - '1'
           env:
             - name: HOME
               value: /tmp
