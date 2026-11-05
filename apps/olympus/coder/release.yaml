@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: coder
-      version: 2.35.3
+      version: 2.38.6
       interval: 1h
       sourceRef:
         kind: HelmRepository
