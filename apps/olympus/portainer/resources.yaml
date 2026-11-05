@@ -138,20 +138,16 @@ metadata:
   name: portainer
   namespace: portainer
 spec:
-  externalTrafficPolicy: Cluster
   ports:
   - name: http
-    nodePort: 30777
     port: 9000
     protocol: TCP
     targetPort: 9000
   - name: https
-    nodePort: 30779
     port: 9443
     protocol: TCP
     targetPort: 9443
   - name: edge
-    nodePort: 30776
     port: 30776
     protocol: TCP
     targetPort: 30776
@@ -159,7 +155,7 @@ spec:
     app.kubernetes.io/instance: portainer
     app.kubernetes.io/name: portainer
   sessionAffinity: None
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service

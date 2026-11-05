@@ -64,16 +64,14 @@ metadata:
   name: n8n
   namespace: n8n
 spec:
-  externalTrafficPolicy: Cluster
   ports:
-  - nodePort: 30078
-    port: 5678
+  - port: 5678
     protocol: TCP
     targetPort: 5678
   selector:
     app: n8n
   sessionAffinity: None
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service

@@ -167,17 +167,15 @@ metadata:
   name: pihole-web
   namespace: pihole
 spec:
-  externalTrafficPolicy: Cluster
   ports:
   - name: http
-    nodePort: 30053
     port: 80
     protocol: TCP
     targetPort: 80
   selector:
     app: pihole
   sessionAffinity: None
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: v1
 data:

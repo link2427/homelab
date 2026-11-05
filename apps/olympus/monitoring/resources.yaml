@@ -262,16 +262,14 @@ metadata:
   name: grafana
   namespace: monitoring
 spec:
-  externalTrafficPolicy: Cluster
   ports:
-  - nodePort: 30030
-    port: 3000
+  - port: 3000
     protocol: TCP
     targetPort: 3000
   selector:
     app: grafana
   sessionAffinity: None
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
@@ -339,16 +337,14 @@ metadata:
   name: prometheus
   namespace: monitoring
 spec:
-  externalTrafficPolicy: Cluster
   ports:
-  - nodePort: 30090
-    port: 9090
+  - port: 9090
     protocol: TCP
     targetPort: 9090
   selector:
     app: prometheus
   sessionAffinity: None
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service

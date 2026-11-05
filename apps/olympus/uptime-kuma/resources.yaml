@@ -53,16 +53,14 @@ metadata:
   name: uptime-kuma
   namespace: uptime-kuma
 spec:
-  externalTrafficPolicy: Cluster
   ports:
-  - nodePort: 30301
-    port: 3001
+  - port: 3001
     protocol: TCP
     targetPort: 3001
   selector:
     app: uptime-kuma
   sessionAffinity: None
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
