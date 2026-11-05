@@ -65,7 +65,7 @@ spec:
         kubernetes.io/hostname: atlas
       containers:
       - name: buildkit
-        image: moby/buildkit:v0.33.0
+        image: moby/buildkit:v0.34.2@sha256:c5f8862f52499773af85bc07695b2379ef08e8002352b0df2c4864c91d78dabe
         args:
         - --config
         - /etc/buildkit/buildkitd.toml

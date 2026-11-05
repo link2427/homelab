@@ -94,7 +94,7 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: plex
-          image: lscr.io/linuxserver/plex:version-1.42.2.10156-f737b826c
+          image: lscr.io/linuxserver/plex:version-1.43.5.11079-b3b13e506@sha256:0c2f1122a4275efeea953a9882359f3809b27279d3c3022392e8e610a2eccc67
           imagePullPolicy: IfNotPresent
           env:
             - name: PUID

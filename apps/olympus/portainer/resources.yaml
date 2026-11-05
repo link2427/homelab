@@ -28,7 +28,7 @@ spec:
       containers:
       - args:
         - --tunnel-port=30776
-        image: portainer/portainer-ce:lts
+        image: portainer/portainer-ce:2.45.3@sha256:3609c307943bca8e5c492f69ddd6965df177208b50678a4cff28391c8dd4e96e
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
@@ -110,7 +110,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: status.podIP
-        image: portainer/agent:lts
+        image: portainer/agent:2.45.3@sha256:6e6d2d5d8967da5b4d45eab32b7268af170395395d753d3f34ecb4d6ca5bd388
         imagePullPolicy: Always
         name: portainer-agent
         ports:

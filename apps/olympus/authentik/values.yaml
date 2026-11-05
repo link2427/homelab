@@ -1,4 +1,9 @@
 global:
+  # Chart 2026.5.6 is the newest 2026.5 chart; 2026.5.8 carries the MFA and
+  # SAML bypass fixes (CVE-2026-94606/-94609/-94611/-94612/-94613).
+  image:
+    tag: "2026.5.8"
+    digest: sha256:0ab5658f7f4963f2964cffe0963fa1ef2fa84c21a259489d6fdded789d82492e
   securityContext:
     runAsNonRoot: true
     seccompProfile:
