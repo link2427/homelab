@@ -16,6 +16,5 @@ resources:
 - headlamp
 - netbox
 - telchar-construct
-- telchar-forge
 - dubquick
 - llm

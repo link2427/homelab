@@ -315,7 +315,6 @@ def export_namespaces() -> None:
         "n8n",
         "uptime-kuma",
         "monitoring",
-        "telchar-forge",
         "telchar-construct",
         "nvidia-device-plugin",
     ]
@@ -408,7 +407,6 @@ def export_apps() -> None:
         "n8n",
         "uptime-kuma",
         "telchar-construct",
-        "telchar-forge",
     ]
     apps = {namespace: namespaced_resources(namespace) for namespace in app_namespaces}
 
@@ -437,23 +435,12 @@ def export_apps() -> None:
         "monitoring": ["grafana-admin.secret.yaml"],
         "pihole": ["pihole-api-password.secret.yaml"],
         "telchar-construct": ["cloudflared-token.secret.yaml"],
-        "telchar-forge": [
-            "cloudflared-token.secret.yaml",
-            "forge-secrets.secret.yaml",
-            "ghcr-creds.secret.yaml",
-        ],
     }
     encrypted_secret_from_live(
         "telchar-construct",
         "cloudflared-token",
         ROOT / "apps/olympus/telchar-construct/cloudflared-token.secret.yaml",
     )
-    for secret_name in ("cloudflared-token", "forge-secrets", "ghcr-creds"):
-        encrypted_secret_from_live(
-            "telchar-forge",
-            secret_name,
-            ROOT / f"apps/olympus/telchar-forge/{secret_name}.secret.yaml",
-        )
 
     for namespace, objects in apps.items():
         app_dir = ROOT / "apps/olympus" / namespace

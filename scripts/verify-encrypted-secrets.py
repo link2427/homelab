@@ -74,18 +74,6 @@ def main() -> None:
             "telchar-construct",
             "cloudflared-token",
         ),
-        ROOT / "apps/olympus/telchar-forge/cloudflared-token.secret.yaml": (
-            "telchar-forge",
-            "cloudflared-token",
-        ),
-        ROOT / "apps/olympus/telchar-forge/forge-secrets.secret.yaml": (
-            "telchar-forge",
-            "forge-secrets",
-        ),
-        ROOT / "apps/olympus/telchar-forge/ghcr-creds.secret.yaml": (
-            "telchar-forge",
-            "ghcr-creds",
-        ),
         ROOT / "apps/olympus/monitoring/grafana-admin.secret.yaml": (
             "monitoring",
             "grafana-admin",

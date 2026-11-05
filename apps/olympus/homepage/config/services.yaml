@@ -169,30 +169,6 @@
       namespace: telchar-construct
       podSelector: app.kubernetes.io/name=construct-site
       app: construct-site
-  - Telchar Forge:
-      icon: mdi-shield-search-outline
-      href: https://telcharforge.com
-      description: Intelligence platform site
-      siteMonitor: https://telcharforge.com
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-site
-      app: forge-site
-  - Forge App:
-      icon: mdi-radar
-      href: https://app.telcharforge.com
-      description: Operational intelligence workspace
-      siteMonitor: https://app.telcharforge.com
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-mobile-web
-      app: forge-mobile-web
-  - Forge API:
-      icon: mdi-api
-      href: https://api.telcharforge.com/health
-      description: Public API readiness endpoint
-      siteMonitor: https://api.telcharforge.com/health
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-api
-      app: forge-api
 - Media Control:
   - Seerr:
       icon: seerr.png
@@ -497,56 +473,7 @@
       namespace: nas
       podSelector: app.kubernetes.io/name=plex-media-nfs
       app: plex-media-nfs
-- Forge Workers:
-  - Forge MCP:
-      icon: mdi-connection
-      description: Model Context Protocol service
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-mcp
-      app: forge-mcp
-  - Ingester:
-      icon: mdi-download-network-outline
-      description: Source ingestion pipeline
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-ingester
-      app: forge-ingester
-  - Processor:
-      icon: mdi-cog-sync-outline
-      description: Event normalization and enrichment
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-processor
-      app: forge-processor
-  - Distributor:
-      icon: mdi-send-circle-outline
-      description: Alert and delivery pipeline
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-distributor
-      app: forge-distributor
-  - Briefing:
-      icon: mdi-file-document-edit-outline
-      description: Automated intelligence briefings
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-briefing
-      app: forge-briefing
 - Data Plane:
-  - PostgreSQL + PostGIS:
-      icon: postgres.png
-      description: Forge system of record and geospatial data
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-postgres
-      app: forge-postgres
-  - Redis:
-      icon: redis.png
-      description: Cache and coordination layer
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-redis
-      app: forge-redis
-  - NATS JetStream:
-      icon: mdi-bus
-      description: Event transport and durable streams
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=forge-nats
-      app: forge-nats
   - Authentik PostgreSQL:
       icon: postgres.png
       description: Identity provider database
@@ -652,13 +579,6 @@
       namespace: tailscale
       podSelector: app=operator
       app: operator
-  - Forge Cloudflare Tunnel:
-      icon: cloudflare.png
-      href: https://one.dash.cloudflare.com
-      description: Public routing for Forge site, app, and API
-      namespace: telchar-forge
-      podSelector: app.kubernetes.io/name=cloudflared
-      app: cloudflared
   - Construct Cloudflare Tunnel:
       icon: cloudflare.png
       href: https://one.dash.cloudflare.com
