@@ -296,6 +296,7 @@ spec:
                           | .proxyPassword = $password
                           | .proxyBypassLocalAddresses = true
                           | .proxyBypassFilter = "radarr.media-automation.svc.cluster.local,sonarr.media-automation.svc.cluster.local"
+                          | .authenticationRequired = "enabled"
                           | .passwordConfirmation = .password')
                         printf '%s' "$configured" | curl -fsS -X PUT \
                           -H "X-Api-Key: $api_key" \
