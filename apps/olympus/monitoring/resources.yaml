@@ -28,7 +28,7 @@ spec:
             secretKeyRef:
               name: grafana-admin
               key: admin-password
-        image: grafana/grafana:latest
+        image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
         imagePullPolicy: Always
         name: grafana
         ports:
@@ -82,7 +82,7 @@ spec:
         app: kube-state-metrics
     spec:
       containers:
-      - image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.1
+      - image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.20.0
         imagePullPolicy: IfNotPresent
         name: kube-state-metrics
         ports:
@@ -209,7 +209,7 @@ spec:
         - --path.sysfs=/host/sys
         - --path.rootfs=/host/root
         - --collector.filesystem.ignored-mount-points=^/(dev|proc|sys|var/lib/docker/.+)($|/)
-        image: prom/node-exporter:latest
+        image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
         imagePullPolicy: Always
         name: node-exporter
         ports:
