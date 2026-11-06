@@ -10,3 +10,6 @@ configMapGenerator:
   - name: vulcan-config
     namespace: vulcan
     files: [config.json]
+  - name: vulcan-store-filer
+    namespace: vulcan
+    files: [filer.toml]

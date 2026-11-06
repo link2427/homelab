@@ -1,0 +1,7 @@
+# The seaweedfs image ships an empty /etc/seaweedfs/filer.toml. When the filer
+# finds any filer.toml it skips its built-in leveldb2 default and exits with no
+# store enabled, so name the store explicitly. /data/filerldb2 holds the
+# existing filer metadata.
+[leveldb2]
+enabled = true
+dir = "/data/filerldb2"
