@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: lithobrake-site
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  # Only the shared olympus-access tunnel connector may reach the site.
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: authentik}
+          podSelector:
+            matchLabels: {app.kubernetes.io/name: cloudflared}
+      ports:
+        - {protocol: TCP, port: 8080}
+  # A static file server makes no outbound connections, not even DNS.
+  egress: []
